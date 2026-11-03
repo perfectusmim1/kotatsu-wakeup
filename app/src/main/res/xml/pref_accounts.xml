@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:title="@string/accounts_and_sync">
+	<PreferenceScreen
+		android:fragment="org.koitharu.kotatsu.settings.SyncSettingsFragment"
+		android:icon="@drawable/ic_sync"
+		android:key="sync_settings"
+		android:title="@string/sync" />
+
+	<PreferenceCategory android:title="@string/tracking">
+
+		<Preference
+			android:icon="@drawable/ic_anilist"
+			android:key="anilist"
+			android:summary="@string/loading_"
+			android:title="@string/anilist"
+			app:icon="@drawable/ic_anilist" />
+
+		<Preference
+			android:icon="@drawable/ic_kitsu"
+			android:key="kitsu"
+			android:summary="@string/loading_"
+			android:title="@string/kitsu"
+			app:icon="@drawable/ic_kitsu" />
+
+		<Preference
+			android:icon="@drawable/ic_mal"
+			android:key="mal"
+			android:summary="@string/loading_"
+			android:title="@string/mal"
+			app:icon="@drawable/ic_mal" />
+
+		<Preference
+			android:icon="@drawable/ic_shikimori"
+			android:key="shikimori"
+			android:summary="@string/loading_"
+			android:title="@string/shikimori"
+			app:icon="@drawable/ic_shikimori" />
+
+	</PreferenceCategory>
+
+	<PreferenceScreen
+		android:fragment="org.koitharu.kotatsu.sourcescore.ui.CommunitySettingsFragment"
+		android:icon="@drawable/ic_trending_small"
+		android:key="community_settings"
+		android:summary="@string/community_summary"
+		android:title="@string/community"
+		app:allowDividerAbove="true" />
+
+	<Preference
+		android:fragment="org.koitharu.kotatsu.settings.discord.DiscordSettingsFragment"
+		android:icon="@drawable/ic_discord"
+		android:key="discord_rpc"
+		android:summary="@string/discord_rpc_summary"
+		android:title="@string/discord"
+		app:icon="@drawable/ic_discord" />
+
+</PreferenceScreen>

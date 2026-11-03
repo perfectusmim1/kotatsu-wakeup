@@ -1,0 +1,290 @@
+package org.koitharu.kotatsu.reader.ui.pager
+
+import android.content.ComponentCallbacks2
+import android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+import android.content.Context
+import android.content.res.Configuration
+import android.view.View
+import androidx.annotation.CallSuper
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.viewbinding.ViewBinding
+import com.davemorrissey.labs.subscaleview.DefaultOnImageEventListener
+import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import org.koitharu.kotatsu.BuildConfig
+import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
+import org.koitharu.kotatsu.core.image.CoilImageView
+import org.koitharu.kotatsu.core.os.NetworkState
+import org.koitharu.kotatsu.core.ui.list.lifecycle.LifecycleAwareViewHolder
+import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.core.util.ext.isAnimatedImage
+import org.koitharu.kotatsu.core.util.ext.isLowRamDevice
+import org.koitharu.kotatsu.core.util.ext.isSerializable
+import org.koitharu.kotatsu.core.util.ext.observe
+import org.koitharu.kotatsu.databinding.LayoutPageInfoBinding
+import org.koitharu.kotatsu.parsers.util.ifZero
+import org.koitharu.kotatsu.reader.domain.PageLoader
+import org.koitharu.kotatsu.reader.domain.erase.PageMask
+import org.koitharu.kotatsu.reader.ui.config.ReaderSettings
+import org.koitharu.kotatsu.reader.ui.erase.ErasePageTarget
+import org.koitharu.kotatsu.reader.ui.erase.MaskedRegionDecoder
+import org.koitharu.kotatsu.reader.ui.pager.vm.PageState
+import org.koitharu.kotatsu.reader.ui.pager.vm.PageViewModel
+import org.koitharu.kotatsu.reader.ui.pager.webtoon.WebtoonHolder
+
+abstract class BasePageHolder<B : ViewBinding>(
+	protected val binding: B,
+	loader: PageLoader,
+	readerSettingsProducer: ReaderSettings.Producer,
+	networkState: NetworkState,
+	exceptionResolver: ExceptionResolver,
+	lifecycleOwner: LifecycleOwner,
+) : LifecycleAwareViewHolder(binding.root, lifecycleOwner), DefaultOnImageEventListener, ComponentCallbacks2 {
+
+	protected val viewModel = PageViewModel(
+		loader = loader,
+		settingsProducer = readerSettingsProducer,
+		networkState = networkState,
+		exceptionResolver = exceptionResolver,
+		isWebtoon = this is WebtoonHolder,
+	)
+	private val pageLoader = loader
+	private val hiddenImageChanges = loader.imageHider.rulesChanges
+
+	/** The page told about being on screen, so that it is told when it no longer is, whatever this holder has moved on to. */
+	private var pageOnScreen: Long? = null
+	protected val bindingInfo = LayoutPageInfoBinding.bind(binding.root)
+	protected abstract val ssiv: SubsamplingScaleImageView
+
+	protected val animatedView: CoilImageView? by lazy {
+		itemView.findViewById(R.id.animatedView)
+	}
+
+	protected val settings: ReaderSettings
+		get() = viewModel.settingsProducer.value
+
+	val context: Context
+		get() = itemView.context
+
+	var boundData: ReaderPage? = null
+		private set
+
+	init {
+		lifecycleScope.launch(Dispatchers.Main) {
+			ssiv.bindToLifecycle(this@BasePageHolder)
+			ssiv.isEagerLoadingEnabled = !context.isLowRamDevice()
+			ssiv.addOnImageEventListener(viewModel)
+			ssiv.addOnImageEventListener(this@BasePageHolder)
+		}
+		val clickListener = View.OnClickListener { v ->
+			when (v.id) {
+				R.id.button_retry -> viewModel.retry(
+					page = boundData?.toMangaPage() ?: return@OnClickListener,
+					isFromUser = true,
+				)
+
+				R.id.button_error_details -> viewModel.showErrorDetails(boundData?.url)
+			}
+		}
+		bindingInfo.buttonRetry.setOnClickListener(clickListener)
+		bindingInfo.buttonErrorDetails.setOnClickListener(clickListener)
+	}
+
+	@CallSuper
+	protected open fun onConfigChanged(settings: ReaderSettings) {
+		settings.applyBackground(itemView)
+		if (settings.applyBitmapConfig(ssiv)) {
+			reloadImage()
+		} else if (viewModel.state.value is PageState.Shown) {
+			onReady()
+		}
+		ssiv.applyDownSampling(isResumed())
+	}
+
+	fun reloadImage() {
+		val state = viewModel.state.value as? PageState.Shown ?: return
+		applyMask(state.mask)
+		ssiv.setImage(state.source)
+	}
+
+	fun bind(data: ReaderPage) {
+		boundData?.let { pageLoader.onPageUnbound(it.id) }
+		pageLoader.onPageBound(data.id)
+		boundData = data
+		ssiv.isVisible = true
+		animatedView?.isVisible = false
+		animatedView?.disposeImage()
+		viewModel.onBind(data.toMangaPage())
+		onBind(data)
+	}
+
+	@CallSuper
+	protected open fun onBind(data: ReaderPage) = Unit
+
+	override fun onCreate() {
+		super.onCreate()
+		context.registerComponentCallbacks(this)
+		viewModel.state.observe(this, ::onStateChanged)
+		viewModel.settingsProducer.observe(this, ::onConfigChanged)
+		// The first emission is the rules this page was already checked against
+		hiddenImageChanges.drop(1).observe(this) { viewModel.recheck() }
+	}
+
+	/** Whether a page keeps its full quality off screen, rather than being decoded again smaller, and again when it comes back. */
+	protected open val keepsQualityOffScreen: Boolean
+		get() = false
+
+	private fun setPageOnScreen(pageId: Long?) {
+		pageOnScreen?.takeIf { it != pageId }?.let { pageLoader.setOnScreen(it, false) }
+		pageId?.let { pageLoader.setOnScreen(it, true) }
+		pageOnScreen = pageId
+	}
+
+	override fun onResume() {
+		super.onResume()
+		setPageOnScreen(boundData?.id)
+		ssiv.applyDownSampling(isForeground = true)
+		if (viewModel.state.value is PageState.Error && !viewModel.isLoading()) {
+			boundData?.let { viewModel.retry(it.toMangaPage(), isFromUser = false) }
+		}
+	}
+
+	override fun onPause() {
+		super.onPause()
+		setPageOnScreen(null)
+		ssiv.applyDownSampling(isForeground = false)
+	}
+
+	override fun onDestroy() {
+		context.unregisterComponentCallbacks(this)
+		super.onDestroy()
+	}
+
+	open fun onAttachedToWindow() = Unit
+
+	open fun onDetachedFromWindow() = Unit
+
+	@CallSuper
+	open fun onRecycled() {
+		setPageOnScreen(null)
+		viewModel.onRecycle()
+		boundData?.let { pageLoader.onPageUnbound(it.id) }
+		boundData = null
+		ssiv.recycle()
+		animatedView?.disposeImage()
+	}
+
+	override fun onTrimMemory(level: Int) {
+		// TODO
+	}
+
+	override fun onConfigurationChanged(newConfig: Configuration) = Unit
+
+	@Deprecated("Deprecated in Java")
+	final override fun onLowMemory() = onTrimMemory(TRIM_MEMORY_COMPLETE)
+
+	protected open fun onStateChanged(state: PageState) {
+		bindingInfo.layoutError.isVisible = state is PageState.Error
+		bindingInfo.layoutProgress.isGone = state.isFinalState()
+		val progress = (state as? PageState.Loading)?.progress ?: -1
+		if (progress in 0..100) {
+			bindingInfo.progressBar.isIndeterminate = false
+			bindingInfo.progressBar.setProgressCompat(progress, true)
+			bindingInfo.textViewStatus.text = context.getString(R.string.percent_string_pattern, progress.toString())
+		} else {
+			bindingInfo.progressBar.isIndeterminate = true
+			bindingInfo.textViewStatus.setText(R.string.loading_)
+		}
+		val isAnimated = boundData?.url?.isAnimatedImage() == true
+		when (state) {
+			is PageState.Converting -> {
+				bindingInfo.textViewStatus.setText(R.string.processing_)
+			}
+
+			is PageState.Empty -> Unit
+
+			is PageState.Error -> {
+				val e = state.error
+				bindingInfo.textViewError.text = e.getDisplayMessage(context.resources)
+				bindingInfo.buttonRetry.setText(
+					ExceptionResolver.getResolveStringId(e).ifZero { R.string.try_again },
+				)
+				bindingInfo.buttonErrorDetails.isVisible = e.isSerializable()
+				bindingInfo.layoutError.isVisible = true
+				bindingInfo.progressBar.hide()
+			}
+
+			is PageState.Loaded -> {
+				if (isAnimated) {
+					showAnimated(boundData!!, state)
+					bindingInfo.layoutProgress.isGone = true
+				} else {
+					bindingInfo.textViewStatus.setText(R.string.preparing_)
+					applyMask(state.mask)
+					ssiv.setImage(state.source)
+				}
+			}
+
+			is PageState.Loading -> {
+				if (state.preview != null && ssiv.getState() == null) {
+					ssiv.setImage(state.preview)
+				}
+			}
+
+			is PageState.Shown -> Unit
+
+			is PageState.Hidden -> ssiv.recycle()
+		}
+	}
+
+	/** This page as something a scrub can act on, or null while nothing erasable is on it. */
+	fun createEraseTarget(): ErasePageTarget? {
+		val page = boundData ?: return null
+		val uri = viewModel.shownImage ?: return null
+		if (!ssiv.isReady || page.url.isAnimatedImage()) {
+			return null
+		}
+		return ErasePageTarget(page, uri, ssiv, viewModel.shownRegion, viewModel.shownMask, viewModel.state)
+	}
+
+	/**
+	 * Has to run before every image is set, not only when it changes. Applying the bitmap setting swaps the
+	 * factory for a plain one, and an image set after that would show exactly what was hidden.
+	 */
+	private fun applyMask(mask: PageMask?) {
+		val current = ssiv.regionDecoderFactory
+		val plain = (current as? MaskedRegionDecoder.Factory)?.delegate ?: current
+		ssiv.regionDecoderFactory = if (mask != null) MaskedRegionDecoder.Factory(plain, mask) else plain
+	}
+
+	private fun showAnimated(page: ReaderPage, loadedState: PageState.Loaded) {
+		ssiv.isVisible = false
+		animatedView?.let {
+			it.isVisible = true
+			it.setImageAsync(page)
+		}
+		viewModel.state.update { currentState ->
+			if (currentState is PageState.Loaded) {
+				PageState.Shown(loadedState.source, loadedState.isConverted, loadedState.mask)
+			} else {
+				currentState
+			}
+		}
+	}
+
+	protected fun SubsamplingScaleImageView.applyDownSampling(isForeground: Boolean) {
+		downSampling = when {
+			isForeground || keepsQualityOffScreen || !settings.isReaderOptimizationEnabled -> 1
+			BuildConfig.DEBUG -> 32
+			context.isLowRamDevice() -> 8
+			else -> 4
+		}
+	}
+}

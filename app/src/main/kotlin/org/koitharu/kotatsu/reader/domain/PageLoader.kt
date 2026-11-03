@@ -1,0 +1,524 @@
+package org.koitharu.kotatsu.reader.domain
+
+import android.content.Context
+import android.graphics.Rect
+import android.net.Uri
+import androidx.annotation.AnyThread
+import androidx.annotation.CheckResult
+import androidx.collection.LongSparseArray
+import androidx.collection.set
+import androidx.core.net.toFile
+import androidx.core.net.toUri
+import coil3.BitmapImage
+import coil3.Image
+import coil3.ImageLoader
+import coil3.memory.MemoryCache
+import coil3.request.ImageRequest
+import coil3.request.transformations
+import coil3.toBitmap
+import com.davemorrissey.labs.subscaleview.ImageSource
+import dagger.hilt.android.ActivityRetainedLifecycle
+import dagger.hilt.android.scopes.ActivityRetainedScoped
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okio.use
+import org.jetbrains.annotations.Blocking
+import org.koitharu.kotatsu.core.LocalizedAppContext
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
+import org.koitharu.kotatsu.core.image.BitmapDecoderCompat
+import org.koitharu.kotatsu.core.network.CommonHeaders
+import org.koitharu.kotatsu.core.network.MangaHttpClient
+import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
+import org.koitharu.kotatsu.core.parser.CachingMangaRepository
+import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.prefs.AppSettings
+import org.koitharu.kotatsu.core.ui.image.TrimTransformation
+import org.koitharu.kotatsu.core.util.FileSize
+import org.koitharu.kotatsu.core.util.MimeTypes
+import org.koitharu.kotatsu.core.util.ext.URI_SCHEME_ZIP
+import org.koitharu.kotatsu.core.util.ext.cancelChildrenAndJoin
+import org.koitharu.kotatsu.core.util.ext.compressToPNG
+import org.koitharu.kotatsu.core.util.ext.ensureRamAtLeast
+import org.koitharu.kotatsu.core.util.ext.ensureSuccess
+import org.koitharu.kotatsu.core.util.ext.getCompletionResultOrNull
+import org.koitharu.kotatsu.core.util.ext.isFileUri
+import org.koitharu.kotatsu.core.util.ext.isNotEmpty
+import org.koitharu.kotatsu.core.util.ext.isPowerSaveMode
+import org.koitharu.kotatsu.core.util.ext.isZipUri
+import org.koitharu.kotatsu.core.util.ext.lifecycleScope
+import org.koitharu.kotatsu.core.util.ext.mangaSourceExtra
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.core.util.ext.ramAvailable
+import org.koitharu.kotatsu.core.util.ext.toMimeType
+import org.koitharu.kotatsu.core.util.ext.use
+import org.koitharu.kotatsu.core.util.ext.withProgress
+import org.koitharu.kotatsu.core.util.progress.ProgressDeferred
+import org.koitharu.kotatsu.download.ui.worker.DownloadSlowdownDispatcher
+import org.koitharu.kotatsu.local.data.LocalStorageCache
+import org.koitharu.kotatsu.local.data.PageCache
+import org.koitharu.kotatsu.parsers.model.MangaPage
+import org.koitharu.kotatsu.parsers.model.MangaSource
+import org.koitharu.kotatsu.parsers.util.requireBody
+import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import org.koitharu.kotatsu.reader.domain.erase.ImageHider
+import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
+import java.io.File
+import java.util.LinkedList
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.ZipFile
+import javax.inject.Inject
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+
+@ActivityRetainedScoped
+class PageLoader @Inject constructor(
+	@LocalizedAppContext private val context: Context,
+	lifecycle: ActivityRetainedLifecycle,
+	@MangaHttpClient private val okHttp: OkHttpClient,
+	@PageCache private val cache: LocalStorageCache,
+	private val coil: ImageLoader,
+	private val settings: AppSettings,
+	private val mangaRepositoryFactory: MangaRepository.Factory,
+	private val imageProxyInterceptor: ImageProxyInterceptor,
+	private val downloadSlowdownDispatcher: DownloadSlowdownDispatcher,
+	private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
+	val imageHider: ImageHider,
+	private val preloader: PagePreloader,
+) {
+
+	val loaderScope = lifecycle.lifecycleScope + InternalErrorHandler() + Dispatchers.Default
+
+	private val tasks = LongSparseArray<ProgressDeferred<Uri, Float>>()
+	private val slots = DownloadSlots()
+
+	/** How many views each page is in. A download only stops when nothing wants it any more. */
+	private val boundPages = LongSparseArray<Int>()
+
+	/** What was started ahead of time, and is no use once it is no longer ahead. */
+	private val prefetching = HashSet<Long>()
+	private val oniSagaSemaphore = Semaphore(ONISAGA_PREFETCH_LIMIT + 1)
+	private val oniSagaPrefetchSemaphore = Semaphore(ONISAGA_PREFETCH_LIMIT)
+	private val convertLock = Mutex()
+	private val prefetchLock = Mutex()
+
+	@Volatile
+	private var repository: MangaRepository? = null
+	private val prefetchQueue = LinkedList<MangaPage>()
+	private val counter = AtomicInteger(0)
+	private var prefetchQueueLimit = PREFETCH_LIMIT_DEFAULT // TODO adaptive
+	private val edgeDetector = EdgeDetector(context)
+
+	fun isPrefetchApplicable(): Boolean {
+		return repository is CachingMangaRepository
+			&& settings.isPagesPreloadEnabled
+			&& !context.isPowerSaveMode()
+			&& !isLowRam()
+	}
+
+	/** The page on screen goes first for everything: its download, then its check. */
+	fun setOnScreen(pageId: Long, isOnScreen: Boolean) {
+		slots.setOnScreen(pageId, isOnScreen)
+		imageHider.setOnScreen(pageId, isOnScreen)
+	}
+
+	fun onPageBound(pageId: Long) {
+		synchronized(tasks) {
+			boundPages[pageId] = (boundPages[pageId] ?: 0) + 1
+		}
+	}
+
+	/**
+	 * Nothing shows this page now. Still on its way, it is holding up pages someone is on their way to, and the bytes are for
+	 * nothing unless they come back, when it starts again. What has already arrived is kept on disk either way.
+	 */
+	fun onPageUnbound(pageId: Long) {
+		synchronized(tasks) {
+			val count = (boundPages[pageId] ?: 0) - 1
+			if (count > 0) {
+				boundPages[pageId] = count
+			} else {
+				boundPages.remove(pageId)
+				cancelIfUnfinished(pageId)
+			}
+		}
+	}
+
+	private fun cancelIfUnfinished(pageId: Long) {
+		val task = tasks[pageId] ?: return
+		if (!task.isCompleted) {
+			task.cancel()
+			tasks.remove(pageId)
+		}
+	}
+
+	@AnyThread
+	fun prefetch(pages: List<ReaderPage>) = loaderScope.launch {
+		prefetchLock.withLock {
+			// Only what is ahead from here: whoever jumps somewhere else has no use for what was ahead of where they were
+			val wanted = pages.mapTo(HashSet()) { it.id }
+			prefetchQueue.removeAll { it.id !in wanted }
+			synchronized(tasks) {
+				val iterator = prefetching.iterator()
+				while (iterator.hasNext()) {
+					val id = iterator.next()
+					val task = tasks[id]
+					if (task == null || task.isCompleted) {
+						iterator.remove()
+					} else if (id !in wanted && boundPages[id] == null) {
+						iterator.remove()
+						cancelIfUnfinished(id)
+					}
+				}
+			}
+			for (page in pages.asReversed()) {
+				val isLoading = synchronized(tasks) {
+					tasks[page.id]?.takeIf { it.isValid() }?.isCancelled == false
+				}
+				if (isLoading || prefetchQueue.any { it.id == page.id }) {
+					continue
+				}
+				prefetchQueue.offerFirst(page.toMangaPage())
+				val queueLimit = if (page.source.isOniSaga()) {
+					ONISAGA_PREFETCH_LIMIT
+				} else {
+					prefetchQueueLimit
+				}
+				while (prefetchQueue.size > queueLimit) {
+					prefetchQueue.pollLast()
+				}
+			}
+		}
+		if (counter.get() == 0) {
+			onIdle()
+		}
+	}
+
+	suspend fun loadPreview(page: MangaPage): ImageSource? {
+		val preview = page.preview
+		if (preview.isNullOrEmpty()) {
+			return null
+		}
+		val request = ImageRequest.Builder(context)
+			.data(preview)
+			.mangaSourceExtra(page.source)
+			.transformations(TrimTransformation())
+			.build()
+		return coil.execute(request).image?.toImageSource()
+	}
+
+	fun peekPreviewSource(preview: String?): ImageSource? {
+		if (preview.isNullOrEmpty()) {
+			return null
+		}
+		coil.memoryCache?.let { cache ->
+			val key = MemoryCache.Key(preview)
+			cache[key]?.image?.let {
+				return if (it is BitmapImage) {
+					ImageSource.cachedBitmap(it.toBitmap())
+				} else {
+					ImageSource.bitmap(it.toBitmap())
+				}
+			}
+		}
+		coil.diskCache?.let { cache ->
+			cache.openSnapshot(preview)?.use { snapshot ->
+				return ImageSource.file(snapshot.data.toFile())
+			}
+		}
+		return null
+	}
+
+	fun loadPageAsync(page: MangaPage, force: Boolean): ProgressDeferred<Uri, Float> = synchronized(tasks) {
+		val task = tasks[page.id]?.takeIf { it.isValid() }
+		if (force) {
+			task?.cancel()
+		} else if (task?.isCancelled == false) {
+			return@synchronized task
+		}
+		loadPageAsyncImpl(page, skipCache = force, isPrefetch = false).also {
+			tasks[page.id] = it
+		}
+	}
+
+	suspend fun loadPage(page: MangaPage, force: Boolean): Uri {
+		var isForced = force
+		while (true) {
+			try {
+				return loadPageAsync(page, isForced).await()
+			} catch (e: CancellationException) {
+				// It was the download that was given up on, by a view of it going away, and not this
+				currentCoroutineContext().ensureActive()
+				isForced = false
+			}
+		}
+	}
+
+	@CheckResult
+	suspend fun convertBimap(uri: Uri): Uri = convertLock.withLock {
+		if (uri.isZipUri()) {
+			runInterruptible(Dispatchers.IO) {
+				ZipFile(uri.schemeSpecificPart).use { zip ->
+					val entry = zip.getEntry(uri.fragment)
+					context.ensureRamAtLeast(entry.size * 2)
+					zip.getInputStream(entry).use {
+						BitmapDecoderCompat.decode(it, MimeTypes.getMimeTypeFromExtension(entry.name))
+					}
+				}
+			}.use { image ->
+				cache.set(uri.toString(), image).toUri()
+			}
+		} else {
+			val file = uri.toFile()
+			runInterruptible(Dispatchers.IO) {
+				context.ensureRamAtLeast(BitmapDecoderCompat.estimateDecodedSize(file))
+				BitmapDecoderCompat.decode(file)
+			}.use { image ->
+				image.compressToPNG(file)
+			}
+			uri
+		}
+	}
+
+	suspend fun getTrimmedBounds(uri: Uri): Rect? = runCatchingCancellable {
+		edgeDetector.getBounds(ImageSource.uri(uri))
+	}.onFailure { error ->
+		error.printStackTraceDebug()
+	}.getOrNull()
+
+	suspend fun getPageUrl(page: MangaPage): String {
+		return getRepository(page.source).getPageUrl(page)
+	}
+
+	suspend fun invalidate(clearCache: Boolean) {
+		synchronized(tasks) {
+			tasks.clear()
+		}
+		loaderScope.cancelChildrenAndJoin()
+		if (clearCache) {
+			cache.clear()
+		}
+	}
+
+	private fun onIdle() = loaderScope.launch {
+		prefetchLock.withLock {
+			while (prefetchQueue.isNotEmpty()) {
+				val page = prefetchQueue.pollFirst() ?: return@launch
+				synchronized(tasks) {
+					val task = tasks[page.id]?.takeIf { it.isValid() }
+					if (task?.isCancelled != false) {
+						tasks[page.id] = loadPageAsyncImpl(page, skipCache = false, isPrefetch = true)
+						prefetching += page.id
+					}
+				}
+			}
+		}
+	}
+
+	private fun loadPageAsyncImpl(
+		page: MangaPage,
+		skipCache: Boolean,
+		isPrefetch: Boolean,
+	): ProgressDeferred<Uri, Float> {
+		val progress = MutableStateFlow(PROGRESS_UNDEFINED)
+		val deferred = loaderScope.async(
+			start = if (isPrefetch) CoroutineStart.UNDISPATCHED else CoroutineStart.DEFAULT,
+		) {
+			counter.incrementAndGet()
+			try {
+				loadPageImpl(
+					page = page,
+					progress = progress,
+					isPrefetch = isPrefetch,
+					skipCache = skipCache,
+				)
+			} finally {
+				if (counter.decrementAndGet() == 0) {
+					onIdle()
+				}
+			}
+		}
+		return ProgressDeferred(deferred, progress)
+	}
+
+	@Synchronized
+	private fun getRepository(source: MangaSource): MangaRepository {
+		val result = repository
+		return if (result != null && result.source == source) {
+			result
+		} else {
+			mangaRepositoryFactory.create(source).also { repository = it }
+		}
+	}
+
+	private suspend fun loadPageImpl(
+		page: MangaPage,
+		progress: MutableStateFlow<Float>,
+		isPrefetch: Boolean,
+		skipCache: Boolean,
+	): Uri {
+		if (isPrefetch) {
+			val uri = if (page.source.isOniSaga()) {
+				oniSagaPrefetchSemaphore.withPermit { loadPageWithPermit(page, progress, isPrefetch = true, skipCache) }
+			} else {
+				loadPageWithPermit(page, progress, isPrefetch = true, skipCache)
+			}
+			// Not part of this task: the reader waits on this task when it reaches the page, and looking pages over
+			// ahead of time goes one at a time. A page already downloaded would sit blank behind all of the others.
+			loaderScope.launch { imageHider.checkAhead(page, uri) }
+			return uri
+		}
+		return loadPageWithPermit(page, progress, isPrefetch = false, skipCache)
+	}
+
+	private suspend fun loadPageWithPermit(
+		page: MangaPage,
+		progress: MutableStateFlow<Float>,
+		isPrefetch: Boolean,
+		skipCache: Boolean,
+	): Uri {
+		val load: suspend () -> Uri = {
+			captchaAutoResolveCoordinator.runWithVerification(
+				source = page.source,
+				mayStartVerification = !isPrefetch,
+			) {
+				loadPageAttempt(page, progress, isPrefetch, skipCache)
+			}
+		}
+		return if (page.source.isOniSaga()) {
+			oniSagaSemaphore.withPermit { load() }
+		} else {
+			slots.withSlot(page.id, load)
+		}
+	}
+
+	private suspend fun loadPageAttempt(
+		page: MangaPage,
+		progress: MutableStateFlow<Float>,
+		isPrefetch: Boolean,
+		skipCache: Boolean,
+	): Uri {
+		val pageUrl = getPageUrl(page)
+		check(pageUrl.isNotBlank()) { "Cannot obtain full image url for $page" }
+		if (!skipCache) {
+			preloader.awaitDownload(pageUrl)
+			cache.get(pageUrl)?.let { return decodeIfAvif(it.toUri()) }
+		}
+		val uri = pageUrl.toUri()
+		return when {
+			uri.isZipUri() -> if (uri.scheme == URI_SCHEME_ZIP) {
+				uri
+			} else { // legacy uri
+				uri.buildUpon().scheme(URI_SCHEME_ZIP).build()
+			}
+
+			uri.isFileUri() -> uri
+			else -> {
+				if (isPrefetch) {
+					downloadSlowdownDispatcher.delay(page.source)
+				}
+				val request = createPageRequest(pageUrl, page.source)
+				val file = imageProxyInterceptor.interceptPageRequest(request, okHttp).ensureSuccess().use { response ->
+					response.requireBody().withProgress(progress).use {
+						cache.set(pageUrl, it.source(), it.contentType()?.toMimeType())
+					}
+				}
+				decodeIfAvif(file.toUri())
+			}
+		}
+	}
+
+	/**
+	 * Decodes an AVIF too large for the platform with libavif straight away, and keeps the result in its place. Any
+	 * other image goes on to the view as it is, which is far quicker. Only for the page cache, since this replaces the
+	 * file. A page that fails here still has the reader's own fallback.
+	 */
+	private suspend fun decodeIfAvif(uri: Uri): Uri {
+		if (!runInterruptible(Dispatchers.IO) { BitmapDecoderCompat.isAvifTooLargeForPlatform(uri.toFile()) }) {
+			return uri
+		}
+		return runCatchingCancellable { convertBimap(uri) }
+			.onFailure { it.printStackTraceDebug() }
+			.getOrDefault(uri)
+	}
+
+	private fun isLowRam(): Boolean {
+		return context.ramAvailable <= FileSize.MEGABYTES.convert(PREFETCH_MIN_RAM_MB, FileSize.BYTES)
+	}
+
+	private fun MangaSource.isOniSaga(): Boolean = name == "ONISAGA" || name.startsWith("ONISAGA_")
+
+	private fun Image.toImageSource(): ImageSource = if (this is BitmapImage) {
+		ImageSource.cachedBitmap(toBitmap())
+	} else {
+		ImageSource.bitmap(toBitmap())
+	}
+
+	private fun Deferred<Uri>.isValid(): Boolean {
+		return getCompletionResultOrNull()?.map { uri ->
+			uri.exists() && uri.isTargetNotEmpty()
+		}?.getOrDefault(false) != false
+	}
+
+	private class InternalErrorHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler),
+		CoroutineExceptionHandler {
+
+		override fun handleException(context: CoroutineContext, exception: Throwable) {
+			exception.printStackTraceDebug()
+		}
+	}
+
+	companion object {
+
+		private const val PROGRESS_UNDEFINED = -1f
+		private const val PREFETCH_LIMIT_DEFAULT = 6
+		private const val ONISAGA_PREFETCH_LIMIT = 5
+		private const val PREFETCH_MIN_RAM_MB = 80L
+
+		fun createPageRequest(pageUrl: String, mangaSource: MangaSource) = Request.Builder()
+			.url(pageUrl)
+			.get()
+			.header(CommonHeaders.ACCEPT, "image/webp,image/png;q=0.9,image/jpeg,*/*;q=0.8")
+			.cacheControl(CommonHeaders.CACHE_CONTROL_NO_STORE)
+			.tag(MangaSource::class.java, mangaSource)
+			.build()
+
+
+		@Blocking
+		private fun Uri.exists(): Boolean = when {
+			isFileUri() -> toFile().exists()
+			isZipUri() -> {
+				val file = File(requireNotNull(schemeSpecificPart))
+				file.exists() && ZipFile(file).use { it.getEntry(fragment) != null }
+			}
+
+			else -> false
+		}
+
+		@Blocking
+		private fun Uri.isTargetNotEmpty(): Boolean = when {
+			isFileUri() -> toFile().isNotEmpty()
+			isZipUri() -> {
+				val file = File(requireNotNull(schemeSpecificPart))
+				file.exists() && ZipFile(file).use { (it.getEntry(fragment)?.size ?: 0L) != 0L }
+			}
+
+			else -> false
+		}
+	}
+}

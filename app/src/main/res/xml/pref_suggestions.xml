@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:title="@string/suggestions">
+	<SwitchPreferenceCompat
+		android:defaultValue="true"
+		android:icon="@drawable/ic_suggestion"
+		android:key="suggestions"
+		android:layout="@layout/preference_toggle_header"
+		android:title="@string/suggestions_enable" />
+
+	<SwitchPreferenceCompat
+		android:defaultValue="false"
+		android:dependency="suggestions"
+		android:icon="@drawable/ic_manga_source"
+		android:key="suggestions_disabled_sources"
+		android:summary="@string/suggestions_disabled_sources_summary"
+		android:title="@string/include_disabled_sources" />
+
+	<org.koitharu.kotatsu.settings.utils.MultiAutoCompleteTextViewPreference
+		android:dependency="suggestions"
+		android:icon="@drawable/ic_tag"
+		android:key="suggestions_exclude_tags"
+		android:summary="@string/suggestions_excluded_genres_summary"
+		android:title="@string/suggestions_excluded_genres" />
+
+	<Preference
+		android:icon="@drawable/ic_info_outline"
+		android:key="track_warning"
+		android:persistent="false"
+		android:selectable="false"
+		android:summary="@string/suggestions_info"
+		app:allowDividerAbove="true" />
+
+</PreferenceScreen>
