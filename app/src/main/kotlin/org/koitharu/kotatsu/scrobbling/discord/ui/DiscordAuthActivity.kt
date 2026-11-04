@@ -47,6 +47,6 @@ class DiscordAuthActivity : BaseBrowserActivity(), DiscordTokenWebClient.Callbac
 	private companion object {
 
 		const val BASE_URL = "https://discord.com/login"
-		private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14; SM-S921U; Build/UP1A.231005.007) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.363"
+		private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14; SM-S921U; Build/UP1A.231005.007) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Mobile Safari/537.36"
 	}
 }
