@@ -29,4 +29,12 @@ dependencyResolutionManagement {
 }
 
 include ':app'
-rootProject.name = "Kotatsu"
+rootProject.name = "Kotatsu-Wakeup"
+
+if (file('../kotatsu-parsers').exists() && "true".equalsIgnoreCase(providers.gradleProperty("useLocalParsers").orNull)) {
+	includeBuild('../kotatsu-parsers') {
+		dependencySubstitution {
+			substitute module("com.github.clquwu:kotatsu-parsers-redo") using project(':')
+		}
+	}
+}

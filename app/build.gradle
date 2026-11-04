@@ -47,7 +47,7 @@ android {
     }
 
     defaultConfig {
-		applicationId 'io.github.kotatsuredo.kotatsu'
+		applicationId 'io.github.kotatsuwakeup.kotatsu'
 		minSdk = 23
 		targetSdk = 37
 		versionCode = 2048
@@ -82,7 +82,7 @@ android {
 		// Host that serves the shareable https manga links and the assetlinks.json that lets Android
 		// verify them. Must match the deployed worker's hostname in web/wrangler.toml exactly, or the
 		// links stop opening the app directly. Used by the manifest and by Manga.appUrl.
-		def appLinkHost = 'kotatsuredo.app'
+		def appLinkHost = 'kotatsuwakeup.app'
 		manifestPlaceholders = [appLinkHost: appLinkHost]
 		buildConfigField 'String', 'APP_LINK_HOST', "\"${appLinkHost}\""
 	}
