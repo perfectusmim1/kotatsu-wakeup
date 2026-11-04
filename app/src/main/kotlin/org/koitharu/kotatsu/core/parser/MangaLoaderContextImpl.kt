@@ -81,10 +81,17 @@ class MangaLoaderContextImpl @Inject constructor(
         parser: MangaParser,
         url: String,
     ): Nothing {
-        if (parser.source == MangaParserSource.COMIX) {
+        if (parser.source == MangaParserSource.COMIX || parser.source == MangaParserSource.OKUTOON) {
             throw CloudFlareProtectedException(url, parser.source, parser.getRequestHeaders())
         }
         throw InteractiveActionRequiredException(parser.source, url)
+    }
+
+    override fun requestCloudflareVerification(
+        parser: MangaParser,
+        url: String,
+    ): Nothing {
+        throw CloudFlareProtectedException(url, parser.source, parser.getRequestHeaders())
     }
 
     override fun redrawImageResponse(response: Response, redraw: (image: Bitmap) -> Bitmap): Response {
