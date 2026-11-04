@@ -18,7 +18,6 @@
 		android:title="@string/allow_unstable_updates" />
 
 	<Preference
-		android:fragment="org.koitharu.kotatsu.settings.about.changelog.ChangelogFragment"
 		android:icon="@drawable/ic_new"
 		android:key="changelog"
 		android:persistent="false"
@@ -26,38 +25,11 @@
 		android:title="@string/changelog" />
 
 	<Preference
-		android:icon="@drawable/ic_book_page"
-		android:key="about_help"
-		android:persistent="false"
-		android:summary="@string/url_user_manual"
-		android:title="@string/user_manual"
-		app:allowDividerAbove="true" />
-
-	<Preference
 		android:icon="@drawable/ic_script"
 		android:key="about_github"
 		android:persistent="false"
 		android:summary="@string/url_github"
-		android:title="@string/source_code" />
-
-	<Preference
-		android:icon="@drawable/ic_language"
-		android:key="about_app_translation"
-		android:persistent="false"
-		android:summary="@string/url_weblate"
-		android:title="@string/about_app_translation_summary" />
-
-	<Preference
-		android:icon="@drawable/ic_discord"
-		android:key="about_discord"
-		android:persistent="false"
-		android:summary="@string/url_discord"
-		android:title="@string/telegram_group" />
-
-	<Preference
-		android:icon="@drawable/ic_heart"
-		android:key="sponsor"
-		android:persistent="false"
-		android:title="@string/community_sponsor" />
+		android:title="@string/source_code"
+		app:allowDividerAbove="true" />
 
 </PreferenceScreen>
