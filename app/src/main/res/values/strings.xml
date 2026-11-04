@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name" translatable="false">Kotatsu-Redo</string>
+    <string name="app_name" translatable="false">Kotatsu-Wakeup</string>
     <string name="local_storage">Local storage</string>
     <string name="favourites">Favorites</string>
     <string name="history">History</string>
@@ -550,13 +550,13 @@
     <string name="community_delete">Delete everything about me</string>
     <string name="community_delete_summary">Erases your ratings and comments from the server, permanently</string>
     <string name="community_delete_confirm">This erases your ratings, removes your comments and deletes your identity. It cannot be undone.</string>
-    <string name="community_sponsor">Support Kotatsu-Redo</string>
+    <string name="community_sponsor">Support Kotatsu-Wakeup</string>
     <string name="community_intro_replay">Show introduction</string>
     <string name="community_intro_replay_summary">Walk through the community features again</string>
 
     <!-- Onboarding -->
     <string name="community_intro_title">Comments and ratings</string>
-    <string name="community_intro_body">Kotatsu-Redo can now show comments and ratings from other readers, and use what everyone learns to put the sources that actually work at the top of your searches.\n\nThere is no account. No email, no password. Your device makes a random key and that is your whole identity — you can back it up and move it to a new phone.</string>
+    <string name="community_intro_body">Kotatsu-Wakeup can now show comments and ratings from other readers, and use what everyone learns to put the sources that actually work at the top of your searches.\n\nThere is no account. No email, no password. Your device makes a random key and that is your whole identity — you can back it up and move it to a new phone.</string>
     <string name="community_recover">Restore</string>
     <string name="community_recover_title">Restore your account</string>
     <string name="community_recover_body">Paste the recovery key from your other device. You will find it there under Settings, Services, Community.
@@ -590,9 +590,9 @@ Optional — skip it and you appear as anon.</string>
     <string name="community_nickname_too_long">24 characters at most</string>
     <string name="community_nickname_blocked">&#8220;%s&#8221; isn\'t allowed in a nickname</string>
     <string name="community_sponsor_title">Where the money goes</string>
-    <string name="community_sponsor_body">Kotatsu-Redo is free and has no ads. All donations go to the project.</string>
+    <string name="community_sponsor_body">Kotatsu-Wakeup is free and has no ads. All donations go to the project.</string>
     <string name="community_sponsor_perk">As a little thank-you, donors get a small crown next to their name on comments.</string>
-    <string name="community_donation_reminder">Kotatsu-Redo is free and has no ads. All donations go to the project, and as a little thank-you, donors get a small crown next to their name on comments.</string>
+    <string name="community_donation_reminder">Kotatsu-Wakeup is free and has no ads. All donations go to the project, and as a little thank-you, donors get a small crown next to their name on comments.</string>
     <string name="community_supporter_author">%s, supporter</string>
     <string name="community_sponsor_reports">Reports are posted on the Discord.</string>
     <string name="community_sponsor_open">Become a sponsor</string>

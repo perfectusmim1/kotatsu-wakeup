@@ -512,7 +512,7 @@ class CommunityOnboardingDialog : DialogFragment() {
 
 		private const val NICKNAME_MIN = 2
 
-		const val SPONSOR_URL = "https://github.com/sponsors/Kotatsu-Redo"
+		const val SPONSOR_URL = "https://github.com/perfectusmim1/kotatsu-wakeup"
 
 		fun showIfNeeded(context: Context, settings: CommunitySettings, fm: FragmentManager) {
 			if (fm.findFragmentByTag(TAG) != null) return
