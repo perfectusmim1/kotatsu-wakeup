@@ -685,7 +685,7 @@ class DetailsActivity :
 		// Up immediately, in its loading state. Waiting for the round trip meant the row appeared a
 		// second or two after everything else and pushed the page around as it landed.
 		binder.setEnabled(false)
-		loading?.isVisible = true
+		loading?.isVisible = false
 		group.isVisible = false
 		stars.isVisible = false
 
