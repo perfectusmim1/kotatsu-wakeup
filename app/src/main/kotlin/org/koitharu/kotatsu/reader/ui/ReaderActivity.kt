@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.sourcescore.ui.CommunityRatingDelegate
 import org.koitharu.kotatsu.sourcescore.ui.CommunityCommentsSheet
 import org.koitharu.kotatsu.core.exceptions.resolve.DialogErrorObserver
@@ -76,7 +77,11 @@ import org.koitharu.kotatsu.reader.data.TapGridSettings
 import org.koitharu.kotatsu.reader.domain.TapGridArea
 import org.koitharu.kotatsu.reader.domain.erase.ImageHider
 import org.koitharu.kotatsu.reader.domain.indexOfPosition
+import org.koitharu.kotatsu.reader.domain.translate.TranslationUiEvent
+import org.koitharu.kotatsu.reader.domain.translate.model.PageTranslationState
+import org.koitharu.kotatsu.reader.domain.translate.model.TranslationStage
 import org.koitharu.kotatsu.reader.ui.config.ReaderConfigSheet
+import org.koitharu.kotatsu.reader.ui.translate.TranslationSettingsSheet
 import org.koitharu.kotatsu.reader.ui.erase.EraseController
 import org.koitharu.kotatsu.reader.ui.erase.ErasePageTarget
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
@@ -140,6 +145,9 @@ class ReaderActivity :
 
     // Tracks whether the foldable device is in an unfolded state (half-opened or flat)
     private var isFoldUnfolded: Boolean = false
+    private var isChapterLoadingToast: Boolean = false
+    private var currentTranslationBanner: PageTranslationState? = null
+    private var isShowingStatusToast: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -225,12 +233,27 @@ class ReaderActivity :
         viewModel.isZoomControlsEnabled.observe(this) {
             viewBinding.zoomControl.isVisible = it
         }
-        addMenuProvider(ReaderMenuProvider(viewModel) { router.openHiddenImages() })
+        viewModel.isTranslationEnabled.observe(this) { isEnabled ->
+            viewBinding.actionsView.isTranslationActive = isEnabled
+            invalidateOptionsMenu()
+        }
+        viewModel.translationBannerState.observe(this) { banner ->
+            currentTranslationBanner = banner
+            updateStatusToast()
+        }
+        viewModel.translationUiEvents.observe(this, ::onTranslationUiEvent)
+        addMenuProvider(ReaderMenuProvider(this, viewModel, { router.openHiddenImages() }, ::onTranslateClick))
 
         observeWindowLayout()
 
         // Apply initial double-mode considering foldable setting
         applyDoubleModeAuto()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        viewModel.onNewIntent(intent)
     }
 
     override fun getParentActivityIntent(): Intent? {
@@ -338,12 +361,58 @@ class ReaderActivity :
             TransitionManager.beginDelayedTransition(viewBinding.root, transition)
             viewBinding.layoutLoading.isVisible = showLoadingLayout
         }
-        if (isLoading && hasPages) {
+        isChapterLoadingToast = isLoading && hasPages
+        updateStatusToast()
+        invalidateOptionsMenu()
+    }
+
+    private fun updateStatusToast() {
+        if (isChapterLoadingToast) {
+            isShowingStatusToast = true
             viewBinding.toastView.show(R.string.loading_)
-        } else {
+            return
+        }
+        val banner = currentTranslationBanner
+        val bannerMessage = when (banner?.stage) {
+            TranslationStage.DOWNLOADING_MODELS -> getString(
+                R.string.translation_ocr_downloading,
+                banner.progressPercent.coerceIn(0, 100),
+            )
+
+            TranslationStage.RUNNING_OCR -> getString(R.string.translation_ocr_running)
+            TranslationStage.TRANSLATING_TEXT -> getString(R.string.translation_translating_text)
+            TranslationStage.RENDERING_PAGE -> getString(R.string.translation_rendering_page)
+            else -> null
+        }
+        if (bannerMessage != null) {
+            isShowingStatusToast = true
+            viewBinding.toastView.show(bannerMessage)
+        } else if (isShowingStatusToast) {
+            isShowingStatusToast = false
             viewBinding.toastView.hide()
         }
-        invalidateOptionsMenu()
+    }
+
+    private fun onTranslationUiEvent(event: TranslationUiEvent) {
+        when (event) {
+            is TranslationUiEvent.PromptMissingApiKey -> {
+                TranslationSettingsSheet.show(supportFragmentManager, highlightMissingKey = true)
+            }
+
+            is TranslationUiEvent.Error -> {
+                val message = event.message?.takeIf { it.isNotBlank() }?.let {
+                    getString(R.string.translation_error_generic, it)
+                } ?: getString(R.string.translation_api_key_required)
+                val snackbar = Snackbar.make(viewBinding.container, message, Snackbar.LENGTH_LONG)
+                    .setAnchorView(viewBinding.toolbarDocked)
+                if (event.openSettingsAction) {
+                    snackbar.setAction(R.string.translation_settings) {
+                        TranslationSettingsSheet.show(supportFragmentManager, highlightMissingKey = true)
+                    }
+                }
+                snackbar.show()
+            }
+        }
     }
 
     override fun onGridTouch(area: TapGridArea): Boolean {
@@ -403,6 +472,9 @@ class ReaderActivity :
             val pages = viewModel.content.value.pages
             var index = pages.indexOfFirst { it.chapterId == page.chapterId && it.id == page.id }
             if (index == -1) {
+                index = pages.indexOfFirst { it.chapterId == page.chapterId && it.index == page.index }
+            }
+            if (index == -1) {
                 // The page slider counts every page of the chapter, including those since hidden
                 index = pages.indexOfPosition(page.chapterId, page.index) ?: -1
             }
@@ -417,6 +489,11 @@ class ReaderActivity :
         return true
     }
 
+    override fun onBookmarkSelected(bookmark: Bookmark): Boolean {
+        viewModel.switchChapter(bookmark.chapterId, bookmark.page, bookmark.scroll)
+        return true
+    }
+
     override fun onReaderModeChanged(mode: ReaderMode) {
         viewModel.saveCurrentState(readerManager.currentReader?.getCurrentState())
         viewModel.switchMode(mode)
@@ -426,6 +503,14 @@ class ReaderActivity :
     override fun onDoubleModeChanged(isEnabled: Boolean) {
         // Combine manual toggle with foldable auto setting
         applyDoubleModeAuto(isEnabled)
+    }
+
+    override fun onTranslationToggle(isEnabled: Boolean): Boolean {
+        return viewModel.setTranslationEnabled(isEnabled, fromUserTap = true)
+    }
+
+    override fun onTranslationSettingsClick() {
+        TranslationSettingsSheet.show(supportFragmentManager)
     }
 
     private fun applyDoubleModeAuto(manualEnabled: Boolean? = null) {
@@ -525,6 +610,7 @@ class ReaderActivity :
     }
 
     override fun onBookmarkClick() {
+        viewModel.saveCurrentState(readerManager.currentReader?.getCurrentState())
         viewModel.toggleBookmark()
     }
 
@@ -556,6 +642,15 @@ class ReaderActivity :
                 CommunityCommentsSheet.show(supportFragmentManager, workId, chapterId)
             }
         }
+    }
+
+    override fun onTranslateClick() {
+        viewModel.toggleTranslation()
+    }
+
+    override fun onTranslateLongClick(): Boolean {
+        TranslationSettingsSheet.show(supportFragmentManager)
+        return true
     }
 
     override fun onSavePageClick() {

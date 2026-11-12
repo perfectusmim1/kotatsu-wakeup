@@ -31,3 +31,6 @@
 -keep class org.acra.sender.JobSenderService
 # Loaded by ACRA through ServiceLoader (META-INF/services), so nothing references it directly.
 -keep class org.koitharu.kotatsu.core.util.SentryReportSenderFactory { *; }
+
+-keep class ai.onnxruntime.** { *; }
+-dontwarn ai.onnxruntime.**

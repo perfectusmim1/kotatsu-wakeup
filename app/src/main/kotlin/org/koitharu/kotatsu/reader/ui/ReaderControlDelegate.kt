@@ -143,6 +143,10 @@ class ReaderControlDelegate(
 		/** Comments on the chapter being read, not on the work as a whole. */
 		fun onCommentsClick()
 
+		fun onTranslateClick()
+
+		fun onTranslateLongClick(): Boolean
+
 		fun openMenu()
 
 		fun onSavePageClick()

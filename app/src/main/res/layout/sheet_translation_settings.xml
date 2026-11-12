@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/layout_main"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical">
+
+	<org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetHeaderBar
+		android:id="@+id/headerBar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		app:title="@string/translation_settings" />
+
+	<androidx.core.widget.NestedScrollView
+		android:id="@+id/scrollView"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:clipToPadding="false"
+		android:scrollbars="vertical">
+
+		<LinearLayout
+			android:id="@+id/layout_content"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:animateLayoutChanges="true"
+			android:orientation="vertical"
+			android:paddingBottom="@dimen/margin_normal">
+
+			<com.google.android.material.materialswitch.MaterialSwitch
+				android:id="@+id/switch_translation_enabled"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:minHeight="?android:listPreferredItemHeightSmall"
+				android:paddingStart="?android:listPreferredItemPaddingStart"
+				android:paddingEnd="?android:listPreferredItemPaddingEnd"
+				android:text="@string/translation"
+				android:textAppearance="@style/TextAppearance.Kotatsu.GridTitle" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_small"
+				android:text="@string/translation_provider"
+				android:textAppearance="@style/TextAppearance.Kotatsu.GridTitle" />
+
+			<com.google.android.material.button.MaterialButtonToggleGroup
+				android:id="@+id/toggleGroup_provider"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_small"
+				app:selectionRequired="true"
+				app:singleSelection="true">
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_provider_google"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="@string/translation_provider_google" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_provider_gemini"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="@string/translation_provider_gemini" />
+
+			</com.google.android.material.button.MaterialButtonToggleGroup>
+
+			<com.google.android.material.textfield.TextInputLayout
+				android:id="@+id/inputLayout_api_keys"
+				style="?textInputOutlinedStyle"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:hint="@string/translation_api_keys"
+				app:endIconMode="clear_text"
+				app:helperText="@string/translation_api_keys_empty">
+
+				<com.google.android.material.textfield.TextInputEditText
+					android:id="@+id/editText_api_keys"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:gravity="top|start"
+					android:importantForAutofill="no"
+					android:inputType="textMultiLine|textNoSuggestions"
+					android:maxLines="4"
+					android:minLines="2" />
+
+			</com.google.android.material.textfield.TextInputLayout>
+
+			<com.google.android.material.textfield.TextInputLayout
+				android:id="@+id/inputLayout_source_lang"
+				style="?textInputOutlinedStyle"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:hint="@string/translation_source_lang"
+				app:endIconMode="dropdown_menu"
+				app:helperText="@string/translation_ocr_ready">
+
+				<AutoCompleteTextView
+					android:id="@+id/edit_source_lang"
+					style="?editTextStyle"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:inputType="none"
+					tools:ignore="LabelFor" />
+
+			</com.google.android.material.textfield.TextInputLayout>
+
+			<LinearLayout
+				android:id="@+id/layout_ocr_model_action"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_small"
+				android:gravity="center_vertical"
+				android:orientation="horizontal"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.progressindicator.LinearProgressIndicator
+					android:id="@+id/progress_ocr_download"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:visibility="gone"
+					tools:progress="45"
+					tools:visibility="visible" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_download_ocr"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/translation_ocr_download" />
+
+			</LinearLayout>
+
+			<com.google.android.material.textfield.TextInputLayout
+				android:id="@+id/inputLayout_target_lang"
+				style="?textInputOutlinedStyle"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:hint="@string/translation_target_lang"
+				app:endIconMode="dropdown_menu">
+
+				<AutoCompleteTextView
+					android:id="@+id/edit_target_lang"
+					style="?editTextStyle"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:inputType="none"
+					tools:ignore="LabelFor" />
+
+			</com.google.android.material.textfield.TextInputLayout>
+
+			<com.google.android.material.materialswitch.MaterialSwitch
+				android:id="@+id/switch_auto_translate"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="@dimen/margin_small"
+				android:minHeight="?android:listPreferredItemHeightSmall"
+				android:paddingStart="?android:listPreferredItemPaddingStart"
+				android:paddingEnd="?android:listPreferredItemPaddingEnd"
+				android:text="@string/translation_auto_translate"
+				android:textAppearance="@style/TextAppearance.Kotatsu.GridTitle"
+				android:textColor="?colorOnSurfaceVariant" />
+
+			<com.google.android.material.materialswitch.MaterialSwitch
+				android:id="@+id/switch_skip_sfx"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:minHeight="?android:listPreferredItemHeightSmall"
+				android:paddingStart="?android:listPreferredItemPaddingStart"
+				android:paddingEnd="?android:listPreferredItemPaddingEnd"
+				android:text="@string/translation_skip_sfx"
+				android:textAppearance="@style/TextAppearance.Kotatsu.GridTitle"
+				android:textColor="?colorOnSurfaceVariant" />
+
+			<com.google.android.material.materialswitch.MaterialSwitch
+				android:id="@+id/switch_filter_promo"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:minHeight="?android:listPreferredItemHeightSmall"
+				android:paddingStart="?android:listPreferredItemPaddingStart"
+				android:paddingEnd="?android:listPreferredItemPaddingEnd"
+				android:text="@string/translation_filter_promo"
+				android:textAppearance="@style/TextAppearance.Kotatsu.GridTitle"
+				android:textColor="?colorOnSurfaceVariant" />
+
+			<org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
+				android:id="@+id/button_clear_cache"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="@dimen/margin_small"
+				android:text="@string/translation_clear_cache"
+				app:drawableStartCompat="@drawable/ic_delete" />
+
+		</LinearLayout>
+
+	</androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

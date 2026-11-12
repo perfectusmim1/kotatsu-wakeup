@@ -77,6 +77,7 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.requireBody
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.domain.erase.ImageHider
+import org.koitharu.kotatsu.reader.domain.translate.ReaderTranslationCoordinator
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
 import java.util.LinkedList
@@ -99,10 +100,15 @@ class PageLoader @Inject constructor(
 	private val downloadSlowdownDispatcher: DownloadSlowdownDispatcher,
 	private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
 	val imageHider: ImageHider,
+	val translationCoordinator: ReaderTranslationCoordinator,
 	private val preloader: PagePreloader,
 ) {
 
 	val loaderScope = lifecycle.lifecycleScope + InternalErrorHandler() + Dispatchers.Default
+
+	init {
+		translationCoordinator.attachPageUriProvider { page -> loadPage(page, force = false) }
+	}
 
 	private val tasks = LongSparseArray<ProgressDeferred<Uri, Float>>()
 	private val slots = DownloadSlots()

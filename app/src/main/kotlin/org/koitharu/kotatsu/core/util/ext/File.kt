@@ -115,6 +115,18 @@ fun File.isReadable() = runCatching {
 	canRead()
 }.getOrDefault(false)
 
-fun File.isWriteable() = runCatching {
-	canWrite()
+fun File.isWriteable(): Boolean = runCatching {
+	if (!exists()) {
+		return@runCatching false
+	}
+	if (!isDirectory) {
+		return@runCatching canWrite()
+	}
+	var probe: File? = null
+	try {
+		probe = File.createTempFile(".kotatsu_write_test_", null, this)
+		probe.exists()
+	} finally {
+		probe?.delete()
+	}
 }.getOrDefault(false)

@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.favourites.data
 
 import android.database.DatabaseUtils.sqlEscapeString
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -170,6 +171,22 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 
 	@Query("SELECT COUNT(category_id) FROM favourites WHERE manga_id = :mangaId AND deleted_at = 0")
 	abstract suspend fun findCategoriesCount(mangaId: Long): Int
+
+	@Query(
+		"""SELECT f.manga_id, fc.icon FROM favourites f
+		INNER JOIN favourite_categories fc ON fc.category_id = f.category_id
+		WHERE f.manga_id IN (:mangaIds) AND f.deleted_at = 0 AND fc.deleted_at = 0
+		ORDER BY fc.show_in_lib DESC,
+		CASE WHEN fc.icon IS NOT NULL AND fc.icon != '' AND fc.icon != 'default' THEN 0 ELSE 1 END ASC,
+		fc.sort_key ASC,
+		f.created_at ASC""",
+	)
+	abstract suspend fun findFavouriteIcons(mangaIds: List<Long>): List<MangaFavouriteIcon>
+
+	data class MangaFavouriteIcon(
+		@ColumnInfo(name = "manga_id") val mangaId: Long,
+		@ColumnInfo(name = "icon") val icon: String?,
+	)
 
 	@Query("SELECT manga.source AS count FROM favourites LEFT JOIN manga ON manga.manga_id = favourites.manga_id GROUP BY manga.source ORDER BY COUNT(manga.source) DESC LIMIT :limit")
 	abstract suspend fun findPopularSources(limit: Int): List<String>

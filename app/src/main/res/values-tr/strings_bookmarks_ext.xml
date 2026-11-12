@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Yer imleri eklendi</string>
+	<string name="bookmarks_sort_newest">Son eklenen</string>
+	<string name="bookmarks_sort_oldest">İlk eklenen</string>
+	<string name="bookmarks_sort_chapter">Bölüm sırası</string>
+	<string name="search_bookmarks_hint">Seri veya bölüm ara</string>
+	<string name="search_bookmarked_chapters_hint">Yer imli bölümlerde ara</string>
+	<string name="no_bookmarks_matching_query">Eşleşen yer imi bulunamadı</string>
+	<string name="no_bookmarks_matching_summary">Mevcut arama ölçütüne uygun yer imi yok</string>
+	<string name="download_bookmarked_chapters">Yer imi olan bölümleri indir</string>
+	<string name="no_bookmarked_chapters_to_download">İndirilecek yer imli bölüm yok</string>
+	<string name="migrate_bookmarks">Yer imlerini başka kaynağa taşı</string>
+	<string name="bookmark_migration_choose_series">Taşınacak seriyi seçin</string>
+	<string name="bookmark_migration_searching">Aktif kaynaklarda aranıyor…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d kaynak · %3$d eşleşme</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d bölüm eşleşti</string>
+	<string name="bookmark_migration_total_chapters">%1$d bölüm</string>
+	<string name="bookmark_migration_no_candidates">Uyumlu kaynak bulunamadı</string>
+	<string name="bookmark_migration_no_candidates_summary">Etkin kaynaklarda bu seri ve yer imli bölümleriyle uyumlu sonuç bulunamadı</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s) serisindeki %1$d yer imi \"%4$s\" (%5$s) serisine taşınsın mı?\n%7$d yer imli bölümden %6$d tanesi eşleşti.</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s) serisindeki %1$d yer imi \"%4$s\" (%5$s) serisine taşınsın mı?\nBölümler okuma yüzdesine göre eşleştirilecek.</string>
+	<string name="bookmark_migration_success">Yer imleri %1$s kaynağına taşındı</string>
+	<string name="bookmark_migration_no_bookmarks">Bu seri için yer imi bulunamadı</string>
+	<string name="bookmark_migration_rescan">Yeniden tara</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Bölüm yok</string>
+	<string name="bookmarks_count_badge">%1$d yer imi</string>
+</resources>

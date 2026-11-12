@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.reader.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.annotation.AnyThread
 import androidx.annotation.MainThread
@@ -15,6 +16,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
@@ -39,6 +42,8 @@ import org.koitharu.kotatsu.core.exceptions.EmptyMangaException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.model.getPreferredBranch
+import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
+import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.nav.ReaderIntent
 import org.koitharu.kotatsu.core.os.AppShortcutManager
@@ -52,6 +57,7 @@ import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.firstNotNull
 import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
+import org.koitharu.kotatsu.core.util.ext.getParcelableExtraCompat
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.requireValue
 import org.koitharu.kotatsu.details.data.MangaDetails
@@ -77,6 +83,9 @@ import org.koitharu.kotatsu.parsers.util.sizeOrZero
 import org.koitharu.kotatsu.reader.domain.ChaptersLoader
 import org.koitharu.kotatsu.reader.domain.DetectReaderModeUseCase
 import org.koitharu.kotatsu.reader.domain.PageLoader
+import org.koitharu.kotatsu.reader.domain.translate.ReaderTranslationCoordinator
+import org.koitharu.kotatsu.reader.domain.translate.TranslationUiEvent
+import org.koitharu.kotatsu.reader.domain.translate.model.PageTranslationState
 import org.koitharu.kotatsu.reader.ui.config.ReaderSettings
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import org.koitharu.kotatsu.reader.ui.pager.ReaderUiState
@@ -122,7 +131,7 @@ class ReaderViewModel @Inject constructor(
     deleteLocalMangaUseCase = deleteLocalMangaUseCase,
     localStorageChanges = localStorageChanges,
 ) {
-    private val intent = MangaIntent(savedStateHandle)
+    private var intent = MangaIntent(savedStateHandle)
 
     private var loadingJob: Job? = null
     private var pageSaveJob: Job? = null
@@ -259,6 +268,58 @@ class ReaderViewModel @Inject constructor(
         loadImpl()
     }
 
+    fun onNewIntent(newIntent: Intent) {
+        val parsedIntent = MangaIntent(newIntent)
+        val newState: ReaderState? = newIntent.getParcelableExtraCompat(ReaderIntent.EXTRA_STATE)
+        val hasNewBranch = newIntent.hasExtra(ReaderIntent.EXTRA_BRANCH)
+        val newBranch = if (hasNewBranch) newIntent.getStringExtra(ReaderIntent.EXTRA_BRANCH) else null
+        if (newIntent.hasExtra(ReaderIntent.EXTRA_INCOGNITO)) {
+            val incognito = newIntent.getBooleanExtra(ReaderIntent.EXTRA_INCOGNITO, false)
+            isIncognitoMode.value = incognito
+            savedStateHandle[ReaderIntent.EXTRA_INCOGNITO] = incognito
+        }
+        val currentMangaId = getMangaOrNull()?.id ?: intent.mangaId
+        val incomingMangaId = parsedIntent.mangaId
+        val isDifferentManga = incomingMangaId != MangaIntent.ID_NONE && incomingMangaId != currentMangaId
+        if (isDifferentManga || mangaDetails.value == null) {
+            stateChangeJob?.cancel()
+            loadingJob?.cancel()
+            intent = parsedIntent
+            savedStateHandle[AppRouter.KEY_ID] = newIntent.getLongExtra(AppRouter.KEY_ID, MangaIntent.ID_NONE)
+            savedStateHandle[AppRouter.KEY_MANGA] = newIntent.getParcelableExtraCompat<ParcelableManga>(AppRouter.KEY_MANGA)
+            savedStateHandle[AppRouter.KEY_DATA] = newIntent.data
+            savedStateHandle[ReaderIntent.EXTRA_STATE] = newState
+            if (hasNewBranch) {
+                savedStateHandle[ReaderIntent.EXTRA_BRANCH] = newBranch
+            } else {
+                savedStateHandle.remove<String>(ReaderIntent.EXTRA_BRANCH)
+            }
+            readingState.value = null
+            mangaDetails.value = null
+            selectedBranch.value = newBranch
+            content.value = ReaderContent(emptyList(), null)
+            loadImpl()
+            return
+        }
+        if (newState != null) {
+            savedStateHandle[ReaderIntent.EXTRA_STATE] = newState
+            val chapter = chaptersLoader.peekChapter(newState.chapterId)
+            if (chapter != null && chapter.branch != selectedBranch.value) {
+                selectedBranch.value = chapter.branch
+                readingState.value = null
+                reload()
+            } else {
+                switchChapter(newState.chapterId, newState.page, newState.scroll)
+            }
+        } else if (hasNewBranch && newBranch != selectedBranch.value) {
+            savedStateHandle.remove<ReaderState>(ReaderIntent.EXTRA_STATE)
+            savedStateHandle[ReaderIntent.EXTRA_BRANCH] = newBranch
+            selectedBranch.value = newBranch
+            readingState.value = null
+            reload()
+        }
+    }
+
     fun onPause() {
         getMangaOrNull()?.let {
             statsCollector.onPause(it.id)
@@ -353,13 +414,26 @@ class ReaderViewModel @Inject constructor(
         }?.toMangaPage()
     }
 
-    fun switchChapter(id: Long, page: Int) {
+    fun switchChapter(id: Long, page: Int, scroll: Int = 0) {
         val prevJob = loadingJob
+        val prevStateJob = stateChangeJob
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
-            content.value = ReaderContent(emptyList(), null)
-            chaptersLoader.loadSingleChapter(id)
-            val newState = ReaderState(id, page, 0)
+            prevStateJob?.cancelAndJoin()
+            val newState = ReaderState(id, page, scroll)
+            val alreadyLoaded = chaptersLoader.hasPages(id) &&
+                content.value.pages.any { it.chapterId == id }
+            if (!alreadyLoaded) {
+                content.value = ReaderContent(emptyList(), null)
+                chaptersLoader.loadSingleChapter(id)
+            } else if (content.value.state == newState) {
+                contentLock.withLock {
+                    content.value = content.value.copy(state = null)
+                }
+                withContext(Dispatchers.Main) {}
+            }
+            readingState.value = newState
+            notifyStateChanged()
             publishPages(newState)
             saveCurrentState(newState)
         }
@@ -367,8 +441,10 @@ class ReaderViewModel @Inject constructor(
 
     fun switchChapterBy(delta: Int) {
         val prevJob = loadingJob
+        val prevStateJob = stateChangeJob
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
+            prevStateJob?.cancelAndJoin()
             val prevState = readingState.requireValue()
             val newChapterId = if (delta != 0) {
                 val allChapters = mangaDetails.requireValue().allChapters
@@ -388,10 +464,24 @@ class ReaderViewModel @Inject constructor(
                 page = if (delta == 0) prevState.page else 0,
                 scroll = if (delta == 0) prevState.scroll else 0,
             )
+            readingState.value = newState
+            notifyStateChanged()
             publishPages(newState)
             saveCurrentState(newState)
         }
     }
+
+    val translationCoordinator: ReaderTranslationCoordinator = pageLoader.translationCoordinator
+    val isTranslationEnabled: StateFlow<Boolean> = translationCoordinator.isEnabled
+    val translationBannerState: StateFlow<PageTranslationState?> = translationCoordinator.activeBannerState
+    val translationUiEvents: SharedFlow<TranslationUiEvent> = translationCoordinator.uiEvents
+
+    fun toggleTranslation(): Boolean = translationCoordinator.toggle()
+
+    fun setTranslationEnabled(
+        isEnabled: Boolean,
+        fromUserTap: Boolean = false,
+    ): Boolean = translationCoordinator.setEnabled(isEnabled, fromUserTap)
 
     @MainThread
     fun onCurrentPageChanged(lowerPos: Int, upperPos: Int) {
@@ -414,6 +504,7 @@ class ReaderViewModel @Inject constructor(
                 return@launchJob
             }
             ensureActive()
+            updateTranslationWindow(pages, lowerPos, upperPos)
             val autoLoadAllowed = readerMode.value != ReaderMode.WEBTOON || !isWebtoonPullGestureEnabled.value
             if (autoLoadAllowed) {
                 if (upperPos >= pages.lastIndex - BOUNDS_PAGE_OFFSET) {
@@ -429,21 +520,47 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    private fun updateTranslationWindow(pages: List<ReaderPage>, lowerPos: Int, upperPos: Int) {
+        if (pages.isEmpty()) {
+            translationCoordinator.updateReadingWindow(emptyList(), emptyList())
+            return
+        }
+        val safeLower = lowerPos.coerceIn(0, pages.lastIndex)
+        val safeUpper = upperPos.coerceIn(safeLower, pages.lastIndex)
+        val activePages = pages.subList(safeLower, safeUpper + 1).toList()
+        val prefetchStart = (safeUpper + 1).coerceAtMost(pages.size)
+        val prefetchEnd = (safeUpper + 1 + ReaderTranslationCoordinator.PREFETCH_PAGE_COUNT).coerceAtMost(pages.size)
+        val prefetchPages = if (prefetchStart < prefetchEnd) {
+            pages.subList(prefetchStart, prefetchEnd).toList()
+        } else {
+            emptyList()
+        }
+        translationCoordinator.updateReadingWindow(activePages, prefetchPages)
+    }
+
     fun toggleBookmark() {
         if (bookmarkJob?.isActive == true) {
             return
         }
+        val liveState = getCurrentState()
         bookmarkJob = launchJob(Dispatchers.Default) {
             loadingJob?.join()
-            val state = checkNotNull(getCurrentState())
-            if (isBookmarkAdded.value) {
-                val manga = requireManga()
+            val state = liveState?.takeIf { candidate ->
+                content.value.pages.any { it.chapterId == candidate.chapterId }
+            } ?: getCurrentState() ?: return@launchJob
+            val manga = requireManga()
+            val isAdded = bookmarksRepository.observeBookmark(manga, state.chapterId, state.page).first() != null
+            if (isAdded) {
                 bookmarksRepository.removeBookmark(manga.id, state.chapterId, state.page)
                 onShowToast.call(R.string.bookmark_removed)
             } else {
-                val page = checkNotNull(getCurrentPage()) { "Page not found" }
+                val page = checkNotNull(
+                    content.value.pages.find {
+                        it.chapterId == state.chapterId && it.index == state.page
+                    }?.toMangaPage(),
+                ) { "Page not found" }
                 val bookmark = Bookmark(
-                    manga = requireManga(),
+                    manga = manga,
                     pageId = page.id,
                     chapterId = state.chapterId,
                     page = state.page,
@@ -455,6 +572,7 @@ class ReaderViewModel @Inject constructor(
                 bookmarksRepository.addBookmark(bookmark)
                 onShowToast.call(R.string.bookmark_added)
             }
+            notifyStateChanged()
         }
     }
 
@@ -558,7 +676,17 @@ class ReaderViewModel @Inject constructor(
      * for good, as nothing is going to change again to correct it.
      */
     private suspend fun publishPages(state: ReaderState?) = contentLock.withLock {
-        content.value = ReaderContent(chaptersLoader.snapshot(), state)
+        val snapshot = chaptersLoader.snapshot()
+        content.value = ReaderContent(snapshot, state)
+        if (state != null && snapshot.isNotEmpty()) {
+            var idx = snapshot.indexOfFirst { it.chapterId == state.chapterId && it.index == state.page }
+            if (idx < 0) {
+                idx = snapshot.indexOfFirst { it.chapterId == state.chapterId }
+            }
+            if (idx >= 0) {
+                updateTranslationWindow(snapshot, idx, idx)
+            }
+        }
     }
 
     @AnyThread

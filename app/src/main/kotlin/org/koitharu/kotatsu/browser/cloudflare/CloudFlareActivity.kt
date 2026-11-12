@@ -10,6 +10,7 @@ import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.core.net.toUri
 import androidx.core.view.doOnLayout
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
@@ -23,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.yield
+import okhttp3.Cookie
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
@@ -31,16 +33,20 @@ import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.MangaSource
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.network.cookies.AndroidCookieJar
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.network.webview.CF_STATE_JS
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
+import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.parsers.config.ConfigKey
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.network.CloudFlareHelper
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
+import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -52,11 +58,13 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 
 	private var pendingResult = RESULT_CANCELED
 	private val isAutoResolve: Boolean by lazy { intent?.getBooleanExtra(EXTRA_AUTO_RESOLVE, false) == true }
-	private var resultNotified = false
-	private val autoRecreateCount: Int by lazy {
-		intent?.getIntExtra(EXTRA_AUTO_RECREATE_COUNT, 0) ?: 0
+	private val isEscalatedFromHidden: Boolean by lazy {
+		intent?.getBooleanExtra(EXTRA_ESCALATED_FROM_HIDDEN, false) == true
 	}
-	private var recreateRequested = false
+	private var resultNotified = false
+	private var escalationRequested = false
+	private var mangaSource: MangaSource = UnknownMangaSource
+	private var repository: ParserMangaRepository? = null
 	private var clearanceAtLaunch: String? = null
 	private var clearanceUpdateObservedAt = 0L
 	private var challengeStartedAt = 0L
@@ -76,6 +84,8 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	private lateinit var cfClient: CloudFlareClient
 
 	override fun onCreate2(savedInstanceState: Bundle?, source: MangaSource, repository: ParserMangaRepository?) {
+		this.mangaSource = source
+		this.repository = repository
 		if (isHiddenAutoResolveActivity) {
 			isHiddenPresentation = true
 			// Keep the window focused and the WebView rendered: Turnstile treats a non-focused or
@@ -89,6 +99,9 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			}
 		} else {
 			setDisplayHomeAsUp(isEnabled = true, showUpAsClose = true)
+			if (isAutoResolve) {
+				captchaAutoResolveCoordinator.registerInteractiveActivity(this)
+			}
 		}
 		val url = intent?.dataString
 		if (url.isNullOrEmpty()) {
@@ -117,8 +130,8 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			} catch (e: Exception) {
 				Snackbar.make(viewBinding.webView, e.getDisplayMessage(resources), Snackbar.LENGTH_LONG).show()
 			}
-			if (savedInstanceState == null || autoRecreateCount > 0) {
-				if (isAutoResolve && autoRecreateCount == 0) {
+			if (savedInstanceState == null) {
+				if (isAutoResolve && !isEscalatedFromHidden) {
 					url.toHttpUrlOrNull()?.let {
 						clearRejectedClearance(it)
 						CookieManager.getInstance().flush()
@@ -168,15 +181,22 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		setResult(pendingResult)
 		// In auto-resolve mode the originating Fragment / Activity may already be dead, so its
 		// ActivityResultLauncher won't deliver the result. Notify the singleton coordinator instead so
-		// the result reaches every screen that's still awaiting it.
-		if (isAutoResolve && !resultNotified) {
-			resultNotified = true
-			val sourceName = intent?.getStringExtra(AppRouter.KEY_SOURCE)
-			if (sourceName != null) {
-				captchaAutoResolveCoordinator.notifyResolveResult(
-					MangaSource(sourceName),
-					pendingResult == RESULT_OK,
-				)
+		// the result reaches every screen that's still awaiting it. Do NOT report failure if we are
+		// handing off to visible CloudFlareActivity.
+		if (!escalationRequested && !resultNotified) {
+			val targetSource = mangaSource.takeUnless { it == UnknownMangaSource }
+				?: intent?.getStringExtra(AppRouter.KEY_SOURCE)?.let(::MangaSource)
+			if (targetSource != null) {
+				if (isAutoResolve) {
+					resultNotified = true
+					captchaAutoResolveCoordinator.notifyResolveResult(
+						targetSource,
+						pendingResult == RESULT_OK,
+					)
+				} else if (pendingResult == RESULT_OK) {
+					resultNotified = true
+					captchaAutoResolveCoordinator.notifyManualResolveSuccess(targetSource)
+				}
 			}
 		}
 		super.finish()
@@ -186,12 +206,13 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		(this as? CloudFlareHiddenActivity)?.let {
 			captchaAutoResolveCoordinator.unregisterHiddenActivity(it)
 		}
+		captchaAutoResolveCoordinator.unregisterInteractiveActivity(this)
 		super.onDestroy()
 	}
 
 	/** True only while this same WebView should remain invisible and at the top of the task. */
 	fun shouldStayHiddenAndFocused(): Boolean =
-		isAutoResolve && isHiddenPresentation && !isFinishing && !isDestroyed
+		isAutoResolve && isHiddenPresentation && !escalationRequested && !isFinishing && !isDestroyed
 
 	/** Cancels the automatic session without leaving a hidden Activity or WebView behind. */
 	fun cancelAutomaticResolve() {
@@ -209,7 +230,12 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	 * the resolve loop would time out against a WebView that never navigated at all.
 	 */
 	private suspend fun awaitChallengeViewport() {
-		val focusDeadline = System.currentTimeMillis() + VIEWPORT_FOCUS_TIMEOUT_MS
+		val focusTimeout = if (isHiddenAutoResolveActivity) {
+			HIDDEN_VIEWPORT_FOCUS_TIMEOUT_MS
+		} else {
+			VIEWPORT_FOCUS_TIMEOUT_MS
+		}
+		val focusDeadline = System.currentTimeMillis() + focusTimeout
 		while (!viewBinding.webView.hasWindowFocus() && System.currentTimeMillis() < focusDeadline) {
 			delay(VIEWPORT_POLL_INTERVAL_MS)
 		}
@@ -231,48 +257,29 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 
 	override fun onLoopDetected() = Unit
 
-	// Record profile priming now, but recreate only if the parent page remains challenged after a grace period.
 	override fun onCheckPassed() {
-		if (isAutoResolve && autoRecreateCount < MAX_AUTO_RECREATE_COUNT) {
-			markClearanceUpdateObserved()
-		}
+		markClearanceUpdateObserved()
 	}
 
 	/**
-	 * Drives the visible auto-resolve to completion. Runs on the main thread, so WebView calls are safe.
-	 *
-	 * The target page must report [CF_STATE_JS] == "ok" for several consecutive probes. Requiring a
-	 * stable page avoids accepting the short DOM gap between two managed-challenge stages.
-	 *
-	 * The page-state probe is a passive, read-only DOM query of the parent challenge page (it cannot reach
-	 * into Turnstile's cross-origin iframe), so polling it does not perturb the challenge.
+	 * Drives the challenge solver loop:
+	 * - In [CloudFlareHiddenActivity], polls cleanly for up to ~3.5s; if an interactive Turnstile /
+	 *   checkbox challenge or error page appears, or if `cf_clearance` is not acquired in time,
+	 *   escalates seamlessly to visible [CloudFlareActivity].
+	 * - In visible [CloudFlareActivity], waits patiently for user completion without recreating or
+	 *   timing out, and auto-completes as soon as the loaded page passes verification.
 	 */
 	private suspend fun runResolveLoop() {
-		val budget = if (autoRecreateCount < MAX_AUTO_RECREATE_COUNT) {
-			AUTO_RETRY_DELAY_MS
-		} else {
-			MANUAL_FALLBACK_DELAY_MS
-		}
 		var consecutivePasses = 0
-		val requiredStablePasses = if (isHiddenAutoResolveActivity && autoRecreateCount > 0) {
-			HIDDEN_RECREATED_STABLE_PASSES
-		} else {
-			REQUIRED_STABLE_PASSES
-		}
+		var consecutiveCheckboxes = 0
+		var consecutiveWidgets = 0
+		var clearanceAcquiredAt = 0L
 		while (true) {
 			delay(RESOLVE_POLL_INTERVAL_MS)
 			// Nothing is loading yet, so no deadline may run.
 			val startedAt = challengeStartedAt
 			if (startedAt == 0L) {
 				continue
-			}
-			if (isAutoResolve && autoRecreateCount < MAX_AUTO_RECREATE_COUNT) {
-				val clearance = intent.dataString?.let {
-					CloudFlareHelper.getClearanceCookie(cookieJar, it)
-				}
-				if (clearance != null && clearance != clearanceAtLaunch) {
-					markClearanceUpdateObserved()
-				}
 			}
 			val challengeState = probeChallengeState()
 			if (challengeState != lastChallengeState) {
@@ -284,41 +291,70 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			}
 			if (challengeState == CF_STATE_OK) {
 				consecutivePasses++
-				if (consecutivePasses >= requiredStablePasses) {
+				consecutiveCheckboxes = 0
+				consecutiveWidgets = 0
+				if (consecutivePasses >= REQUIRED_STABLE_PASSES) {
 					finishSuccess()
 					return
 				}
-			} else {
-				consecutivePasses = 0
-				val now = System.currentTimeMillis()
-				val retryAt = startedAt + budget
-				if (
-					clearanceUpdateObservedAt != 0L &&
-					now - clearanceUpdateObservedAt >= CLEARANCE_RECREATE_GRACE_MS
-				) {
-					requestAutoRecreate("clearance updated but challenge remained")
-					return
+				continue
+			}
+			consecutivePasses = 0
+
+			if (!isHiddenAutoResolveActivity) {
+				continue
+			}
+
+			if (challengeState == CF_STATE_ERROR) {
+				escalateToInteractive("challenge error page")
+				return
+			}
+
+			when (probeInteractiveChallenge()) {
+				CF_INTERACTIVE_CHECKBOX -> {
+					consecutiveCheckboxes++
+					consecutiveWidgets = 0
+					if (consecutiveCheckboxes >= REQUIRED_CHECKBOX_PROBES) {
+						escalateToInteractive("interactive checkbox detected")
+						return
+					}
 				}
-				if (
-					isAutoResolve &&
-					autoRecreateCount < MAX_AUTO_RECREATE_COUNT &&
-					now >= retryAt
-				) {
-					requestAutoRecreate("profile warm-up timeout")
-					return
+
+				CF_INTERACTIVE_WIDGET -> {
+					consecutiveWidgets++
+					consecutiveCheckboxes = 0
+					if (consecutiveWidgets >= REQUIRED_WIDGET_PROBES) {
+						escalateToInteractive("interactive Turnstile widget stayed visible")
+						return
+					}
 				}
-				if (
-					isAutoResolve &&
-					autoRecreateCount >= MAX_AUTO_RECREATE_COUNT &&
-					isHiddenPresentation &&
-					now >= retryAt
-				) {
-					revealForManualCompletion()
+
+				else -> {
+					consecutiveCheckboxes = 0
+					consecutiveWidgets = 0
+				}
+			}
+
+			val now = System.currentTimeMillis()
+			val elapsed = now - startedAt
+			val hasClearance = hasClearanceCookie()
+			if (hasClearance && clearanceAcquiredAt == 0L) {
+				clearanceAcquiredAt = now
+				markClearanceUpdateObserved()
+			}
+			if (elapsed >= HIDDEN_AUTO_RESOLVE_TIMEOUT_MS) {
+				val withinRedirectGrace = hasClearance &&
+					(now - clearanceAcquiredAt) < CLEARANCE_REDIRECT_GRACE_MS &&
+					elapsed < HIDDEN_AUTO_RESOLVE_MAX_BUDGET_MS
+				if (!withinRedirectGrace) {
+					escalateToInteractive(
+						if (hasClearance) "clearance redirect timeout" else "hidden auto-resolve timeout (${elapsed}ms)",
+					)
+					return
 				}
 			}
 		}
 	}
-
 
 	private fun markClearanceUpdateObserved() {
 		if (clearanceUpdateObservedAt == 0L) {
@@ -326,27 +362,40 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		}
 	}
 
-	private fun requestAutoRecreate(reason: String) {
-		if (recreateRequested || autoRecreateCount >= MAX_AUTO_RECREATE_COUNT) return
-		recreateRequested = true
+	private fun escalateToInteractive(reason: String) {
+		if (escalationRequested || pendingResult == RESULT_OK || isFinishing || isDestroyed) return
+		escalationRequested = true
 		resolveJob?.cancel()
+		viewBinding.webView.stopLoading()
 		CookieManager.getInstance().flush()
-		Log.d(TAG, "Recreating automatic challenge after $reason with preserved browser profile")
-		intent.putExtra(EXTRA_AUTO_RECREATE_COUNT, autoRecreateCount + 1)
-		recreate()
+		Log.d(TAG, "Escalating hidden Cloudflare challenge to visible window: $reason")
+		val sourceName = mangaSource.takeUnless { it == UnknownMangaSource }?.name
+			?: intent?.getStringExtra(AppRouter.KEY_SOURCE)
+		if (sourceName != null) {
+			captchaAutoResolveCoordinator.markEscalatingToInteractive(MangaSource(sourceName))
+		}
+		val targetIntent = Intent(this, CloudFlareActivity::class.java).apply {
+			data = intent?.data ?: intent?.dataString?.toUri()
+			if (sourceName != null) {
+				putExtra(AppRouter.KEY_SOURCE, sourceName)
+			}
+			intent?.getStringExtra(AppRouter.KEY_USER_AGENT)?.let {
+				putExtra(AppRouter.KEY_USER_AGENT, it)
+			}
+			putExtra(EXTRA_AUTO_RESOLVE, isAutoResolve)
+			putExtra(EXTRA_ESCALATED_FROM_HIDDEN, true)
+			addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+		}
+		try {
+			startActivity(targetIntent)
+			finish()
+		} catch (e: Exception) {
+			e.printStackTraceDebug()
+			escalationRequested = false
+			finishAfterTransition()
+		}
 	}
 
-	/** Falls back to manual completion without discarding the warmed browser profile or WebView. */
-	private fun revealForManualCompletion() {
-		if (!isHiddenPresentation) return
-		isHiddenPresentation = false
-		viewBinding.root.alpha = 1f
-		viewBinding.appbar.isGone = false
-		window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
-		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = true)
-		invalidateOptionsMenu()
-		Log.d(TAG, "Automatic challenge needs user interaction; revealing the existing solver")
-	}
 	private suspend fun probeChallengeState(): String = suspendCancellableCoroutine { cont ->
 		viewBinding.webView.evaluateJavascript(CF_STATE_JS) { raw ->
 			if (cont.isActive) {
@@ -355,14 +404,46 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		}
 	}
 
+	private suspend fun probeInteractiveChallenge(): String = suspendCancellableCoroutine { cont ->
+		viewBinding.webView.evaluateJavascript(CF_INTERACTIVE_JS) { raw ->
+			if (cont.isActive) {
+				cont.resume(raw?.removeSurrounding("\"") ?: CF_INTERACTIVE_NONE)
+			}
+		}
+	}
+
+	private fun hasClearanceCookie(): Boolean {
+		val targetUrl = intent?.dataString ?: return false
+		val jarClearance = CloudFlareHelper.getClearanceCookie(cookieJar, targetUrl)
+		if (!jarClearance.isNullOrEmpty() && jarClearance != clearanceAtLaunch) {
+			return true
+		}
+		val cm = CookieManager.getInstance()
+		for (rawUrl in listOfNotNull(targetUrl, viewBinding.webView.url).distinct()) {
+			val httpUrl = rawUrl.toHttpUrlOrNull() ?: continue
+			val rawCookies = cm.getCookie(rawUrl) ?: continue
+			val cfCookie = rawCookies.split(';').firstNotNullOfOrNull { part ->
+				Cookie.parse(httpUrl, part.trim())?.takeIf {
+					it.name == CLEARANCE_COOKIE_NAME && it.value.isNotEmpty()
+				}
+			}
+			if (cfCookie != null && cfCookie.value != clearanceAtLaunch) {
+				return true
+			}
+		}
+		return false
+	}
+
 	private fun finishSuccess() {
-		if (pendingResult == RESULT_OK) return
+		if (pendingResult == RESULT_OK || escalationRequested) return
 		pendingResult = RESULT_OK
 		resolveJob?.cancel()
+		val webViewUserAgent = viewBinding.webView.settings.userAgentString?.nullIfEmpty()
+		val urls = listOfNotNull(intent?.dataString, viewBinding.webView.url).distinct()
 		lifecycleScope.launch {
-			// Persist the final cookie state before the Activity destroys the WebView and before the
-			// parser retries its OkHttp request.
-			CookieManager.getInstance().flush()
+			// Sync both WebView cookies and the exact WebView User-Agent before closing the Activity
+			// so the retrying OkHttp request presents the same clearance + UA pair.
+			persistCookiesAndUserAgent(urls, webViewUserAgent)
 			val source = intent?.getStringExtra(AppRouter.KEY_SOURCE)
 			if (source != null) {
 				runCatchingCancellable {
@@ -372,6 +453,35 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 				}
 			}
 			finishAfterTransition()
+		}
+	}
+
+	private suspend fun persistCookiesAndUserAgent(
+		urls: List<String>,
+		webViewUserAgent: String?,
+	) = runInterruptible(Dispatchers.IO) {
+		val cookieManager = CookieManager.getInstance()
+		cookieManager.flush()
+		if (cookieJar !is AndroidCookieJar) {
+			for (rawUrl in urls) {
+				val httpUrl = rawUrl.toHttpUrlOrNull() ?: continue
+				val rawCookies = cookieManager.getCookie(rawUrl) ?: continue
+				val cookies = rawCookies.split(';').mapNotNull { part ->
+					Cookie.parse(httpUrl, part.trim())
+				}
+				if (cookies.isNotEmpty()) {
+					cookieJar.saveFromResponse(httpUrl, cookies)
+				}
+			}
+		}
+		val targetSource = mangaSource.takeUnless { it == UnknownMangaSource }
+		if (targetSource != null && !webViewUserAgent.isNullOrEmpty()) {
+			runCatching {
+				val config = repository?.getConfig() ?: SourceSettings(this@CloudFlareActivity, targetSource)
+				config.cloudFlareUserAgent = webViewUserAgent
+			}.onFailure {
+				it.printStackTraceDebug()
+			}
 		}
 	}
 
@@ -397,16 +507,37 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		}
 	}
 
-	private suspend fun clearRejectedClearance(url: HttpUrl) = runInterruptible(Dispatchers.Default) {
+	private suspend fun clearRejectedClearance(url: HttpUrl) = runInterruptible(Dispatchers.IO) {
 		cookieJar.removeCookies(url) { cookie ->
 			cookie.name == CLEARANCE_COOKIE_NAME
 		}
+		if (cookieJar !is AndroidCookieJar) {
+			expireWebViewCookies(url) { it.name == CLEARANCE_COOKIE_NAME }
+		}
 	}
 
-	private suspend fun clearCfCookies(url: HttpUrl) = runInterruptible(Dispatchers.Default) {
+	private suspend fun clearCfCookies(url: HttpUrl) = runInterruptible(Dispatchers.IO) {
 		cookieJar.removeCookies(url) { cookie ->
 			CloudFlareHelper.isCloudFlareCookie(cookie.name)
 		}
+		if (cookieJar !is AndroidCookieJar) {
+			expireWebViewCookies(url) { CloudFlareHelper.isCloudFlareCookie(it.name) }
+		}
+	}
+
+	private fun expireWebViewCookies(url: HttpUrl, predicate: (Cookie) -> Boolean) {
+		val cm = CookieManager.getInstance()
+		val urlString = url.toString()
+		val raw = cm.getCookie(urlString) ?: return
+		val expiredAt = System.currentTimeMillis() - 100_000L
+		for (part in raw.split(';')) {
+			val cookie = Cookie.parse(url, part.trim()) ?: continue
+			if (predicate(cookie)) {
+				val expired = cookie.newBuilder().expiresAt(expiredAt).build()
+				cm.setCookie(urlString, expired.toString())
+			}
+		}
+		cm.flush()
 	}
 
 	/**
@@ -421,19 +552,18 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	 * interstitial reloads itself with a fresh ray id, and the solver loops forever no matter how long
 	 * it is given.
 	 *
-	 * The clearance cookie is bound to the User-Agent that earned it, so the fix has to keep OkHttp in
-	 * step. Writing the source's [ConfigKey.UserAgent] would not do it: parsers like HotComics build
-	 * `getRequestHeaders()` from a hard-coded constant and never read that key back, so the agent is
-	 * recorded in [SourceSettings.cloudFlareUserAgent] instead and forced on by `CommonHeadersInterceptor`.
-	 * Only genuinely inconsistent overrides are touched — a source whose agent already matches the
-	 * engine is left exactly as it is.
+	 * The clearance cookie is bound to the User-Agent that earned it, so [finishSuccess] also records the
+	 * WebView's actual User-Agent in [SourceSettings.cloudFlareUserAgent] for `CommonHeadersInterceptor`.
 	 */
 	private fun alignUserAgentWithEngine(repository: ParserMangaRepository?) {
 		if (repository == null) return
 		val engineUserAgent = runCatching { WebSettings.getDefaultUserAgent(this) }.getOrNull()
 		if (engineUserAgent.isNullOrEmpty() || ANDROID_UA_TOKEN !in engineUserAgent) return
 		val currentUserAgent = viewBinding.webView.settings.userAgentString
-		if (currentUserAgent.isNullOrEmpty() || ANDROID_UA_TOKEN in currentUserAgent) return
+		if (currentUserAgent.isNullOrEmpty()) return
+		val isNonAndroidUa = ANDROID_UA_TOKEN !in currentUserAgent
+		val isNonChromiumMobileUa = "Firefox/" in currentUserAgent || "FxiOS" in currentUserAgent || "Gecko/" in currentUserAgent
+		if (!isNonAndroidUa && !isNonChromiumMobileUa) return
 		Log.w(
 			TAG,
 			"Configured User-Agent contradicts the WebView engine, realigning so the challenge can pass." +
@@ -486,20 +616,63 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 
 		const val TAG = "CloudFlareActivity"
 		const val EXTRA_AUTO_RESOLVE = "auto_resolve"
+		private const val EXTRA_ESCALATED_FROM_HIDDEN = "escalated_from_hidden"
 		private const val VIEWPORT_POLL_INTERVAL_MS = 16L
 		private const val VIEWPORT_FOCUS_TIMEOUT_MS = 2_000L
-		private const val EXTRA_AUTO_RECREATE_COUNT = "auto_recreate_count"
-		private const val RESOLVE_POLL_INTERVAL_MS = 800L
-		private const val AUTO_RETRY_DELAY_MS = 6_000L
-		private const val MANUAL_FALLBACK_DELAY_MS = 15_000L
-		private const val CLEARANCE_RECREATE_GRACE_MS = 500L
-		private const val REQUIRED_STABLE_PASSES = 3
-		private const val MAX_AUTO_RECREATE_COUNT = 1
+		private const val HIDDEN_VIEWPORT_FOCUS_TIMEOUT_MS = 500L
+		private const val RESOLVE_POLL_INTERVAL_MS = 350L
+		private const val HIDDEN_AUTO_RESOLVE_TIMEOUT_MS = 3_500L
+		private const val CLEARANCE_REDIRECT_GRACE_MS = 1_200L
+		private const val HIDDEN_AUTO_RESOLVE_MAX_BUDGET_MS =
+			HIDDEN_AUTO_RESOLVE_TIMEOUT_MS + CLEARANCE_REDIRECT_GRACE_MS
+		private const val REQUIRED_STABLE_PASSES = 2
+		private const val REQUIRED_CHECKBOX_PROBES = 2
+		private const val REQUIRED_WIDGET_PROBES = 6
 		private const val CLEARANCE_COOKIE_NAME = "cf_clearance"
-		private const val HIDDEN_RECREATED_STABLE_PASSES = 1
 		private const val HIDDEN_RENDER_ALPHA = 0.01f
 		private const val CF_STATE_OK = "ok"
 		private const val CF_STATE_WAIT = "wait"
+		private const val CF_STATE_ERROR = "error"
+		private const val CF_INTERACTIVE_NONE = "none"
+		private const val CF_INTERACTIVE_CHECKBOX = "checkbox"
+		private const val CF_INTERACTIVE_WIDGET = "widget"
 		private const val ANDROID_UA_TOKEN = "Android"
+
+		private const val CF_INTERACTIVE_JS = """
+			(function(){
+				try {
+					var checkboxes = document.querySelectorAll(
+						'input[type="checkbox"], [role="checkbox"], .ctp-checkbox-label, .cf-turnstile-wrapper input'
+					);
+					for (var i = 0; i < checkboxes.length; i++) {
+						var el = checkboxes[i];
+						var style = window.getComputedStyle(el);
+						if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
+						var rect = el.getBoundingClientRect();
+						if (rect.width > 0 && rect.height > 0) return 'checkbox';
+					}
+					var iframes = document.querySelectorAll('iframe');
+					for (var j = 0; j < iframes.length; j++) {
+						var frame = iframes[j];
+						var fStyle = window.getComputedStyle(frame);
+						if (fStyle.display === 'none' || fStyle.visibility === 'hidden' || fStyle.opacity === '0') continue;
+						var fRect = frame.getBoundingClientRect();
+						if (fRect.width < 120 || fRect.height < 40) continue;
+						var src = (frame.src || '').toLowerCase();
+						var title = (frame.title || '').toLowerCase();
+						var inChallenge = frame.closest && frame.closest('#turnstile-wrapper, .cf-turnstile, #challenge-stage');
+						if (src.indexOf('challenges.cloudflare.com') !== -1 ||
+							src.indexOf('turnstile') !== -1 ||
+							title.indexOf('cloudflare') !== -1 ||
+							title.indexOf('checkbox') !== -1 ||
+							title.indexOf('captcha') !== -1 ||
+							inChallenge) {
+							return 'widget';
+						}
+					}
+					return 'none';
+				} catch (e) { return 'none'; }
+			})()
+		"""
 	}
 }

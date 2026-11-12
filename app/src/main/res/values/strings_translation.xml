@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Translation settings</string>
+	<string name="translation_toggle">Toggle translation</string>
+	<string name="translation_enable">Enable translation</string>
+	<string name="translation_disable">Disable translation</string>
+	<string name="translation_active">Active</string>
+	<string name="translation_off">Off</string>
+	<string name="translation_provider">Translation provider</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_source_lang">Source language (OCR)</string>
+	<string name="translation_target_lang">Target language</string>
+	<string name="translation_api_keys">Gemini API keys</string>
+	<string name="translation_api_keys_hint">Separate multiple keys with commas or new lines</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d active key configured</item>
+		<item quantity="other">%1$d active keys configured</item>
+	</plurals>
+	<string name="translation_api_keys_empty">No API key configured</string>
+	<string name="translation_api_key_required">Add a Gemini API key or switch to Google Translate</string>
+	<string name="translation_auto_translate">Auto-translate pages</string>
+	<string name="translation_skip_sfx">Skip sound effects</string>
+	<string name="translation_filter_promo">Skip promo &amp; credits pages</string>
+	<string name="translation_ocr_ready">OCR model ready</string>
+	<string name="translation_ocr_not_downloaded">OCR model downloads on first use</string>
+	<string name="translation_ocr_download">Download model</string>
+	<string name="translation_ocr_downloading">Downloading OCR model… %1$d%%</string>
+	<string name="translation_ocr_running">Recognizing text…</string>
+	<string name="translation_translating_text">Translating…</string>
+	<string name="translation_rendering_page">Rendering page…</string>
+	<string name="translation_clear_cache">Clear translation cache</string>
+	<string name="translation_cache_cleared">Translation cache cleared</string>
+	<string name="translation_cache_cleared_size">Cleared %1$s of cached translations</string>
+	<string name="translation_error_generic">Translation failed: %1$s</string>
+</resources>

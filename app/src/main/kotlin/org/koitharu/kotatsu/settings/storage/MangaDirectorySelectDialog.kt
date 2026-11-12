@@ -66,6 +66,11 @@ class MangaDirectorySelectDialog : AlertDialogFragment<DialogDirectorySelectBind
 		viewModel.items.observe(viewLifecycleOwner) { adapter.items = it }
 		viewModel.onDismissDialog.observeEvent(viewLifecycleOwner) { dismiss() }
 		viewModel.onPickDirectory.observeEvent(viewLifecycleOwner) { pickCustomDirectory() }
+		viewModel.onFallbackDirectorySelected.observeEvent(viewLifecycleOwner) { message ->
+			context?.applicationContext?.let { appContext ->
+				Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
+			}
+		}
 		viewModel.onError.observeEvent(viewLifecycleOwner, ToastErrorObserver(binding.root, this))
 	}
 

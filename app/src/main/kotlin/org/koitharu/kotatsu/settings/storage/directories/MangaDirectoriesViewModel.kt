@@ -13,6 +13,7 @@ import org.koitharu.kotatsu.core.util.ext.computeSize
 import org.koitharu.kotatsu.core.util.ext.isReadable
 import org.koitharu.kotatsu.core.util.ext.isWriteable
 import org.koitharu.kotatsu.local.data.LocalStorageManager
+import org.koitharu.kotatsu.parsers.exception.ContentUnavailableException
 import java.io.File
 import javax.inject.Inject
 
@@ -36,14 +37,28 @@ class MangaDirectoriesViewModel @Inject constructor(
     fun onCustomDirectoryPicked(uri: Uri) {
         launchLoadingJob(Dispatchers.Default) {
             loadingJob?.cancelAndJoin()
-            storageManager.takePermissions(uri)
+            storageManager.tryTakePermissions(uri)
             val dir = storageManager.resolveUri(uri)
-            if (!dir.canRead()) {
-                throw AccessDeniedException(dir)
+            val appDirs = storageManager.getApplicationStorageDirs()
+            if (dir.isWriteable()) {
+                if (dir !in appDirs) {
+                    settings.userSpecifiedMangaDirectories += dir
+                    storageManager.setDirIsNoMediaSafe(dir)
+                    loadList()
+                }
+                return@launchLoadingJob
             }
-            if (dir !in storageManager.getApplicationStorageDirs()) {
+            val fallbackDir = storageManager.findWriteableAppExternalDirForVolume(dir)
+            if (dir.isReadable() && dir !in appDirs) {
                 settings.userSpecifiedMangaDirectories += dir
                 loadList()
+            }
+            if (fallbackDir != null) {
+                throw ContentUnavailableException(
+                    storageManager.getSdCardWriteGuidanceMessage(dir, fallbackDir),
+                )
+            } else {
+                throw AccessDeniedException(dir)
             }
         }
     }
@@ -90,6 +105,6 @@ class MangaDirectoriesViewModel @Inject constructor(
         isAccessible = isReadable() && isWriteable(),
         isAppPrivate = isAppPrivate,
         size = computeSize(),
-        available = StatFs(this.absolutePath).availableBytes,
+        available = runCatching { StatFs(this.absolutePath).availableBytes }.getOrDefault(0L),
     )
 }

@@ -1,5 +1,6 @@
 package org.koitharu.kotatsu.list.ui.model
 
+import org.koitharu.kotatsu.core.model.FavouriteIcon
 import org.koitharu.kotatsu.core.ui.model.MangaOverride
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.list.domain.ReadingProgress
@@ -17,6 +18,7 @@ data class MangaDetailedListModel(
 	val isSaved: Boolean,
 	val tags: List<ChipsView.ChipModel>,
 	val isPinned: Boolean = false,
+	val favouriteIcon: FavouriteIcon? = null,
 ) : MangaListModel() {
 
 	override fun getChangePayload(previousState: ListModel): Any? = when {
@@ -24,6 +26,7 @@ data class MangaDetailedListModel(
 
 		previousState.progress != progress -> PAYLOAD_PROGRESS_CHANGED
 		previousState.isFavorite != isFavorite ||
+			previousState.favouriteIcon != favouriteIcon ||
 			previousState.isSaved != isSaved ||
 			previousState.isPinned != isPinned -> PAYLOAD_ANYTHING_CHANGED
 

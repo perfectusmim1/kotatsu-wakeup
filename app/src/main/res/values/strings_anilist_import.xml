@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Import from AniList</string>
+	<string name="anilist_import_mode_label">Import destination</string>
+	<string name="anilist_import_by_status">By status</string>
+	<string name="anilist_import_single_category">Single category</string>
+	<string name="anilist_import_new_category">New category</string>
+	<string name="anilist_import_new_category_hint">Category name</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Loading your AniList library…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Completed (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Imported: %1$d · Existing: %2$d · Unmatched: %3$d</string>
+	<string name="anilist_import_empty">Your AniList manga list is empty.</string>
+	<string name="anilist_import_unmatched_title">Unmatched titles</string>
+	<string name="anilist_import_start">Start import</string>
+	<string name="anilist_import_retry">Import again</string>
+	<string name="anilist_import_error_no_sources">Enable at least one manga source before importing.</string>
+</resources>

@@ -76,12 +76,33 @@ abstract class BasePageHolder<B : ViewBinding>(
 	var boundData: ReaderPage? = null
 		private set
 
+	private var pendingSwapScale: Float? = null
+	private var pendingSwapCenter: android.graphics.PointF? = null
+
 	init {
 		lifecycleScope.launch(Dispatchers.Main) {
 			ssiv.bindToLifecycle(this@BasePageHolder)
 			ssiv.isEagerLoadingEnabled = !context.isLowRamDevice()
 			ssiv.addOnImageEventListener(viewModel)
 			ssiv.addOnImageEventListener(this@BasePageHolder)
+			ssiv.addOnImageEventListener(
+				object : DefaultOnImageEventListener {
+					override fun onReady() {
+						val scale = pendingSwapScale
+						val center = pendingSwapCenter
+						pendingSwapScale = null
+						pendingSwapCenter = null
+						if (
+							scale != null &&
+							center != null &&
+							this@BasePageHolder !is org.koitharu.kotatsu.reader.ui.pager.webtoon.WebtoonHolder &&
+							ssiv.isReady
+						) {
+							ssiv.setScaleAndCenter(scale, center)
+						}
+					}
+				},
+			)
 		}
 		val clickListener = View.OnClickListener { v ->
 			when (v.id) {
@@ -117,6 +138,8 @@ abstract class BasePageHolder<B : ViewBinding>(
 	fun bind(data: ReaderPage) {
 		boundData?.let { pageLoader.onPageUnbound(it.id) }
 		pageLoader.onPageBound(data.id)
+		pendingSwapScale = null
+		pendingSwapCenter = null
 		boundData = data
 		ssiv.isVisible = true
 		animatedView?.isVisible = false
@@ -133,6 +156,9 @@ abstract class BasePageHolder<B : ViewBinding>(
 		context.registerComponentCallbacks(this)
 		viewModel.state.observe(this, ::onStateChanged)
 		viewModel.settingsProducer.observe(this, ::onConfigChanged)
+		pageLoader.translationCoordinator.activeTranslatedPages.observe(this) { translatedFiles ->
+			viewModel.onTranslationMapUpdated(translatedFiles)
+		}
 		// The first emission is the rules this page was already checked against
 		hiddenImageChanges.drop(1).observe(this) { viewModel.recheck() }
 	}
@@ -174,6 +200,8 @@ abstract class BasePageHolder<B : ViewBinding>(
 	@CallSuper
 	open fun onRecycled() {
 		setPageOnScreen(null)
+		pendingSwapScale = null
+		pendingSwapCenter = null
 		viewModel.onRecycle()
 		boundData?.let { pageLoader.onPageUnbound(it.id) }
 		boundData = null
@@ -193,6 +221,10 @@ abstract class BasePageHolder<B : ViewBinding>(
 	protected open fun onStateChanged(state: PageState) {
 		bindingInfo.layoutError.isVisible = state is PageState.Error
 		bindingInfo.layoutProgress.isGone = state.isFinalState()
+		if (state is PageState.Error || state is PageState.Hidden) {
+			pendingSwapScale = null
+			pendingSwapCenter = null
+		}
 		val progress = (state as? PageState.Loading)?.progress ?: -1
 		if (progress in 0..100) {
 			bindingInfo.progressBar.isIndeterminate = false
@@ -222,13 +254,23 @@ abstract class BasePageHolder<B : ViewBinding>(
 			}
 
 			is PageState.Loaded -> {
+				val preserveView = viewModel.consumePreserveViewState()
 				if (isAnimated) {
+					pendingSwapScale = null
+					pendingSwapCenter = null
 					showAnimated(boundData!!, state)
 					bindingInfo.layoutProgress.isGone = true
 				} else {
-					bindingInfo.textViewStatus.setText(R.string.preparing_)
+					val savedState = if (preserveView) ssiv.getState() else null
+					pendingSwapScale = if (preserveView && ssiv.isReady) ssiv.scale else null
+					pendingSwapCenter = if (preserveView && ssiv.isReady) ssiv.getCenter() else null
+					if (preserveView) {
+						bindingInfo.layoutProgress.isGone = true
+					} else {
+						bindingInfo.textViewStatus.setText(R.string.preparing_)
+					}
 					applyMask(state.mask)
-					ssiv.setImage(state.source)
+					ssiv.setImage(state.source, null, savedState)
 				}
 			}
 

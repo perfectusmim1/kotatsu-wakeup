@@ -2,8 +2,12 @@ package org.koitharu.kotatsu.scrobbling.common.ui.config
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import androidx.activity.viewModels
+import androidx.core.view.MenuProvider
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -20,6 +24,7 @@ import org.koitharu.kotatsu.core.util.ext.showOrHide
 import org.koitharu.kotatsu.core.util.ext.systemBarsInsets
 import org.koitharu.kotatsu.databinding.ActivityScrobblerConfigBinding
 import org.koitharu.kotatsu.list.ui.adapter.TypedListSpacingDecoration
+import org.koitharu.kotatsu.scrobbling.anilist.ui.importlist.AniListImportSheet
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerUser
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
 import org.koitharu.kotatsu.scrobbling.common.ui.config.adapter.ScrobblingMangaAdapter
@@ -53,6 +58,7 @@ class ScrobblerConfigActivity : BaseActivity<ActivityScrobblerConfigBinding>(),
 		viewModel.onLoggedOut.observeEvent(this) {
 			finishAfterTransition()
 		}
+		addMenuProvider(ConfigMenuProvider(), this)
 
 		processIntent(intent)
 	}
@@ -101,12 +107,44 @@ class ScrobblerConfigActivity : BaseActivity<ActivityScrobblerConfigBinding>(),
 	}
 
 	private fun onUserChanged(user: ScrobblerUser?) {
+		invalidateMenu()
 		if (user == null) {
 			viewBinding.imageViewAvatar.disposeImage()
 			viewBinding.imageViewAvatar.setImageResource(appcompatR.drawable.abc_ic_menu_overflow_material)
 			return
 		}
 		viewBinding.imageViewAvatar.setImageAsync(user.avatar)
+	}
+
+	private fun showAniListImportSheet() {
+		if (supportFragmentManager.findFragmentByTag(AniListImportSheet.TAG) == null) {
+			AniListImportSheet().show(supportFragmentManager, AniListImportSheet.TAG)
+		}
+	}
+
+	private inner class ConfigMenuProvider : MenuProvider {
+
+		override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+			if (viewModel.isAniList) {
+				menuInflater.inflate(R.menu.opt_scrobbler_config, menu)
+			}
+		}
+
+		override fun onPrepareMenu(menu: Menu) {
+			menu.findItem(R.id.action_import_anilist)?.isVisible =
+				viewModel.isAniList && (viewModel.user.value != null || viewModel.isAuthorized)
+		}
+
+		override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+			return when (menuItem.itemId) {
+				R.id.action_import_anilist -> {
+					showAniListImportSheet()
+					true
+				}
+
+				else -> false
+			}
+		}
 	}
 
 	private fun onLoadingStateChanged(isLoading: Boolean) {

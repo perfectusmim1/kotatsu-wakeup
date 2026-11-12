@@ -32,6 +32,7 @@ import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.core.util.progress.IntPercentLabelFormatter
 import org.koitharu.kotatsu.databinding.SheetReaderConfigBinding
 import org.koitharu.kotatsu.reader.domain.PageLoader
+import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages
 import org.koitharu.kotatsu.reader.ui.ReaderViewModel
 import org.koitharu.kotatsu.reader.ui.ScreenOrientationHelper
 import javax.inject.Inject
@@ -105,12 +106,22 @@ class ReaderConfigSheet :
         binding.buttonSettings.setOnClickListener(this)
         binding.buttonImageServer.setOnClickListener(this)
         binding.buttonColorFilter.setOnClickListener(this)
+        binding.buttonTranslationSettings.setOnClickListener(this)
         binding.buttonScrollTimer.setOnClickListener(this)
         binding.buttonBookmark.setOnClickListener(this)
         binding.switchDoubleReader.setOnCheckedChangeListener(this)
         binding.switchDoubleFoldable.setOnCheckedChangeListener(this)
         binding.switchDoubleCoverPage.setOnCheckedChangeListener(this)
         binding.sliderDoubleSensitivity.addOnChangeListener(this)
+
+        viewModel.isTranslationEnabled.observe(viewLifecycleOwner) { enabled ->
+            binding.switchTranslation.setOnCheckedChangeListener(null)
+            binding.switchTranslation.isChecked = enabled
+            binding.switchTranslation.setOnCheckedChangeListener(this)
+            bindTranslationSummary(binding)
+        }
+        binding.switchTranslation.setOnCheckedChangeListener(this)
+        bindTranslationSummary(binding)
 
         viewModel.isBookmarkAdded.observe(viewLifecycleOwner) {
             binding.buttonBookmark.setText(if (it) R.string.bookmark_remove else R.string.bookmark_add)
@@ -167,6 +178,12 @@ class ReaderConfigSheet :
                 router.openColorFilterConfig(manga, page)
             }
 
+            R.id.button_translation_settings -> {
+                val callback = findParentCallback(Callback::class.java)
+                dismissAllowingStateLoss()
+                callback?.onTranslationSettingsClick()
+            }
+
             R.id.button_image_server -> viewLifecycleScope.launch {
                 if (imageServerDelegate.showDialog(v.context)) {
                     bindImageServerTitle()
@@ -198,6 +215,14 @@ class ReaderConfigSheet :
             R.id.switch_double_cover_page -> {
                 settings.isReaderDoubleCoverPage = isChecked
                 findParentCallback(Callback::class.java)?.onDoubleModeChanged(settings.isReaderDoubleOnLandscape)
+            }
+
+            R.id.switch_translation -> {
+                val accepted = findParentCallback(Callback::class.java)?.onTranslationToggle(isChecked)
+                if (accepted == false && isChecked) {
+                    buttonView.isChecked = false
+                    dismissAllowingStateLoss()
+                }
             }
         }
     }
@@ -251,6 +276,16 @@ class ReaderConfigSheet :
         switch.setOnCheckedChangeListener(this)
     }
 
+    private fun bindTranslationSummary(binding: SheetReaderConfigBinding) {
+        val sourceCode = settings.translationSourceLang.code.uppercase()
+        val targetCode = TranslationLanguages.normalizeTargetCode(settings.translationTargetLang).uppercase()
+        binding.buttonTranslationSettings.text = getString(
+            R.string.inline_preference_pattern,
+            getString(R.string.translation_settings),
+            "$sourceCode → $targetCode",
+        )
+    }
+
     private suspend fun bindImageServerTitle() {
         viewBinding?.buttonImageServer?.text = getString(
             R.string.inline_preference_pattern,
@@ -287,5 +322,9 @@ class ReaderConfigSheet :
         fun onScrollTimerClick(isLongClick: Boolean)
 
         fun onBookmarkClick()
+
+        fun onTranslationToggle(isEnabled: Boolean): Boolean
+
+        fun onTranslationSettingsClick()
     }
 }

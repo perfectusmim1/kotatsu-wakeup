@@ -9,10 +9,14 @@ import android.widget.ArrayAdapter
 import android.widget.Filter
 import androidx.activity.viewModels
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.children
 import androidx.core.view.isVisible
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipDrawable
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.FavouriteCategory
+import org.koitharu.kotatsu.core.model.FavouriteIcon
 import org.koitharu.kotatsu.core.ui.BaseActivity
 import org.koitharu.kotatsu.core.ui.util.DefaultTextWatcher
 import org.koitharu.kotatsu.core.util.ext.consumeAllSystemBarsInsets
@@ -35,6 +39,7 @@ class FavouritesCategoryEditActivity :
 
 	private val viewModel by viewModels<FavouritesCategoryEditViewModel>()
 	private var selectedSortOrder: ListSortOrder? = null
+	private var selectedIcon: FavouriteIcon? = null
 	private val sortOrders = ListSortOrder.FAVORITES.sortedByOrdinal()
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +47,11 @@ class FavouritesCategoryEditActivity :
 		setContentView(ActivityCategoryEditBinding.inflate(layoutInflater))
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = true)
 		initSortSpinner()
+		initIconChips()
+		savedInstanceState?.getSerializableCompat<FavouriteIcon>(KEY_ICON)?.let {
+			selectedIcon = it
+			selectIconChip(it)
+		}
 		viewBinding.buttonDone.setOnClickListener(this)
 		viewBinding.editName.addTextChangedListener(this)
 		afterTextChanged(viewBinding.editName.text)
@@ -72,12 +82,17 @@ class FavouritesCategoryEditActivity :
 	override fun onSaveInstanceState(outState: Bundle) {
 		super.onSaveInstanceState(outState)
 		outState.putSerializable(KEY_SORT_ORDER, selectedSortOrder)
+		outState.putSerializable(KEY_ICON, selectedIcon)
 	}
 
 	override fun onRestoreInstanceState(savedInstanceState: Bundle) {
 		super.onRestoreInstanceState(savedInstanceState)
 		savedInstanceState.getSerializableCompat<ListSortOrder>(KEY_SORT_ORDER)?.let {
 			selectedSortOrder = it
+		}
+		savedInstanceState.getSerializableCompat<FavouriteIcon>(KEY_ICON)?.let {
+			selectedIcon = it
+			selectIconChip(it)
 		}
 	}
 
@@ -88,6 +103,7 @@ class FavouritesCategoryEditActivity :
 				sortOrder = getSelectedSortOrder(),
 				isTrackerEnabled = viewBinding.switchTracker.isChecked,
 				isVisibleOnShelf = viewBinding.switchShelf.isChecked,
+				icon = selectedIcon ?: FavouriteIcon.DEFAULT,
 			)
 		}
 	}
@@ -102,6 +118,15 @@ class FavouritesCategoryEditActivity :
 
 	private fun onCategoryChanged(category: FavouriteCategory?) {
 		setTitle(if (category == null) R.string.create_category else R.string.edit_category)
+		if (category != null && selectedIcon == null) {
+			val icon = category.resolvedIcon
+			selectedIcon = icon
+			selectIconChip(icon)
+		} else if (selectedIcon != null) {
+			selectIconChip(selectedIcon ?: FavouriteIcon.DEFAULT)
+		} else {
+			selectIconChip(FavouriteIcon.DEFAULT)
+		}
 		if (selectedSortOrder != null) {
 			return
 		}
@@ -124,8 +149,46 @@ class FavouritesCategoryEditActivity :
 		viewBinding.editName.isEnabled = !isLoading
 		viewBinding.switchTracker.isEnabled = !isLoading
 		viewBinding.switchShelf.isEnabled = !isLoading
+		for (child in viewBinding.chipGroupIcons.children) {
+			child.isEnabled = !isLoading
+		}
 		if (isLoading) {
 			viewBinding.textViewError.isVisible = false
+		}
+	}
+
+	private fun initIconChips() {
+		val chipGroup = viewBinding.chipGroupIcons
+		chipGroup.removeAllViews()
+		for (icon in FavouriteIcon.entries) {
+			val chip = Chip(this).apply {
+				setChipDrawable(ChipDrawable.createFromAttributes(context, null, 0, R.style.Widget_Kotatsu_Chip_Filter))
+				id = View.generateViewId()
+				setText(icon.labelRes)
+				setChipIconResource(icon.iconRes)
+				isChipIconVisible = true
+				isCheckedIconVisible = false
+				isCheckable = true
+				setEnsureMinTouchTargetSize(false)
+				tag = icon
+			}
+			chipGroup.addView(chip)
+		}
+		chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+			val checkedChip = checkedIds.firstOrNull()?.let { group.findViewById<Chip>(it) }
+			(checkedChip?.tag as? FavouriteIcon)?.let { selectedIcon = it }
+		}
+	}
+
+	private fun selectIconChip(icon: FavouriteIcon) {
+		for (child in viewBinding.chipGroupIcons.children) {
+			val chip = child as? Chip ?: continue
+			if (chip.tag == icon) {
+				if (!chip.isChecked) {
+					chip.isChecked = true
+				}
+				break
+			}
 		}
 	}
 
@@ -160,5 +223,6 @@ class FavouritesCategoryEditActivity :
 
 		const val NO_ID = -1L
 		private const val KEY_SORT_ORDER = "sort"
+		private const val KEY_ICON = "icon"
 	}
 }

@@ -22,6 +22,7 @@ class MangaDirectorySelectViewModel @Inject constructor(
 	val items = MutableStateFlow(emptyList<DirectoryModel>())
 	val onDismissDialog = MutableEventFlow<Unit>()
 	val onPickDirectory = MutableEventFlow<Unit>()
+	val onFallbackDirectorySelected = MutableEventFlow<String>()
 
 	init {
 		refresh()
@@ -38,16 +39,29 @@ class MangaDirectorySelectViewModel @Inject constructor(
 
 	fun onCustomDirectoryPicked(uri: Uri) {
 		launchJob(Dispatchers.Default) {
-			storageManager.takePermissions(uri)
+			storageManager.tryTakePermissions(uri)
 			val dir = storageManager.resolveUri(uri)
-			if (!dir.isWriteable()) {
+			val appDirs = storageManager.getApplicationStorageDirs()
+			if (dir.isWriteable()) {
+				if (dir !in appDirs) {
+					settings.userSpecifiedMangaDirectories += dir
+					storageManager.setDirIsNoMediaSafe(dir)
+				}
+				settings.mangaStorageDir = dir
+				onDismissDialog.call(Unit)
+				return@launchJob
+			}
+			val fallbackDir = storageManager.findWriteableAppExternalDirForVolume(dir)
+			if (fallbackDir != null) {
+				storageManager.setDirIsNoMediaSafe(fallbackDir)
+				settings.mangaStorageDir = fallbackDir
+				onFallbackDirectorySelected.call(
+					storageManager.getSdCardWriteGuidanceMessage(dir, fallbackDir),
+				)
+				onDismissDialog.call(Unit)
+			} else {
 				throw AccessDeniedException(dir)
 			}
-			if (dir !in storageManager.getApplicationStorageDirs()) {
-				settings.mangaStorageDir = dir
-				storageManager.setDirIsNoMedia(dir)
-			}
-			onDismissDialog.call(Unit)
 		}
 	}
 

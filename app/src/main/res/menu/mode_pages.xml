@@ -4,6 +4,12 @@
 	xmlns:app="http://schemas.android.com/apk/res-auto">
 
 	<item
+		android:id="@+id/action_bookmark"
+		android:icon="@drawable/ic_bookmark"
+		android:title="@string/bookmark_add"
+		app:showAsAction="ifRoom|withText" />
+
+	<item
 		android:id="@+id/action_save"
 		android:icon="@drawable/ic_save"
 		android:title="@string/save"

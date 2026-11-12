@@ -9,6 +9,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -150,10 +151,22 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 			setItems.join()
 			if (position != -1) {
 				with(requireViewBinding().recyclerView) {
-					firstVisibleItemPosition = position
+					stopScroll()
+					val gap = if (pendingState.scroll > 0 && position > 0 && viewModel.isWebtoonGapsEnabled.value) {
+						resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
+					} else {
+						0
+					}
+					val lm = layoutManager as? LinearLayoutManager
+					if (gap != 0 && lm != null) {
+						lm.scrollToPositionWithOffset(position, -gap)
+					} else {
+						firstVisibleItemPosition = position
+					}
 					post {
 						(findViewHolderForAdapterPosition(position) as? WebtoonHolder)
 							?.restoreScroll(pendingState.scroll)
+						notifyScrollChanged()
 					}
 				}
 				viewModel.onCurrentPageChanged(position, position)
@@ -199,7 +212,14 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 	}
 
 	override fun switchPageTo(position: Int, smooth: Boolean) {
-		requireViewBinding().recyclerView.firstVisibleItemPosition = position
+		with(requireViewBinding().recyclerView) {
+			stopScroll()
+			firstVisibleItemPosition = position
+			post {
+				(findViewHolderForAdapterPosition(position) as? WebtoonHolder)?.restoreScroll(0)
+				notifyScrollChanged()
+			}
+		}
 	}
 
 	override fun scrollBy(delta: Int, smooth: Boolean): Boolean {
@@ -253,13 +273,20 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 	}
 
 	private fun RecyclerView.findCurrentPagePosition(): Int {
-		val centerX = width / 2f
-		val centerY = height - resources.getDimension(R.dimen.webtoon_pages_gap)
-		if (centerY <= 0) {
+		if (width <= 0 || height <= 0) {
 			return RecyclerView.NO_POSITION
 		}
-		val view = findChildViewUnder(centerX, centerY) ?: return RecyclerView.NO_POSITION
-		return getChildAdapterPosition(view)
+		val centerX = width / 2f
+		val focalY = (height * 0.35f).coerceAtLeast(1f)
+		val gap = resources.getDimension(R.dimen.webtoon_pages_gap)
+		val view = findChildViewUnder(centerX, focalY)
+			?: findChildViewUnder(centerX, height / 2f)
+			?: findChildViewUnder(centerX, (focalY - gap).coerceAtLeast(1f))
+		return if (view != null) {
+			getChildAdapterPosition(view)
+		} else {
+			firstVisibleItemPosition
+		}
 	}
 
 	private fun TextView.updateFeedback(progress: Float) {

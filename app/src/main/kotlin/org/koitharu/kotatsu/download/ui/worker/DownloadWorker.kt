@@ -44,6 +44,7 @@ import okio.buffer
 import okio.sink
 import okio.use
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.image.BitmapDecoderCompat
 import org.koitharu.kotatsu.core.model.ids
 import org.koitharu.kotatsu.core.model.isLocal
@@ -114,6 +115,7 @@ class DownloadWorker @AssistedInject constructor(
 	@LocalStorageChanges private val localStorageChanges: MutableSharedFlow<LocalManga?>,
 	private val slowdownDispatcher: DownloadSlowdownDispatcher,
 	private val imageProxyInterceptor: ImageProxyInterceptor,
+	private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
 	notificationFactoryFactory: DownloadNotificationFactory.Factory,
 ) : CoroutineWorker(appContext, params) {
 
@@ -204,7 +206,13 @@ class DownloadWorker @AssistedInject constructor(
 						?: error("Cannot obtain remote manga instance")
 				}
 				val repo = mangaRepositoryFactory.create(manga.source)
-				val mangaDetails = if (manga.chapters.isNullOrEmpty() || manga.description.isNullOrEmpty()) repo.getDetails(manga) else manga
+				val mangaDetails = if (manga.chapters.isNullOrEmpty() || manga.description.isNullOrEmpty()) {
+					runWithCloudFlareResolve(repo.source) {
+						repo.getDetails(manga)
+					}
+				} else {
+					manga
+				}
 				output = LocalMangaOutput.getOrCreate(
 					root = destination,
 					manga = mangaDetails,
@@ -212,7 +220,9 @@ class DownloadWorker @AssistedInject constructor(
 				)
 				val coverUrl = mangaDetails.largeCoverUrl.ifNullOrEmpty { mangaDetails.coverUrl }
 				if (!coverUrl.isNullOrEmpty()) {
-					downloadFile(coverUrl, destination, repo.source, tempFiles).let { file ->
+					runWithCloudFlareResolve(repo.source) {
+						downloadFile(coverUrl, destination, repo.source, tempFiles)
+					}.let { file ->
 						output.addCover(file, getMediaType(coverUrl, file))
 						file.deleteAwait()
 					}
@@ -225,7 +235,9 @@ class DownloadWorker @AssistedInject constructor(
 						continue
 					}
 					val pages = runFailsafe {
-						repo.getPages(chapter.value)
+						runWithCloudFlareResolve(repo.source) {
+							repo.getPages(chapter.value)
+						}
 					} ?: continue
 					val pageCounter = AtomicInteger(0)
 					channelFlow {
@@ -235,9 +247,12 @@ class DownloadWorker @AssistedInject constructor(
 							launch {
 								semaphore.withPermit {
 									runFailsafe {
-										val url = repo.getPageUrl(page)
-										val file = cache[url]
-											?: downloadFile(url, destination, repo.source, tempFiles)
+										val (url, file) = runWithCloudFlareResolve(repo.source) {
+											val pageUrl = repo.getPageUrl(page)
+											val downloaded = cache[pageUrl]
+												?: downloadFile(pageUrl, destination, repo.source, tempFiles)
+											pageUrl to downloaded
+										}
 										output.addPage(
 											chapter = chapter,
 											file = file,
@@ -305,6 +320,15 @@ class DownloadWorker @AssistedInject constructor(
 			}
 		}
 	}
+
+	private suspend fun <T> runWithCloudFlareResolve(
+		source: MangaSource,
+		block: suspend () -> T,
+	): T = captchaAutoResolveCoordinator.runWithVerification(
+		source = source,
+		mayStartVerification = !task.isSilent,
+		block = block,
+	)
 
 	private suspend fun <R> runFailsafe(
 		block: suspend () -> R,

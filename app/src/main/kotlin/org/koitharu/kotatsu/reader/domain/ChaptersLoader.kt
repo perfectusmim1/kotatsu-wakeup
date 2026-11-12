@@ -36,17 +36,28 @@ internal fun withoutHidden(pages: List<ReaderPage>, hidden: Set<Long>): List<Rea
  * one still there. Null if the chapter is not in the list at all.
  */
 internal fun List<ReaderPage>.indexOfPosition(chapterId: Long, page: Int): Int? {
-	var last: Int? = null
+	var bestNextPos: Int? = null
+	var bestNextIndex = Int.MAX_VALUE
+	var maxPos: Int? = null
+	var maxIndex = Int.MIN_VALUE
 	for (i in indices) {
 		val item = this[i]
-		if (item.chapterId == chapterId) {
-			if (item.index >= page) {
-				return i
-			}
-			last = i
+		if (item.chapterId != chapterId || item.index < 0) {
+			continue
+		}
+		if (item.index == page) {
+			return i
+		}
+		if (item.index > page && item.index < bestNextIndex) {
+			bestNextIndex = item.index
+			bestNextPos = i
+		}
+		if (item.index > maxIndex) {
+			maxIndex = item.index
+			maxPos = i
 		}
 	}
-	return last
+	return bestNextPos ?: maxPos
 }
 
 @ViewModelScoped
@@ -64,13 +75,20 @@ class ChaptersLoader @Inject constructor(
 		get() = chapters.size()
 
 	suspend fun init(manga: MangaDetails) = mutex.withLock {
-		chapters.clear()
-		manga.allChapters.forEach {
-			chapters.put(it.id, it)
+		synchronized(chapters) {
+			chapters.clear()
+			manga.allChapters.forEach {
+				chapters.put(it.id, it)
+			}
 		}
 	}
 
-	suspend fun loadPrevNextChapter(manga: MangaDetails, currentId: Long, isNext: Boolean): Boolean {
+	suspend fun loadPrevNextChapter(
+		manga: MangaDetails,
+		currentId: Long,
+		isNext: Boolean,
+		trimPages: Boolean = true,
+	): Boolean {
 		val chapters = manga.allChapters
 		val predicate: (MangaChapter) -> Boolean = { it.id == currentId }
 		val index = if (isNext) chapters.indexOfFirst(predicate) else chapters.indexOfLast(predicate)
@@ -78,20 +96,22 @@ class ChaptersLoader @Inject constructor(
 		val newChapter = chapters.getOrNull(if (isNext) index + 1 else index - 1) ?: return false
 		val newPages = loadChapter(newChapter.id, mayStartVerification = false)
 		mutex.withLock {
-			if (chapterPages.chaptersSize > 1) {
-				// trim pages
-				if (chapterPages.size > PAGES_TRIM_THRESHOLD) {
-					if (isNext) {
-						chapterPages.removeFirst()
-					} else {
-						chapterPages.removeLast()
+			synchronized(chapterPages) {
+				if (trimPages && chapterPages.chaptersSize > 1) {
+					// trim pages
+					if (chapterPages.size > PAGES_TRIM_THRESHOLD) {
+						if (isNext) {
+							chapterPages.removeFirst()
+						} else {
+							chapterPages.removeLast()
+						}
 					}
 				}
-			}
-			if (isNext) {
-				chapterPages.addLast(newChapter.id, newPages)
-			} else {
-				chapterPages.addFirst(newChapter.id, newPages)
+				if (isNext) {
+					chapterPages.addLast(newChapter.id, newPages)
+				} else {
+					chapterPages.addFirst(newChapter.id, newPages)
+				}
 			}
 		}
 		return true
@@ -101,42 +121,57 @@ class ChaptersLoader @Inject constructor(
 	suspend fun loadSingleChapter(chapterId: Long): Boolean {
 		val pages = loadChapter(chapterId, mayStartVerification = true)
 		return mutex.withLock {
-			chapterPages.clear()
-			chapterPages.addLast(chapterId, pages)
-			pages.isNotEmpty()
+			synchronized(chapterPages) {
+				chapterPages.clear()
+				chapterPages.addLast(chapterId, pages)
+				pages.isNotEmpty()
+			}
 		}
 	}
 
-	fun peekChapter(chapterId: Long): MangaChapter? = chapters[chapterId]
+	fun peekChapter(chapterId: Long): MangaChapter? = synchronized(chapters) {
+		chapters[chapterId]
+	}
 
-	fun hasPages(chapterId: Long): Boolean {
-		return chapterId in chapterPages
+	fun hasPages(chapterId: Long): Boolean = synchronized(chapterPages) {
+		chapterId in chapterPages
+	}
+
+	fun hasLoadedPages(): Boolean = synchronized(chapterPages) {
+		chapterPages.size > 0
 	}
 
 	fun getPages(chapterId: Long): List<MangaPage> = synchronized(chapterPages) {
 		return chapterPages.subList(chapterId).map { it.toMangaPage() }
 	}
 
-	fun getPagesCount(chapterId: Long): Int {
-		return chapterPages.size(chapterId)
+	fun getPagesCount(chapterId: Long): Int = synchronized(chapterPages) {
+		chapterPages.size(chapterId)
 	}
 
-	fun last() = chapterPages.last()
+	fun last() = synchronized(chapterPages) {
+		chapterPages.last()
+	}
 
-	fun first() = chapterPages.first()
+	fun first() = synchronized(chapterPages) {
+		chapterPages.first()
+	}
 
 	/**
 	 * The pages to show, without those known to be nothing but a hidden image. They are only left out here
 	 * and not when loading: `ReaderPage.index` and [getPagesCount] are what saved progress is made of, and
 	 * must go on describing the chapter as the source serves it.
 	 */
-	suspend fun snapshot(): List<ReaderPage> = withoutHidden(chapterPages.toList(), hiddenImages.getHiddenPages())
+	suspend fun snapshot(): List<ReaderPage> {
+		val pages = synchronized(chapterPages) { chapterPages.toList() }
+		return withoutHidden(pages, hiddenImages.getHiddenPages())
+	}
 
 	fun observeHiddenPages() = hiddenImages.observeHiddenPages()
 
 	/** The page right before or after another, hidden or not, as long as it is in the same chapter. */
 	fun findNeighbour(pageId: Long, isBefore: Boolean): ReaderPage? {
-		val pages = chapterPages.toList()
+		val pages = synchronized(chapterPages) { chapterPages.toList() }
 		val index = pages.indexOfFirst { it.id == pageId }
 		if (index < 0) {
 			return null
@@ -148,7 +183,7 @@ class ChaptersLoader @Inject constructor(
 		chapterId: Long,
 		mayStartVerification: Boolean,
 	): List<ReaderPage> {
-		val chapter = checkNotNull(chapters[chapterId]) { "Requested chapter not found" }
+		val chapter = checkNotNull(synchronized(chapters) { chapters[chapterId] }) { "Requested chapter not found" }
 		val repo = mangaRepositoryFactory.create(chapter.source)
 		val pages = captchaAutoResolveCoordinator.runWithVerification(
 			source = chapter.source,

@@ -22,6 +22,7 @@ import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.parsers.MangaParserAuthProvider
 import org.koitharu.kotatsu.parsers.exception.AuthRequiredException
+import org.koitharu.kotatsu.parsers.exception.ParseException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -100,13 +101,24 @@ class SourceSettingsViewModel @Inject constructor(
 	}
 
 	private fun loadUsername(authProvider: MangaParserAuthProvider?) {
-		launchLoadingJob(Dispatchers.Default) {
+		usernameLoadJob?.cancel()
+		usernameLoadJob = launchLoadingJob(Dispatchers.Default) {
 			try {
 				username.value = null
 				isAuthorized.value = null
-				isAuthorized.value = authProvider?.isAuthorized()
-				username.value = authProvider?.getUsername()
+				if (authProvider == null) {
+					return@launchLoadingJob
+				}
+				isAuthorized.value = authProvider.isAuthorized()
+				username.value = authProvider.getUsername()
 			} catch (_: AuthRequiredException) {
+				username.value = null
+			} catch (e: ParseException) {
+				if (e.message?.contains("Cannot find username", ignoreCase = true) == true) {
+					username.value = null
+				} else {
+					throw e
+				}
 			}
 		}
 	}

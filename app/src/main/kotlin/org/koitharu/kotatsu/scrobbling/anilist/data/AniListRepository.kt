@@ -19,11 +19,13 @@ import org.koitharu.kotatsu.parsers.util.toIntUp
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerRepository
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblerStorage
 import org.koitharu.kotatsu.scrobbling.common.data.ScrobblingEntity
+import org.koitharu.kotatsu.scrobbling.common.domain.ScrobblerAuthRequiredException
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerManga
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerMangaInfo
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerService
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerType
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerUser
+import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
@@ -210,6 +212,117 @@ class AniListRepository @Inject constructor(
 		return ScrobblerMangaInfo(response.getJSONObject("data").getJSONObject("Media"))
 	}
 
+	suspend fun fetchUserMediaList(): List<AniListMediaListEntry> {
+		if (!isAuthorized) {
+			throw ScrobblerAuthRequiredException(ScrobblerService.ANILIST)
+		}
+		val user = cachedUser ?: loadUser()
+		val response = doRequest(
+			REQUEST_QUERY,
+			"""
+			MediaListCollection(userId: ${user.id}, type: MANGA) {
+				lists {
+					name
+					isCustomList
+					status
+					entries {
+						id
+						status
+						progress
+						score(format: POINT_100)
+						media {
+							id
+							title {
+								romaji
+								english
+								native
+								userPreferred
+							}
+							synonyms
+							coverImage {
+								large
+							}
+							chapters
+							siteUrl
+						}
+					}
+				}
+			}
+			""",
+		)
+		val lists = response.optJSONObject("data")
+			?.optJSONObject("MediaListCollection")
+			?.optJSONArray("lists")
+			?: return emptyList()
+
+		val byMediaId = LinkedHashMap<Long, AniListMediaListEntry>()
+		val customSeen = HashSet<Long>()
+		for (i in 0 until lists.length()) {
+			val listObj = lists.optJSONObject(i) ?: continue
+			val isCustom = listObj.optBoolean("isCustomList", false)
+			val listStatus = listObj.getStringOrNull("status")
+			val entries = listObj.optJSONArray("entries") ?: continue
+			for (j in 0 until entries.length()) {
+				val entryObj = entries.optJSONObject(j) ?: continue
+				val parsed = parseMediaListEntry(entryObj, listStatus) ?: continue
+				val existing = byMediaId[parsed.mediaId]
+				if (existing == null || (parsed.mediaId in customSeen && !isCustom)) {
+					byMediaId[parsed.mediaId] = parsed
+					if (isCustom) {
+						customSeen.add(parsed.mediaId)
+					} else {
+						customSeen.remove(parsed.mediaId)
+					}
+				}
+			}
+		}
+		return byMediaId.values.toList()
+	}
+
+	private fun parseMediaListEntry(json: JSONObject, fallbackStatus: String?): AniListMediaListEntry? {
+		val media = json.optJSONObject("media") ?: return null
+		val mediaId = media.optLong("id", 0L)
+		if (mediaId <= 0L) return null
+		val titleObj = media.optJSONObject("title") ?: return null
+		val romaji = titleObj.getStringOrNull("romaji")?.takeIf { it.isNotBlank() }
+		val english = titleObj.getStringOrNull("english")?.takeIf { it.isNotBlank() }
+		val native = titleObj.getStringOrNull("native")?.takeIf { it.isNotBlank() }
+		val userPreferred = titleObj.getStringOrNull("userPreferred")?.takeIf { it.isNotBlank() }
+			?: english
+			?: romaji
+			?: native
+			?: return null
+		val synonymsArray = media.optJSONArray("synonyms")
+		val synonyms = if (synonymsArray != null) {
+			buildList(synonymsArray.length()) {
+				for (k in 0 until synonymsArray.length()) {
+					if (!synonymsArray.isNull(k)) {
+						val syn = synonymsArray.optString(k).takeIf { it.isNotBlank() }
+						if (syn != null) add(syn)
+					}
+				}
+			}
+		} else {
+			emptyList()
+		}
+		val status = json.getStringOrNull("status") ?: fallbackStatus ?: "CURRENT"
+		return AniListMediaListEntry(
+			listEntryId = json.optInt("id", 0),
+			mediaId = mediaId,
+			status = status,
+			progress = json.optInt("progress", 0).coerceAtLeast(0),
+			scorePoint100 = json.optInt("score", 0).coerceIn(0, 100),
+			titleUserPreferred = userPreferred,
+			titleRomaji = romaji,
+			titleEnglish = english,
+			titleNative = native,
+			synonyms = synonyms,
+			coverUrl = media.optJSONObject("coverImage")?.getStringOrNull("large"),
+			totalChapters = if (media.isNull("chapters")) null else media.optInt("chapters", 0).takeIf { it > 0 },
+			siteUrl = media.getStringOrNull("siteUrl"),
+		)
+	}
+
 	private suspend fun saveRate(json: JSONObject, mangaId: Long) {
 		val scoreFormat = ScoreFormat.of(storage[KEY_SCORE_FORMAT])
 		val entity = ScrobblingEntity(
@@ -278,4 +391,42 @@ class AniListRepository @Inject constructor(
 	}
 
 	private fun String.shrink() = replace(shrinkRegex, " ")
+}
+
+data class AniListMediaListEntry(
+	val listEntryId: Int,
+	val mediaId: Long,
+	val status: String,
+	val progress: Int,
+	val scorePoint100: Int,
+	val titleUserPreferred: String,
+	val titleRomaji: String?,
+	val titleEnglish: String?,
+	val titleNative: String?,
+	val synonyms: List<String>,
+	val coverUrl: String?,
+	val totalChapters: Int?,
+	val siteUrl: String?,
+) {
+
+	val scrobblingStatus: ScrobblingStatus
+		get() = when (status) {
+			"PLANNING" -> ScrobblingStatus.PLANNED
+			"CURRENT" -> ScrobblingStatus.READING
+			"REPEATING" -> ScrobblingStatus.RE_READING
+			"COMPLETED" -> ScrobblingStatus.COMPLETED
+			"PAUSED" -> ScrobblingStatus.ON_HOLD
+			"DROPPED" -> ScrobblingStatus.DROPPED
+			else -> ScrobblingStatus.READING
+		}
+
+	fun searchTitles(): List<String> = buildList {
+		titleEnglish?.takeIf { it.isNotBlank() }?.let(::add)
+		titleRomaji?.takeIf { it.isNotBlank() }?.let(::add)
+		if (titleUserPreferred.isNotBlank()) add(titleUserPreferred)
+		for (syn in synonyms) {
+			if (syn.isNotBlank()) add(syn)
+		}
+		titleNative?.takeIf { it.isNotBlank() }?.let(::add)
+	}.distinct()
 }

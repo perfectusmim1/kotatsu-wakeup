@@ -155,7 +155,7 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 		onPageScrollListeners.remove(listener)
 	}
 
-	private fun notifyScrollChanged(dy: Int) {
+	fun notifyScrollChanged(dy: Int = 0) {
 		val listeners = onPageScrollListeners
 		if (listeners.isEmpty()) {
 			return
@@ -190,6 +190,9 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 		}
 		isFixingScroll = true
 		try {
+			val lm = layoutManager
+			val padTop = paddingTop
+			val padBottom = height - paddingBottom
 			for (child in this) {
 				val frame = child as? WebtoonFrameLayout ?: continue
 				if (frame.isRepinPending) {
@@ -197,9 +200,11 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 				}
 				val ssiv = frame.target
 				val range = ssiv.getScrollRange()
+				val topEdge = padTop + (lm?.getTopDecorationHeight(child) ?: 0)
+				val bottomEdge = padBottom - (lm?.getBottomDecorationHeight(child) ?: 0)
 				val target = when {
-					child.top > 0 -> 0
-					child.bottom < height -> range
+					child.top > topEdge -> 0
+					child.bottom < bottomEdge -> range
 					else -> ssiv.getScroll().coerceIn(0, range)
 				}
 				if (ssiv.getScroll() != target) {

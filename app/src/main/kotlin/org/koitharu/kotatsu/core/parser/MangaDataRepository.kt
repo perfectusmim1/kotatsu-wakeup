@@ -22,6 +22,7 @@ import org.koitharu.kotatsu.core.db.entity.toMangaChapters
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.findSameChapter
+import org.koitharu.kotatsu.core.model.ids
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.os.AppShortcutManager
@@ -35,6 +36,7 @@ import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.reader.domain.ReaderColorFilter
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Provider
 
@@ -159,8 +161,7 @@ class MangaDataRepository @Inject constructor(
 				db.getMangaDao().upsert(manga.toEntity(), tags)
 				if (!manga.isLocal) {
 					manga.chapters?.let { chapters ->
-						keepHistoryChapter(manga.id, chapters)
-						db.getChaptersDao().replaceAll(manga.id, chapters.withIndex().toEntities(manga.id))
+						saveChapters(manga.id, chapters)
 					}
 				}
 			}
@@ -182,8 +183,7 @@ class MangaDataRepository @Inject constructor(
 		val chapters = manga.chapters
 		if (!chapters.isNullOrEmpty() && manga.id in db.getMangaDao()) {
 			db.withTransaction {
-				keepHistoryChapter(manga.id, chapters)
-				db.getChaptersDao().replaceAll(manga.id, chapters.withIndex().toEntities(manga.id))
+				saveChapters(manga.id, chapters)
 			}
 		}
 	}
@@ -194,6 +194,14 @@ class MangaDataRepository @Inject constructor(
 	 */
 	suspend fun findCachedChapter(mangaId: Long, chapterId: Long): MangaChapter? {
 		return db.getChaptersDao().find(mangaId, chapterId)?.toMangaChapter()
+	}
+
+	private suspend fun saveChapters(mangaId: Long, newChapters: List<MangaChapter>) {
+		if (newChapters.isNotEmpty()) {
+			keepHistoryChapter(mangaId, newChapters)
+			keepBookmarksChapters(mangaId, newChapters)
+		}
+		db.getChaptersDao().replaceAll(mangaId, newChapters.withIndex().toEntities(mangaId))
 	}
 
 	/**
@@ -208,8 +216,100 @@ class MangaDataRepository @Inject constructor(
 			return
 		}
 		val previous = findCachedChapter(mangaId, history.chapterId) ?: return
-		val same = newChapters.findSameChapter(previous) ?: return
+		val same = findMatchingChapter(newChapters, previous) ?: return
 		db.getHistoryDao().update(history.copy(chapterId = same.id))
+	}
+
+	/**
+	 * Remaps bookmarks whose chapter id disappeared after a source changed chapter URLs/IDs before old cached
+	 * chapters are replaced.
+	 */
+	private suspend fun keepBookmarksChapters(mangaId: Long, newChapters: List<MangaChapter>) {
+		val bookmarksDao = db.getBookmarksDao()
+		val bookmarks = bookmarksDao.findAllByManga(mangaId)
+		if (bookmarks.isEmpty()) {
+			return
+		}
+		val newChapterIds = newChapters.ids()
+		val missingChapterIds = bookmarks.asSequence()
+			.map { it.chapterId }
+			.filterNot { it in newChapterIds }
+			.distinct()
+			.toList()
+		if (missingChapterIds.isEmpty()) {
+			return
+		}
+		val cachedChapters = db.getChaptersDao().findAll(mangaId)
+		if (cachedChapters.isEmpty()) {
+			return
+		}
+		val cachedById = cachedChapters.associateBy { it.chapterId }
+		for (oldChapterId in missingChapterIds) {
+			val previous = cachedById[oldChapterId]?.toMangaChapter() ?: continue
+			val same = findMatchingChapter(newChapters, previous) ?: continue
+			if (same.id != oldChapterId) {
+				bookmarksDao.updateChapterId(mangaId, oldChapterId, same.id)
+			}
+		}
+	}
+
+	private fun findMatchingChapter(newChapters: List<MangaChapter>, previous: MangaChapter): MangaChapter? {
+		newChapters.findSameChapter(previous)?.let { return it }
+		val sameBranch = newChapters.filter { it.branch == previous.branch }
+		val pool = sameBranch.ifEmpty {
+			if (newChapters.hasSingleBranch()) newChapters else emptyList()
+		}
+		if (pool.isEmpty()) {
+			return null
+		}
+		val prevTitle = previous.title.normalizeChapterTitle()
+		if (previous.number > 0f) {
+			val byNumber = pool.filter { it.number == previous.number }
+			if (byNumber.size == 1) {
+				return byNumber.first()
+			}
+			if (byNumber.size > 1) {
+				byNumber.singleOrNull { it.volume == previous.volume }?.let { return it }
+				if (prevTitle.isNotEmpty()) {
+					byNumber.singleOrNull { it.title.normalizeChapterTitle() == prevTitle }?.let { return it }
+				}
+			}
+		}
+		if (prevTitle.isNotEmpty()) {
+			val byTitle = pool.filter { it.title.normalizeChapterTitle() == prevTitle }
+			if (byTitle.size == 1) {
+				return byTitle.first()
+			}
+			if (byTitle.size > 1 && previous.volume > 0) {
+				byTitle.singleOrNull { it.volume == previous.volume }?.let { return it }
+			}
+		}
+		if (previous.number <= 0f) {
+			val parsedNumber = previous.title?.let { extractChapterNumber(it) }
+			if (parsedNumber != null && parsedNumber > 0f) {
+				pool.singleOrNull {
+					it.number == parsedNumber && (previous.volume == 0 || it.volume == previous.volume)
+				}?.let { return it }
+			}
+		}
+		return null
+	}
+
+	private fun List<MangaChapter>.hasSingleBranch(): Boolean {
+		if (isEmpty()) return true
+		val firstBranch = first().branch
+		return all { it.branch == firstBranch }
+	}
+
+	private fun String?.normalizeChapterTitle(): String {
+		if (isNullOrBlank()) return ""
+		return lowercase(Locale.ROOT)
+			.replace(CHAPTER_TITLE_NORMALIZE_REGEX, " ")
+			.trim()
+	}
+
+	private fun extractChapterNumber(title: String): Float? {
+		return CHAPTER_NUMBER_REGEX.find(title)?.groupValues?.getOrNull(1)?.toFloatOrNull()
 	}
 
 	suspend fun gcChaptersCache() {
@@ -296,4 +396,9 @@ class MangaDataRepository @Inject constructor(
 		coverUrlOverride = null,
 		contentRatingOverride = null,
 	)
+
+	private companion object {
+		val CHAPTER_TITLE_NORMALIZE_REGEX = Regex("[\\p{Punct}\\s]+")
+		val CHAPTER_NUMBER_REGEX = Regex("""(?:^|\b)(?:ch(?:apter)?\.?\s*)(\d+(?:\.\d+)?)""", RegexOption.IGNORE_CASE)
+	}
 }

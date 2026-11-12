@@ -16,7 +16,11 @@ data class FavouriteCategory(
 	val createdAt: Instant,
 	val isTrackingEnabled: Boolean,
 	val isVisibleInLibrary: Boolean,
+	val icon: String? = null,
 ) : Parcelable, ListModel {
+
+	val resolvedIcon: FavouriteIcon
+		get() = FavouriteIcon.fromKey(icon)
 
 	override fun areItemsTheSame(other: ListModel): Boolean {
 		return other is FavouriteCategory && id == other.id
@@ -26,7 +30,11 @@ data class FavouriteCategory(
 		if (previousState !is FavouriteCategory) {
 			return null
 		}
-		return if (isTrackingEnabled != previousState.isTrackingEnabled || isVisibleInLibrary != previousState.isVisibleInLibrary) {
+		return if (
+			isTrackingEnabled != previousState.isTrackingEnabled ||
+			isVisibleInLibrary != previousState.isVisibleInLibrary ||
+			icon != previousState.icon
+		) {
 			ListModelDiffCallback.PAYLOAD_CHECKED_CHANGED
 		} else {
 			null

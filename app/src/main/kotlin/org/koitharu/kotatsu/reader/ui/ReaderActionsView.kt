@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.reader.ui
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.database.ContentObserver
 import android.provider.Settings
 import android.util.AttributeSet
@@ -20,6 +21,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderControl
+import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.hasVisibleChildren
 import org.koitharu.kotatsu.core.util.ext.isRtl
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
@@ -27,8 +29,10 @@ import org.koitharu.kotatsu.core.util.ext.setTooltipCompat
 import org.koitharu.kotatsu.core.util.ext.setValueRounded
 import org.koitharu.kotatsu.databinding.LayoutReaderActionsBinding
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet
+import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_CHAPTERS
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_PAGES
 import org.koitharu.kotatsu.reader.ui.ReaderControlDelegate.OnInteractionListener
+import org.koitharu.kotatsu.sourcescore.data.CommunitySettings
 import javax.inject.Inject
 import com.google.android.material.R as materialR
 
@@ -46,6 +50,13 @@ class ReaderActionsView @JvmOverloads constructor(
 	@Inject
 	lateinit var settings: AppSettings
 
+	@Inject
+	lateinit var communitySettings: CommunitySettings
+
+	private val communityPrefs: SharedPreferences by lazy(LazyThreadSafetyMode.NONE) {
+		context.getSharedPreferences(CommunitySettings.FILE_NAME, Context.MODE_PRIVATE)
+	}
+
 	private val binding = LayoutReaderActionsBinding.inflate(LayoutInflater.from(context), this)
 	private val rotationObserver = object : ContentObserver(handler) {
 		override fun onChange(selfChange: Boolean) {
@@ -56,6 +67,8 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 	private var isSliderChanged = false
 	private var isSliderTracking = false
+	private val defaultTranslateIconTint: ColorStateList? = binding.buttonTranslate.iconTint
+	private val defaultTranslateBgTint: ColorStateList? = binding.buttonTranslate.backgroundTintList
 
 	var isSliderEnabled: Boolean
 		get() = binding.slider.isEnabled
@@ -84,6 +97,14 @@ class ReaderActionsView @JvmOverloads constructor(
 			}
 		}
 
+	var isTranslationActive: Boolean = false
+		set(value) {
+			if (field != value) {
+				field = value
+				updateTranslateButton()
+			}
+		}
+
 	var listener: OnInteractionListener? = null
 
 	init {
@@ -93,6 +114,7 @@ class ReaderActionsView @JvmOverloads constructor(
 		binding.buttonPrev.initAction()
 		binding.buttonSave.initAction()
 		binding.buttonOptions.initAction()
+		binding.buttonTranslate.initAction()
 		binding.buttonScreenRotation.initAction()
 		binding.buttonPagesThumbs.initAction()
 		binding.buttonComments.initAction()
@@ -104,18 +126,24 @@ class ReaderActionsView @JvmOverloads constructor(
 		updateControlsVisibility()
 		updatePagesSheetButton()
 		updateRotationButton()
+		updateTranslateButton()
 	}
 
 	override fun onAttachedToWindow() {
 		super.onAttachedToWindow()
 		settings.subscribe(this)
+		communityPrefs.registerOnSharedPreferenceChangeListener(this)
 		context.contentResolver.registerContentObserver(
 			Settings.System.CONTENT_URI, true, rotationObserver,
 		)
+		updateControlsVisibility()
+		updatePagesSheetButton()
+		updateRotationButton()
 	}
 
 	override fun onDetachedFromWindow() {
 		settings.unsubscribe(this)
+		communityPrefs.unregisterOnSharedPreferenceChangeListener(this)
 		context.contentResolver.unregisterContentObserver(rotationObserver)
 		super.onDetachedFromWindow()
 	}
@@ -130,18 +158,31 @@ class ReaderActionsView @JvmOverloads constructor(
 			R.id.button_comments -> listener?.onCommentsClick()
 			R.id.button_screen_rotation -> listener?.toggleScreenOrientation()
 			R.id.button_options -> listener?.openMenu()
+			R.id.button_translate -> listener?.onTranslateClick()
 			R.id.button_bookmark -> listener?.onBookmarkClick()
 		}
 	}
 
 	override fun onLongClick(v: View): Boolean = when (v.id) {
-		R.id.button_bookmark -> AppRouter.from(this)
-			?.showChapterPagesSheet(ChaptersPagesSheet.TAB_BOOKMARKS)
+		R.id.button_pages_thumbs -> AppRouter.from(this)?.showChapterPagesSheet(
+			if (settings.isPagesTabEnabled && settings.defaultDetailsTab != TAB_PAGES) {
+				TAB_PAGES
+			} else {
+				TAB_CHAPTERS
+			},
+		) != null
 
-		R.id.button_timer -> listener?.onScrollTimerClick(isLongClick = true)
-		R.id.button_options -> AppRouter.from(this)?.openReaderSettings()
-		else -> null
-	} != null
+		R.id.button_bookmark -> AppRouter.from(this)
+			?.showChapterPagesSheet(ChaptersPagesSheet.TAB_BOOKMARKS) != null
+
+		R.id.button_translate -> listener?.onTranslateLongClick() == true
+		R.id.button_timer -> {
+			listener?.onScrollTimerClick(isLongClick = true)
+			true
+		}
+		R.id.button_options -> AppRouter.from(this)?.openReaderSettings() != null
+		else -> false
+	}
 
 	override fun onValueChange(slider: Slider, value: Float, fromUser: Boolean) {
 		if (fromUser) {
@@ -168,11 +209,14 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 
 	override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-		when (key) {
-			AppSettings.KEY_READER_CONTROLS -> updateControlsVisibility()
-			AppSettings.KEY_PAGES_TAB,
-			AppSettings.KEY_DETAILS_TAB,
-			AppSettings.KEY_DETAILS_LAST_TAB -> updatePagesSheetButton()
+		when {
+			sharedPreferences === communityPrefs &&
+				(key == null || key == CommunitySettings.KEY_ENABLED) -> updateControlsVisibility()
+
+			key == AppSettings.KEY_READER_CONTROLS -> updateControlsVisibility()
+			key == AppSettings.KEY_PAGES_TAB ||
+				key == AppSettings.KEY_DETAILS_TAB ||
+				key == AppSettings.KEY_DETAILS_LAST_TAB -> updatePagesSheetButton()
 		}
 	}
 
@@ -193,10 +237,11 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	private fun updateControlsVisibility() {
 		val controls = settings.readerControls
+		val isCommunityEnabled = !::communitySettings.isInitialized || communitySettings.isEnabled
 		binding.buttonPrev.isVisible = ReaderControl.PREV_CHAPTER in controls
 		binding.buttonNext.isVisible = ReaderControl.NEXT_CHAPTER in controls
 		binding.buttonPagesThumbs.isVisible = ReaderControl.PAGES_SHEET in controls
-		binding.buttonComments.isVisible = ReaderControl.COMMENTS in controls
+		binding.buttonComments.isVisible = ReaderControl.COMMENTS in controls && isCommunityEnabled
 		binding.buttonScreenRotation.isVisible = ReaderControl.SCREEN_ROTATION in controls
 		binding.buttonSave.isVisible = ReaderControl.SAVE_PAGE in controls
 		binding.buttonTimer.isVisible = ReaderControl.TIMER in controls
@@ -206,7 +251,7 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 
 	private fun updatePagesSheetButton() {
-		val isPagesMode = settings.defaultDetailsTab == TAB_PAGES
+		val isPagesMode = settings.isPagesTabEnabled && settings.defaultDetailsTab == TAB_PAGES
 		val button = binding.buttonPagesThumbs
 		button.setIconResource(
 			if (isPagesMode) R.drawable.ic_grid else R.drawable.ic_list,
@@ -223,6 +268,23 @@ class ReaderActionsView @JvmOverloads constructor(
 		)
 		button.setContentDescriptionAndTooltip(
 			if (isBookmarkAdded) R.string.bookmark_remove else R.string.bookmark_add,
+		)
+	}
+
+	private fun updateTranslateButton() {
+		val button = binding.buttonTranslate
+		button.isSelected = isTranslationActive
+		if (isTranslationActive) {
+			val activeBg = context.getThemeColor(materialR.attr.colorPrimaryContainer)
+			val activeFg = context.getThemeColor(materialR.attr.colorOnPrimaryContainer)
+			button.backgroundTintList = ColorStateList.valueOf(activeBg)
+			button.iconTint = ColorStateList.valueOf(activeFg)
+		} else {
+			button.backgroundTintList = defaultTranslateBgTint
+			button.iconTint = defaultTranslateIconTint
+		}
+		button.setContentDescriptionAndTooltip(
+			if (isTranslationActive) R.string.translation_disable else R.string.translation_enable,
 		)
 	}
 

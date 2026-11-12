@@ -15,6 +15,7 @@ import org.koitharu.kotatsu.core.db.entity.toEntities
 import org.koitharu.kotatsu.core.db.entity.toEntity
 import org.koitharu.kotatsu.core.db.entity.toMangaList
 import org.koitharu.kotatsu.core.model.FavouriteCategory
+import org.koitharu.kotatsu.core.model.FavouriteIcon
 import org.koitharu.kotatsu.core.model.toMangaSources
 import org.koitharu.kotatsu.core.ui.util.ReversibleHandle
 import org.koitharu.kotatsu.core.util.ext.mapItems
@@ -187,6 +188,22 @@ class FavouritesRepository @Inject constructor(
 		return db.getFavouritesDao().findCategoriesCount(mangaId) != 0
 	}
 
+	suspend fun getFavouriteIcons(mangaIds: Collection<Long>): Map<Long, FavouriteIcon> {
+		if (mangaIds.isEmpty()) {
+			return emptyMap()
+		}
+		val dao = db.getFavouritesDao()
+		val result = LinkedHashMap<Long, FavouriteIcon>(mangaIds.size)
+		for (chunk in mangaIds.distinct().chunked(500)) {
+			for (row in dao.findFavouriteIcons(chunk)) {
+				if (row.mangaId !in result) {
+					result[row.mangaId] = FavouriteIcon.fromKey(row.icon)
+				}
+			}
+		}
+		return result
+	}
+
 	suspend fun getCategoriesIds(mangaId: Long): Set<Long> {
 		return db.getFavouritesDao().findCategoriesIds(mangaId).toSet()
 	}
@@ -206,6 +223,7 @@ class FavouritesRepository @Inject constructor(
 		sortOrder: ListSortOrder,
 		isTrackerEnabled: Boolean,
 		isVisibleOnShelf: Boolean,
+		icon: String? = null,
 	): FavouriteCategory {
 		val entity = FavouriteCategoryEntity(
 			title = title,
@@ -216,6 +234,7 @@ class FavouritesRepository @Inject constructor(
 			track = isTrackerEnabled,
 			deletedAt = 0L,
 			isVisibleInLibrary = isVisibleOnShelf,
+			icon = icon,
 		)
 		val id = db.getFavouriteCategoriesDao().insert(entity)
 		val category = entity.toFavouriteCategory(id)
@@ -228,8 +247,9 @@ class FavouritesRepository @Inject constructor(
 		sortOrder: ListSortOrder,
 		isTrackerEnabled: Boolean,
 		isVisibleOnShelf: Boolean,
+		icon: String? = null,
 	) {
-		db.getFavouriteCategoriesDao().update(id, title, sortOrder.name, isTrackerEnabled, isVisibleOnShelf)
+		db.getFavouriteCategoriesDao().update(id, title, sortOrder.name, isTrackerEnabled, isVisibleOnShelf, icon)
 	}
 
 	suspend fun updateCategory(id: Long, isVisibleInLibrary: Boolean) {

@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.list.ui.adapter
 import androidx.core.view.isVisible
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.FavouriteIcon
 import org.koitharu.kotatsu.core.ui.list.AdapterDelegateClickListenerAdapter
 import org.koitharu.kotatsu.core.util.ext.textAndVisible
 import org.koitharu.kotatsu.databinding.ItemMangaListDetailsBinding
@@ -30,7 +31,7 @@ fun mangaListDetailedItemAD(
 			clearIcons()
 			if (item.isPinned) addIcon(R.drawable.ic_pin_small)
 			if (item.isSaved) addIcon(R.drawable.ic_storage)
-			if (item.isFavorite) addIcon(R.drawable.ic_heart_outline)
+			if (item.isFavorite) addIcon((item.favouriteIcon ?: FavouriteIcon.DEFAULT).outlineIconRes)
 			isVisible = iconsCount > 0
 		}
 		binding.imageViewCover.setImageAsync(item.coverUrl, item.manga)

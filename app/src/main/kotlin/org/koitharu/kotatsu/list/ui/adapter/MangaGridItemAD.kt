@@ -11,6 +11,7 @@ import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
 import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.getThemeDimensionPixelOffset
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.FavouriteIcon
 import org.koitharu.kotatsu.core.ui.list.AdapterDelegateClickListenerAdapter
 import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.util.ext.setTooltipCompat
@@ -82,6 +83,9 @@ fun mangaGridItemAD(
 		}
 		// Favourite moved out of the top-left icon strip and into the status cluster opposite it.
 		binding.imageViewFavourite.isVisible = item.isFavorite
+		if (item.isFavorite) {
+			binding.imageViewFavourite.setImageResource((item.favouriteIcon ?: FavouriteIcon.DEFAULT).iconRes)
+		}
 		binding.imageViewCover.setImageAsync(item.coverUrl, item.manga)
 		binding.badge.number = item.counter
 		binding.badge.isVisible = item.counter > 0

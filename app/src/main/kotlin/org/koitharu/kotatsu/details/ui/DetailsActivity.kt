@@ -167,6 +167,11 @@ class DetailsActivity :
 		setContentView(ActivityDetailsBinding.inflate(layoutInflater))
 		infoBinding = LayoutDetailsTableBinding.bind(viewBinding.root)
 		configureTransparentAppBar()
+		if (!communityRating.isAvailable) {
+			viewBinding.loadingIndicatorCommunity?.isVisible = false
+			viewBinding.groupCommunityStars?.isVisible = false
+			viewBinding.groupCommunityRating.isVisible = false
+		}
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
 		supportActionBar?.setDisplayShowTitleEnabled(false)
 		viewBinding.chipFavorite.setOnClickListener(this)
@@ -650,21 +655,23 @@ class DetailsActivity :
 	 * server unreachable, the row simply does not appear. Nothing here may delay or break reading.
 	 */
 	private fun bindCommunityRating(manga: Manga) {
-		val group = viewBinding.groupCommunityRating ?: return
-		val stars = viewBinding.groupCommunityStars ?: return
 		val loading = viewBinding.loadingIndicatorCommunity
-		if (!communityRating.isAvailable) {
+		val group = viewBinding.groupCommunityRating
+		val stars = viewBinding.groupCommunityStars
+		if (!communityRating.isAvailable || stars == null) {
+			loading?.isVisible = false
+			stars?.isVisible = false
 			group.isVisible = false
 			return
 		}
 		val binder = StarRowBinder(
-			stars = listOf(
+			stars = listOfNotNull(
 				viewBinding.buttonStar1,
 				viewBinding.buttonStar2,
 				viewBinding.buttonStar3,
 				viewBinding.buttonStar4,
 				viewBinding.buttonStar5,
-			).mapNotNull { it },
+			),
 			scope = lifecycleScope,
 		) { value ->
 			// A rating is published under the user's name, so there has to be one first.

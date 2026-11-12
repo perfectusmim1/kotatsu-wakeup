@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.reader.ui.pager.vm
 import android.graphics.Rect
 import android.net.Uri
 import androidx.core.net.toFile
+import androidx.core.net.toUri
 import androidx.annotation.WorkerThread
 import com.davemorrissey.labs.subscaleview.DefaultOnImageEventListener
 import com.davemorrissey.labs.subscaleview.ImageSource
@@ -25,6 +26,7 @@ import okio.IOException
 import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.core.image.BitmapDecoderCompat
 import org.koitharu.kotatsu.core.os.NetworkState
+import org.koitharu.kotatsu.core.util.ext.isAnimatedImage
 import org.koitharu.kotatsu.core.util.ext.isFileUri
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.throttle
@@ -33,6 +35,7 @@ import org.koitharu.kotatsu.reader.domain.PageLoader
 import org.koitharu.kotatsu.reader.domain.erase.PageMask
 import org.koitharu.kotatsu.reader.domain.erase.PageVisibility
 import org.koitharu.kotatsu.reader.ui.config.ReaderSettings
+import java.io.File
 
 class PageViewModel(
 	private val loader: PageLoader,
@@ -44,11 +47,18 @@ class PageViewModel(
 
 	private val scope = loader.loaderScope + Dispatchers.Main.immediate
 	private var job: Job? = null
+	private var swapJob: Job? = null
 	private var cachedBounds: Rect? = null
+	private var cachedTrimBounds: Rect? = null
+	private var cachedVisibility: PageVisibility.Show? = null
 	private var boundPage: MangaPage? = null
 
 	/** The page as downloaded. Hidden parts are left out while decoding, so this is always the whole of it. */
 	private var rawUri: Uri? = null
+	private var displayedUri: Uri? = null
+
+	@Volatile
+	private var pendingPreserveViewState: Boolean = false
 
 	/** The file behind what is on screen, once it is on screen. */
 	val shownImage: Uri?
@@ -65,9 +75,21 @@ class PageViewModel(
 
 	fun isLoading() = job?.isActive == true
 
+	fun consumePreserveViewState(): Boolean {
+		val value = pendingPreserveViewState
+		pendingPreserveViewState = false
+		return value
+	}
+
 	fun onBind(page: MangaPage) {
 		val prevJob = job
+		val prevSwapJob = swapJob
+		pendingPreserveViewState = false
+		displayedUri = null
+		cachedTrimBounds = null
+		cachedVisibility = null
 		job = scope.launch(Dispatchers.Default) {
+			prevSwapJob?.cancelAndJoin()
 			prevJob?.cancelAndJoin()
 			doLoad(page, force = false)
 		}
@@ -75,7 +97,10 @@ class PageViewModel(
 
 	fun retry(page: MangaPage, isFromUser: Boolean) {
 		val prevJob = job
+		val prevSwapJob = swapJob
+		pendingPreserveViewState = false
 		job = scope.launch {
+			prevSwapJob?.cancelAndJoin()
 			prevJob?.cancelAndJoin()
 			val e = (state.value as? PageState.Error)?.error
 			if (e != null && ExceptionResolver.canResolve(e)) {
@@ -97,8 +122,13 @@ class PageViewModel(
 	fun onRecycle() {
 		state.value = PageState.Empty
 		cachedBounds = null
+		cachedTrimBounds = null
+		cachedVisibility = null
 		rawUri = null
+		displayedUri = null
 		boundPage = null
+		pendingPreserveViewState = false
+		swapJob?.cancel()
 		job?.cancel()
 	}
 
@@ -113,14 +143,40 @@ class PageViewModel(
 			val page = boundPage ?: return@launch
 			val uri = rawUri ?: return@launch
 			val visibility = loader.imageHider.resolve(page, uri)
+			cachedVisibility = visibility as? PageVisibility.Show
 			val isUnchanged = when (val current = state.value) {
 				is PageState.Shown -> visibility == PageVisibility.Show(current.mask)
 				is PageState.Loaded -> visibility == PageVisibility.Show(current.mask)
 				else -> false
 			}
 			if (!isUnchanged) {
-				present(uri, visibility, isConverted = false)
+				val displayUri = resolveDisplayUri(page, uri)
+				present(displayUri, uri, visibility, isConverted = false, preserveViewState = false)
 			}
+		}
+	}
+
+	fun onTranslationMapUpdated(translatedFiles: Map<Long, File>) {
+		val page = boundPage ?: return
+		val raw = rawUri ?: return
+		if (page.url.isAnimatedImage()) return
+		val current = state.value
+		if (current !is PageState.Shown && current !is PageState.Loaded) return
+		val desiredUri = resolveDisplayUri(page, raw, translatedFiles)
+		if (desiredUri == displayedUri) return
+		val prevSwapJob = swapJob
+		swapJob = scope.launch(Dispatchers.Default) {
+			prevSwapJob?.cancelAndJoin()
+			job?.join()
+			val latestPage = boundPage ?: return@launch
+			val latestRaw = rawUri ?: return@launch
+			if (latestPage.id != page.id) return@launch
+			val latestUri = resolveDisplayUri(latestPage, latestRaw)
+			if (latestUri == displayedUri) return@launch
+			val visibility = cachedVisibility ?: loader.imageHider.resolve(latestPage, latestRaw).also {
+				cachedVisibility = it as? PageVisibility.Show
+			}
+			present(latestUri, latestRaw, visibility, isConverted = false, preserveViewState = true)
 		}
 	}
 
@@ -156,6 +212,18 @@ class PageViewModel(
 	private fun onLoadFailed(e: Throwable, canConvert: Boolean) {
 		e.printStackTraceDebug()
 
+		val currentRaw = rawUri
+		if (displayedUri != null && currentRaw != null && displayedUri != currentRaw) {
+			val page = boundPage
+			if (page != null) {
+				scope.launch(Dispatchers.Default) {
+					val visibility = cachedVisibility ?: loader.imageHider.resolve(page, currentRaw)
+					present(currentRaw, currentRaw, visibility, isConverted = false, preserveViewState = false)
+				}
+				return
+			}
+		}
+
 		state.update { currentState ->
 			if (currentState is PageState.Loaded) {
 				val uri = (currentState.source as? ImageSource.Uri)?.uri
@@ -179,9 +247,13 @@ class PageViewModel(
 			try {
 				val newUri = loader.convertBimap(uri)
 				rawUri = newUri
+				cachedTrimBounds = null
 				// The check before this could not read the image, which is why it needed converting
 				val page = boundPage ?: return@launch
-				present(newUri, loader.imageHider.resolve(page, newUri), isConverted = true)
+				val visibility = loader.imageHider.resolve(page, newUri)
+				cachedVisibility = visibility as? PageVisibility.Show
+				val displayUri = resolveDisplayUri(page, newUri)
+				present(displayUri, newUri, visibility, isConverted = true, preserveViewState = false)
 			} catch (ce: CancellationException) {
 				throw ce
 			} catch (e2: Throwable) {
@@ -216,7 +288,11 @@ class PageViewModel(
 			progressObserver.cancelAndJoin()
 			previewJob.cancel()
 			rawUri = uri
-			present(uri, loader.imageHider.resolve(data, uri), isConverted = false)
+			cachedTrimBounds = null
+			val visibility = loader.imageHider.resolve(data, uri)
+			cachedVisibility = visibility as? PageVisibility.Show
+			val displayUri = resolveDisplayUri(data, uri)
+			present(displayUri, uri, visibility, isConverted = false, preserveViewState = false)
 		} catch (e: CancellationException) {
 			throw e
 		} catch (e: Throwable) {
@@ -242,12 +318,25 @@ class PageViewModel(
 			}
 		}.launchIn(scope)
 
-	private suspend fun present(uri: Uri, visibility: PageVisibility, isConverted: Boolean) {
+	private suspend fun present(
+		displayUri: Uri,
+		rawSourceUri: Uri,
+		visibility: PageVisibility,
+		isConverted: Boolean,
+		preserveViewState: Boolean,
+	) {
 		if (visibility !is PageVisibility.Show) {
+			displayedUri = null
+			pendingPreserveViewState = false
 			state.value = PageState.Hidden
 			return
 		}
-		val trim = if (settingsProducer.value.isPagesCropEnabled(isWebtoon)) loader.getTrimmedBounds(uri) else null
+		val isCropEnabled = settingsProducer.value.isPagesCropEnabled(isWebtoon)
+		val trim = if (isCropEnabled) {
+			cachedTrimBounds ?: loader.getTrimmedBounds(rawSourceUri)?.also { cachedTrimBounds = it }
+		} else {
+			null
+		}
 		val mask = visibility.mask
 		// A masked page always gets a region, which is what makes the view use the region decoder that
 		// knows about the mask, rather than loading the file whole for being small enough.
@@ -256,7 +345,23 @@ class PageViewModel(
 			trim == null -> Rect(0, 0, mask.sourceWidth, mask.visibleHeight)
 			else -> Rect(trim.left, mask.toVisible(trim.top), trim.right, mask.toVisible(trim.bottom))
 		}
-		state.value = PageState.Loaded(uri.toImageSource(cachedBounds), isConverted, mask)
+		pendingPreserveViewState = preserveViewState
+		displayedUri = displayUri
+		state.value = PageState.Loaded(displayUri.toImageSource(cachedBounds), isConverted, mask)
+	}
+
+	private fun resolveDisplayUri(
+		page: MangaPage,
+		rawUri: Uri,
+		translatedFiles: Map<Long, File> = loader.translationCoordinator.activeTranslatedPages.value,
+	): Uri {
+		if (page.url.isAnimatedImage()) return rawUri
+		val translated = translatedFiles[page.id]
+		return if (translated != null && translated.isFile && translated.length() > 0L) {
+			translated.toUri()
+		} else {
+			rawUri
+		}
 	}
 
 	private fun Uri.toImageSource(bounds: Rect?): ImageSource {

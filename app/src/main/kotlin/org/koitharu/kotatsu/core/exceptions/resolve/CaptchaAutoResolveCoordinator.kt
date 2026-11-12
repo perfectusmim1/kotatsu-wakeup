@@ -56,6 +56,9 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	@Volatile
 	private var hiddenActivityRef: WeakReference<CloudFlareHiddenActivity>? = null
 
+	@Volatile
+	private var interactiveActivityRef: WeakReference<CloudFlareActivity>? = null
+
 	init {
 		mainHandler.post {
 			ProcessLifecycleOwner.get().lifecycle.addObserver(this)
@@ -73,12 +76,40 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 		}
 	}
 
+	fun registerInteractiveActivity(activity: CloudFlareActivity) {
+		interactiveActivityRef = WeakReference(activity)
+		activeSession?.isInteractive = true
+		hiddenActivityRef = null
+		reorderPending.set(false)
+	}
+
+	fun unregisterInteractiveActivity(activity: CloudFlareActivity) {
+		if (interactiveActivityRef?.get() === activity) {
+			interactiveActivityRef = null
+		}
+	}
+
+	fun markEscalatingToInteractive(source: MangaSource) {
+		activeSession
+			?.takeIf { it.source == source }
+			?.isInteractive = true
+		hiddenActivityRef = null
+		reorderPending.set(false)
+	}
+
 	/** Called by the current solver Activity when it finishes or is manually cancelled. */
 	fun notifyResolveResult(source: MangaSource, success: Boolean) {
 		activeSession
 			?.takeIf { it.source == source }
 			?.activityResult
 			?.complete(success)
+	}
+
+	fun notifyManualResolveSuccess(source: MangaSource) {
+		activeSession
+			?.takeIf { it.source == source }
+			?.activityResult
+			?.complete(true)
 	}
 
 	fun isResolveActive(source: MangaSource): Boolean = activeSession != null
@@ -196,6 +227,7 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 				if (activeSession === session) activeSession = null
 			}
 			hiddenActivityRef = null
+			interactiveActivityRef = null
 			reorderPending.set(false)
 			// Clear ownership before releasing waiters. A waiter for another source can now retry,
 			// observe that it is still protected, and atomically claim the next session.
@@ -218,14 +250,14 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 
 	/** Keep the existing hidden WebView above newly opened app screens without constructing another one. */
 	override fun onActivityResumed(activity: Activity) {
-		if (activity is CloudFlareHiddenActivity) {
+		if (activity is CloudFlareActivity || activeSession?.isInteractive == true) {
 			reorderPending.set(false)
 			return
 		}
 		val solver = hiddenActivityRef?.get()?.takeUnless { it.isFinishing || it.isDestroyed } ?: return
 		if (!solver.shouldStayHiddenAndFocused() || !reorderPending.compareAndSet(false, true)) return
 		mainHandler.post {
-			if (!solver.shouldStayHiddenAndFocused() || solver.isFinishing || solver.isDestroyed) {
+			if (!solver.shouldStayHiddenAndFocused() || solver.isFinishing || solver.isDestroyed || activeSession?.isInteractive == true) {
 				reorderPending.set(false)
 				return@post
 			}
@@ -237,9 +269,10 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 		}
 	}
 
-	/** App backgrounding cancels the one session and therefore releases every waiter with failure. */
+	/** App backgrounding cancels an unseen hidden session, while keeping visible interactive solving alive. */
 	override fun onStop(owner: LifecycleOwner) {
 		val session = activeSession ?: return
+		if (session.isInteractive) return
 		session.isCancelledByBackground = true
 		session.activityResult.complete(false)
 		mainHandler.post {
@@ -261,6 +294,9 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	) {
 		@Volatile
 		var isCancelledByBackground = false
+
+		@Volatile
+		var isInteractive = false
 	}
 
 	private data class SessionClaim(

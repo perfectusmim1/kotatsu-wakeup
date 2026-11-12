@@ -30,6 +30,7 @@ import org.koitharu.kotatsu.core.ui.list.ListSelectionController
 import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.ui.util.PagerNestedScrollHelper
 import org.koitharu.kotatsu.core.ui.util.RecyclerViewOwner
+import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.RecyclerViewScrollCallback
 import org.koitharu.kotatsu.core.util.ext.consumeAll
 import org.koitharu.kotatsu.core.util.ext.findAppCompatDelegate
@@ -129,6 +130,7 @@ class PagesFragment :
 		parentViewModel.emptyReason.observe(viewLifecycleOwner, ::onNoChaptersChanged)
 		viewModel.thumbnails.observe(viewLifecycleOwner, ::onThumbnailsChanged)
 		viewModel.onPageSaved.observeEvent(this, PagesSavedObserver(binding.recyclerView))
+		viewModel.onActionDone.observeEvent(viewLifecycleOwner, ReversibleActionObserver(binding.recyclerView))
 		viewModel.onError.observeEvent(viewLifecycleOwner, SnackbarErrorObserver(binding.recyclerView, this))
 		combine(
 			viewModel.isLoading,
@@ -203,6 +205,12 @@ class PagesFragment :
 
 	override fun onActionItemClicked(controller: ListSelectionController, mode: ActionMode?, item: MenuItem): Boolean {
 		return when (item.itemId) {
+			R.id.action_bookmark -> {
+				viewModel.addBookmarks(collectSelectedPages())
+				mode?.finish()
+				true
+			}
+
 			R.id.action_save -> {
 				viewModel.savePages(pageSaveHelper, collectSelectedPages())
 				mode?.finish()

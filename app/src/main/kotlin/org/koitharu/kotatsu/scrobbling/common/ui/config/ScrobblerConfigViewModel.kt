@@ -39,6 +39,10 @@ class ScrobblerConfigViewModel @Inject constructor(
 	private val scrobbler = scrobblers.first { it.scrobblerService == scrobblerService }
 
 	val titleResId = scrobbler.scrobblerService.titleResId
+	val isAniList: Boolean
+		get() = scrobblerService == ScrobblerService.ANILIST
+	val isAuthorized: Boolean
+		get() = scrobbler.isEnabled
 
 	val user = MutableStateFlow<ScrobblerUser?>(null)
 	val onLoggedOut = MutableEventFlow<Unit>()

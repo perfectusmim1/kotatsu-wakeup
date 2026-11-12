@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.os.storage.StorageManager
 import androidx.annotation.WorkerThread
 import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import okhttp3.Cache
+import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.LocalizedAppContext
 import org.koitharu.kotatsu.core.exceptions.NonFileUriException
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -25,6 +27,7 @@ import org.koitharu.kotatsu.core.util.ext.getStorageName
 import org.koitharu.kotatsu.core.util.ext.isFileUri
 import org.koitharu.kotatsu.core.util.ext.isReadable
 import org.koitharu.kotatsu.core.util.ext.isWriteable
+import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.resolveFile
 import org.koitharu.kotatsu.core.util.ext.takeIfWriteable
 import org.koitharu.kotatsu.parsers.util.mapToSet
@@ -105,9 +108,73 @@ class LocalStorageManager @Inject constructor(
 		File(dir, NOMEDIA).createNewFile()
 	}
 
+	suspend fun setDirIsNoMediaSafe(dir: File) = runInterruptible(Dispatchers.IO) {
+		runCatching {
+			File(dir, NOMEDIA).createNewFile()
+		}.onFailure {
+			it.printStackTraceDebug()
+		}
+	}
+
 	fun takePermissions(uri: Uri) {
 		val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 		contentResolver.takePersistableUriPermission(uri, flags)
+	}
+
+	fun tryTakePermissions(uri: Uri): Boolean = runCatching {
+		takePermissions(uri)
+		true
+	}.onFailure {
+		it.printStackTraceDebug()
+	}.getOrDefault(false)
+
+	suspend fun findWriteableAppExternalDirForVolume(dir: File): File? = runInterruptible(Dispatchers.IO) {
+		val targetCanonical = runCatching { dir.canonicalPath }.getOrDefault(dir.absolutePath)
+		val storageManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+			context.getSystemService(Context.STORAGE_SERVICE) as? StorageManager
+		} else {
+			null
+		}
+		val targetVolumeUuid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+			runCatching { storageManager?.getStorageVolume(dir)?.uuid }.getOrNull()
+		} else {
+			null
+		}
+		context.getExternalFilesDirs(DIR_NAME).firstOrNull { appDir ->
+			if (appDir == null) return@firstOrNull false
+			val isRemovable = runCatching { Environment.isExternalStorageRemovable(appDir) }.getOrDefault(false)
+			val isNonPrimary = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+				runCatching { storageManager?.getStorageVolume(appDir)?.isPrimary == false }.getOrDefault(false)
+			if (!isRemovable && !isNonPrimary) return@firstOrNull false
+
+			val sameVolumeByUuid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && targetVolumeUuid != null) {
+				val appUuid = runCatching { storageManager?.getStorageVolume(appDir)?.uuid }.getOrNull()
+				appUuid != null && appUuid.equals(targetVolumeUuid, ignoreCase = true)
+			} else {
+				false
+			}
+			val sameVolumeByPath = run {
+				val appCanonical = runCatching { appDir.canonicalPath }.getOrDefault(appDir.absolutePath)
+				val androidDataIndex = appCanonical.indexOf("/Android/data/")
+				if (androidDataIndex > 0) {
+					val volumeRoot = appCanonical.substring(0, androidDataIndex)
+					targetCanonical == volumeRoot || targetCanonical.startsWith(volumeRoot + File.separator)
+				} else {
+					false
+				}
+			}
+			(sameVolumeByUuid || sameVolumeByPath) && (appDir.exists() || appDir.mkdirs()) && appDir.isWriteable()
+		}
+	}
+
+	fun getSdCardWriteGuidanceMessage(pickedDir: File, fallbackDir: File): String {
+		val header = context.getString(R.string.no_write_permission_to_file)
+		val fallbackLine = context.getString(
+			R.string.inline_preference_pattern,
+			context.getString(R.string.download_default_directory),
+			fallbackDir.absolutePath,
+		)
+		return "$header (${pickedDir.name})\n$fallbackLine"
 	}
 
 	fun isOnExternalStorage(file: File): Boolean {

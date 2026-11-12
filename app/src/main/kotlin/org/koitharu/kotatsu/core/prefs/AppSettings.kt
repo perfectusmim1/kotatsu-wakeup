@@ -17,8 +17,10 @@ import androidx.preference.PreferenceManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.ZoomMode
@@ -38,10 +40,16 @@ import org.koitharu.kotatsu.parsers.util.mapNotNullToSet
 import org.koitharu.kotatsu.parsers.util.mapToSet
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.reader.domain.ReaderColorFilter
+import org.koitharu.kotatsu.reader.domain.translate.api.GeminiKeyPool
+import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages
+import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
+import org.koitharu.kotatsu.reader.domain.translate.model.TranslationProvider
+import org.koitharu.kotatsu.reader.domain.translate.model.TranslationSettingsSnapshot
 import java.io.File
 import java.net.Proxy
 import java.util.EnumSet
 import java.util.HashMap
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -554,6 +562,65 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val isReaderEraseGestureEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_ERASE_GESTURE, true)
 
+	var translationProvider: TranslationProvider
+		get() = prefs.getEnumValue(KEY_TRANSLATION_PROVIDER, TranslationProvider.GOOGLE)
+		set(value) = prefs.edit { putEnumValue(KEY_TRANSLATION_PROVIDER, value) }
+
+	var translationSourceLang: OcrSourceLanguage
+		get() = OcrSourceLanguage.fromCode(
+			prefs.getString(KEY_TRANSLATION_SOURCE_LANG, OcrSourceLanguage.ENGLISH.code),
+		)
+		set(value) = prefs.edit { putString(KEY_TRANSLATION_SOURCE_LANG, value.code) }
+
+	var translationTargetLang: String
+		get() {
+			val saved = prefs.getString(KEY_TRANSLATION_TARGET_LANG, null)
+			if (!saved.isNullOrBlank()) {
+				return TranslationLanguages.normalizeTargetCode(saved)
+			}
+			val deviceCode = TranslationLanguages.normalizeTargetCode(Locale.getDefault().language)
+			return TranslationLanguages.findTargetLanguage(deviceCode)?.code ?: "en"
+		}
+		set(value) = prefs.edit {
+			putString(KEY_TRANSLATION_TARGET_LANG, TranslationLanguages.normalizeTargetCode(value))
+		}
+
+	var translationApiKeysRaw: String
+		get() = prefs.getString(KEY_TRANSLATION_API_KEYS, null).orEmpty()
+		set(value) = prefs.edit { putString(KEY_TRANSLATION_API_KEYS, value.trim()) }
+
+	val translationApiKeys: List<String>
+		get() = GeminiKeyPool.parseApiKeysInput(translationApiKeysRaw)
+
+	var isTranslationAutoEnabled: Boolean
+		get() = prefs.getBoolean(KEY_TRANSLATION_AUTO, false)
+		set(value) = prefs.edit { putBoolean(KEY_TRANSLATION_AUTO, value) }
+
+	var isTranslationSkipPureSfx: Boolean
+		get() = prefs.getBoolean(KEY_TRANSLATION_SKIP_SFX, true)
+		set(value) = prefs.edit { putBoolean(KEY_TRANSLATION_SKIP_SFX, value) }
+
+	var isTranslationFilterPromo: Boolean
+		get() = prefs.getBoolean(KEY_TRANSLATION_FILTER_PROMO, true)
+		set(value) = prefs.edit { putBoolean(KEY_TRANSLATION_FILTER_PROMO, value) }
+
+	fun getTranslationSettingsSnapshot(): TranslationSettingsSnapshot = TranslationSettingsSnapshot(
+		provider = translationProvider,
+		sourceLang = translationSourceLang,
+		targetLang = translationTargetLang,
+		apiKeys = translationApiKeys,
+		autoTranslate = isTranslationAutoEnabled,
+		skipPureSfx = isTranslationSkipPureSfx,
+		filterPromoAndCredits = isTranslationFilterPromo,
+	)
+
+	fun observeTranslationSettings(): Flow<TranslationSettingsSnapshot> = prefs.observeChanges()
+		.filter { key -> key == null || key in TRANSLATION_PREF_KEYS }
+		.onStart { emit(null) }
+		.map { getTranslationSettingsSnapshot() }
+		.distinctUntilChanged()
+		.flowOn(Dispatchers.Default)
+
 	/**
 	 * A saved layout's EXPLORE used to be the list of sources, which is now the SOURCES tab, so it gets
 	 * that tab beside the new screen, once. Removing it afterwards has to stick, hence the flag. A bar
@@ -976,6 +1043,23 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_DISCORD_RPC_SKIP_NSFW = "discord_rpc_skip_nsfw"
 		const val KEY_DISCORD_TOKEN = "discord_token"
 		const val KEY_ACTIVE_SOURCE_PRESET = "active_source_preset"
+		const val KEY_TRANSLATION_PROVIDER = "reader_translation_provider"
+		const val KEY_TRANSLATION_SOURCE_LANG = "reader_translation_source_lang"
+		const val KEY_TRANSLATION_TARGET_LANG = "reader_translation_target_lang"
+		const val KEY_TRANSLATION_API_KEYS = "reader_translation_api_keys"
+		const val KEY_TRANSLATION_AUTO = "reader_translation_auto"
+		const val KEY_TRANSLATION_SKIP_SFX = "reader_translation_skip_sfx"
+		const val KEY_TRANSLATION_FILTER_PROMO = "reader_translation_filter_promo"
+
+		private val TRANSLATION_PREF_KEYS = setOf(
+			KEY_TRANSLATION_PROVIDER,
+			KEY_TRANSLATION_SOURCE_LANG,
+			KEY_TRANSLATION_TARGET_LANG,
+			KEY_TRANSLATION_API_KEYS,
+			KEY_TRANSLATION_AUTO,
+			KEY_TRANSLATION_SKIP_SFX,
+			KEY_TRANSLATION_FILTER_PROMO,
+		)
 
 		// keys for non-persistent preferences
 		const val KEY_APP_VERSION = "app_version"

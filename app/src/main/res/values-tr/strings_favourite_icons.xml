@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Simge</string>
+	<string name="fav_icon_default">Kalp</string>
+	<string name="fav_icon_star">Yıldız</string>
+	<string name="fav_icon_fire">Ateş</string>
+	<string name="fav_icon_crown">Taç</string>
+	<string name="fav_icon_book">Kitap</string>
+	<string name="fav_icon_bookmark">Yer İmi</string>
+	<string name="fav_icon_eye">Göz</string>
+	<string name="fav_icon_bolt">Şimşek</string>
+	<string name="fav_icon_clock">Saat</string>
+	<string name="fav_icon_folder">Klasör</string>
+	<string name="fav_icon_check">Onay</string>
+	<string name="fav_icon_sparkles">Parıltı</string>
+</resources>

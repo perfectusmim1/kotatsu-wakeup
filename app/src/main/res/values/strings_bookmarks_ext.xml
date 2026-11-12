@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Bookmarks added</string>
+	<string name="bookmarks_sort_newest">Newest added</string>
+	<string name="bookmarks_sort_oldest">Oldest added</string>
+	<string name="bookmarks_sort_chapter">Chapter order</string>
+	<string name="search_bookmarks_hint">Search series or chapter</string>
+	<string name="search_bookmarked_chapters_hint">Search bookmarked chapters</string>
+	<string name="no_bookmarks_matching_query">No matching bookmarks</string>
+	<string name="no_bookmarks_matching_summary">No bookmarks matched your current filter</string>
+	<string name="download_bookmarked_chapters">Download bookmarked chapters</string>
+	<string name="no_bookmarked_chapters_to_download">No bookmarked chapters to download</string>
+	<string name="migrate_bookmarks">Migrate bookmarks to another source</string>
+	<string name="bookmark_migration_choose_series">Choose series to migrate</string>
+	<string name="bookmark_migration_searching">Searching active sources…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d sources · %3$d matches</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d chapters matched</string>
+	<string name="bookmark_migration_total_chapters">%1$d chapters</string>
+	<string name="bookmark_migration_no_candidates">No compatible sources found</string>
+	<string name="bookmark_migration_no_candidates_summary">No enabled source matched this series and its bookmarked chapters</string>
+	<string name="bookmark_migration_confirm">Migrate %1$d bookmark(s) from \"%2$s\" (%3$s) to \"%4$s\" (%5$s)?\n%6$d of %7$d bookmarked chapters matched.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Migrate %1$d bookmark(s) from \"%2$s\" (%3$s) to \"%4$s\" (%5$s)?\nChapters will be approximated by reading progress.</string>
+	<string name="bookmark_migration_success">Bookmarks migrated to %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">No bookmarks found for this series</string>
+	<string name="bookmark_migration_rescan">Rescan</string>
+	<string name="bookmark_migration_unavailable_no_chapters">No chapters</string>
+	<string name="bookmarks_count_badge">%1$d bookmarks</string>
+</resources>

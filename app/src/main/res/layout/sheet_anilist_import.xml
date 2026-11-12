@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:animateLayoutChanges="true"
+	android:orientation="vertical">
+
+	<org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetHeaderBar
+		android:id="@+id/headerBar"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		app:title="@string/import_from_anilist" />
+
+	<androidx.core.widget.NestedScrollView
+		android:id="@+id/scrollView"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:clipToPadding="false"
+		android:scrollbars="vertical">
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:paddingHorizontal="@dimen/margin_normal"
+			android:paddingBottom="@dimen/margin_normal">
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/anilist_import_mode_label"
+				android:textAppearance="?textAppearanceTitleSmall" />
+
+			<com.google.android.material.button.MaterialButtonToggleGroup
+				android:id="@+id/toggleGroup_mode"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="@dimen/margin_small"
+				app:checkedButton="@id/button_mode_status"
+				app:selectionRequired="true"
+				app:singleSelection="true">
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_mode_status"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="@string/anilist_import_by_status" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_mode_category"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="@string/anilist_import_single_category" />
+
+			</com.google.android.material.button.MaterialButtonToggleGroup>
+
+			<LinearLayout
+				android:id="@+id/layout_category_picker"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:orientation="vertical"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.textfield.TextInputLayout
+					android:id="@+id/inputLayout_category_select"
+					style="?textInputOutlinedStyle"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:hint="@string/anilist_import_single_category"
+					app:endIconMode="dropdown_menu">
+
+					<AutoCompleteTextView
+						android:id="@+id/edit_category_select"
+						style="?editTextStyle"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:inputType="none"
+						tools:ignore="LabelFor" />
+
+				</com.google.android.material.textfield.TextInputLayout>
+
+				<com.google.android.material.textfield.TextInputLayout
+					android:id="@+id/inputLayout_category_name"
+					style="?textInputOutlinedStyle"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="@dimen/margin_small"
+					android:hint="@string/anilist_import_new_category_hint"
+					android:visibility="gone"
+					tools:visibility="visible">
+
+					<com.google.android.material.textfield.TextInputEditText
+						android:id="@+id/editText_category_name"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:imeOptions="actionDone"
+						android:importantForAutofill="no"
+						android:inputType="textCapWords"
+						android:maxLength="120"
+						android:maxLines="1" />
+
+				</com.google.android.material.textfield.TextInputLayout>
+
+			</LinearLayout>
+
+			<LinearLayout
+				android:id="@+id/layout_progress"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:orientation="vertical"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+				<com.google.android.material.progressindicator.LinearProgressIndicator
+					android:id="@+id/progressBar"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:indeterminate="true" />
+
+				<TextView
+					android:id="@+id/textView_status"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="@dimen/margin_small"
+					android:ellipsize="end"
+					android:maxLines="2"
+					android:textAppearance="?textAppearanceBodyMedium"
+					tools:text="12/40 · Solo Leveling" />
+
+				<TextView
+					android:id="@+id/textView_counts"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="4dp"
+					android:textAppearance="?textAppearanceBodySmall"
+					android:textColor="?colorOnSurfaceVariant"
+					tools:text="Imported: 10 · Existing: 1 · Unmatched: 1" />
+
+				<LinearLayout
+					android:id="@+id/layout_unmatched"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="@dimen/margin_small"
+					android:orientation="vertical"
+					android:visibility="gone"
+					tools:visibility="visible">
+
+					<TextView
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:text="@string/anilist_import_unmatched_title"
+						android:textAppearance="?textAppearanceTitleSmall" />
+
+					<TextView
+						android:id="@+id/textView_unmatched"
+						android:layout_width="match_parent"
+						android:layout_height="wrap_content"
+						android:layout_marginTop="4dp"
+						android:textAppearance="?textAppearanceBodySmall"
+						android:textColor="?colorOnSurfaceVariant"
+						android:textIsSelectable="true" />
+
+				</LinearLayout>
+
+			</LinearLayout>
+
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:gravity="end"
+				android:orientation="horizontal">
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_cancel"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="@string/close" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_start"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginStart="@dimen/margin_small"
+					android:text="@string/anilist_import_start" />
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+	</androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

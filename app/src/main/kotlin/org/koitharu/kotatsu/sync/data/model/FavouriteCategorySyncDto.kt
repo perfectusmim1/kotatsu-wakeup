@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.sync.data.model
 
 import android.database.Cursor
+import androidx.core.database.getStringOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.koitharu.kotatsu.core.util.ext.buildContentValues
@@ -16,6 +17,7 @@ data class FavouriteCategorySyncDto(
 	@SerialName("track") val track: Boolean,
 	@SerialName("show_in_lib") val isVisibleInLibrary: Boolean,
 	@SerialName("deleted_at") val deletedAt: Long,
+	@SerialName("icon") val icon: String? = null,
 ) {
 
 	constructor(cursor: Cursor) : this(
@@ -27,9 +29,10 @@ data class FavouriteCategorySyncDto(
 		track = cursor.getBoolean(cursor.getColumnIndexOrThrow("track")),
 		isVisibleInLibrary = cursor.getBoolean(cursor.getColumnIndexOrThrow("show_in_lib")),
 		deletedAt = cursor.getLong(cursor.getColumnIndexOrThrow("deleted_at")),
+		icon = cursor.getColumnIndex("icon").takeIf { it >= 0 }?.let(cursor::getStringOrNull),
 	)
 
-	fun toContentValues() = buildContentValues(8) {
+	fun toContentValues() = buildContentValues(9) {
 		put("category_id", categoryId)
 		put("created_at", createdAt)
 		put("sort_key", sortKey)
@@ -38,5 +41,6 @@ data class FavouriteCategorySyncDto(
 		put("track", track)
 		put("show_in_lib", isVisibleInLibrary)
 		put("deleted_at", deletedAt)
+		put("icon", icon)
 	}
 }

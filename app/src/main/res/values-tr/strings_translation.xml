@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Çeviri ayarları</string>
+	<string name="translation_toggle">Çeviriyi aç/kapat</string>
+	<string name="translation_enable">Çeviriyi aç</string>
+	<string name="translation_disable">Çeviriyi kapat</string>
+	<string name="translation_active">Açık</string>
+	<string name="translation_off">Kapalı</string>
+	<string name="translation_provider">Çeviri sağlayıcısı</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google Çeviri</string>
+	<string name="translation_source_lang">Kaynak dil (OCR)</string>
+	<string name="translation_target_lang">Hedef dil</string>
+	<string name="translation_api_keys">Gemini API anahtarları</string>
+	<string name="translation_api_keys_hint">Birden fazla anahtarı virgül veya yeni satırla ayırın</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d aktif anahtar tanımlı</item>
+		<item quantity="other">%1$d aktif anahtar tanımlı</item>
+	</plurals>
+	<string name="translation_api_keys_empty">Tanımlı API anahtarı yok</string>
+	<string name="translation_api_key_required">Gemini API anahtarı ekleyin veya Google Çeviri seçin</string>
+	<string name="translation_auto_translate">Sayfaları otomatik çevir</string>
+	<string name="translation_skip_sfx">Ses efektlerini atla</string>
+	<string name="translation_filter_promo">Ekip ve reklam sayfalarını atla</string>
+	<string name="translation_ocr_ready">OCR modeli hazır</string>
+	<string name="translation_ocr_not_downloaded">OCR modeli ilk kullanımda indirilecek</string>
+	<string name="translation_ocr_download">Modeli indir</string>
+	<string name="translation_ocr_downloading">OCR modeli indiriliyor… %%%1$d</string>
+	<string name="translation_ocr_running">Metin taranıyor…</string>
+	<string name="translation_translating_text">Çevriliyor…</string>
+	<string name="translation_rendering_page">Sayfa oluşturuluyor…</string>
+	<string name="translation_clear_cache">Çeviri önbelleğini temizle</string>
+	<string name="translation_cache_cleared">Çeviri önbelleği temizlendi</string>
+	<string name="translation_cache_cleared_size">%1$s çeviri önbelleği temizlendi</string>
+	<string name="translation_error_generic">Çeviri başarısız: %1$s</string>
+</resources>

@@ -21,7 +21,11 @@ import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.config.ConfigKey
+import org.koitharu.kotatsu.parsers.util.buildMangaSearchQueries
+import org.koitharu.kotatsu.parsers.util.mangaTitleMatchDistance
+import org.koitharu.kotatsu.parsers.util.normalizeSearchQuery
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import org.koitharu.kotatsu.parsers.util.sanitizeMangaSearchTitle
 import org.koitharu.kotatsu.search.domain.SearchKind
 import org.koitharu.kotatsu.search.domain.SearchV2Helper
 import org.koitharu.kotatsu.sourcescore.domain.SourceRanker
@@ -216,38 +220,107 @@ class AlternativesUseCase @Inject constructor(
 		if (sources.isEmpty()) {
 			return emptyFlow()
 		}
+		val searchQueries = buildAlternativeSearchQueries(manga, query)
+		if (searchQueries.isEmpty()) {
+			return emptyFlow()
+		}
+		val seedTitles = buildSeedTitles(manga, query)
 		return channelFlow {
 			for (source in sources) {
 				launch {
 					val searchHelper = searchHelperFactory.create(source)
-					val searchResult = runCatchingCancellable {
-						withSourcePermit(source) {
-							searchHelper(query, SearchKind.TITLE)?.manga
+					val matchedById = LinkedHashMap<Long, Pair<Manga, Float>>()
+					val seenKeys = HashSet<String>()
+					var hadSuccessfulSearch = false
+					var lastError: Throwable? = null
+
+					for (candidateQuery in searchQueries) {
+						val searchResult = runCatchingCancellable {
+							withSourcePermit(source) {
+								searchHelper(candidateQuery, SearchKind.SIMPLE)?.manga
+							}
+						}
+						val error = searchResult.exceptionOrNull()
+						if (error != null) {
+							lastError = error
+							Log.w(
+								SOURCE_REPLACEMENT_TAG,
+								"Search failed: source=${source.name} query=\"${candidateQuery.take(120)}\"",
+								error,
+							)
+							continue
+						}
+						hadSuccessfulSearch = true
+						val list = searchResult.getOrNull().orEmpty()
+						var foundExactInBatch = false
+						for (m in list) {
+							if (isSameManga(m, manga)) {
+								continue
+							}
+							val dedupeKey = "${m.source.name}:${m.url}"
+							if (!seenKeys.add(dedupeKey)) {
+								continue
+							}
+							val score = mangaTitleMatchDistance(m.title, m.altTitles, seedTitles)
+							if (!score.isFinite()) {
+								continue
+							}
+							val existing = matchedById[m.id]
+							if (existing == null || score < existing.second) {
+								matchedById[m.id] = m to score
+							}
+							if (score == 0f) {
+								foundExactInBatch = true
+							}
+						}
+						if (foundExactInBatch) {
+							break
 						}
 					}
-					searchResult.exceptionOrNull()?.let { error ->
-						Log.w(
-							SOURCE_REPLACEMENT_TAG,
-							"Search failed: source=${source.name} query=\"${query.take(120)}\"",
-							error,
-						)
+
+					if (!hadSuccessfulSearch && lastError != null) {
 						onSourceFailure(source)
 					}
-					val list = searchResult.getOrNull()
-					list?.forEach { m ->
-						if (m.id != manga.id) {
-							if (loadDetails) {
-								launch {
-									send(loadDetails(m))
-								}
-							} else {
-								send(m)
+
+					val sortedMatches = matchedById.values
+						.sortedBy { it.second }
+						.map { it.first }
+					for (m in sortedMatches) {
+						if (loadDetails) {
+							launch {
+								send(loadDetails(m))
 							}
+						} else {
+							send(m)
 						}
 					}
 				}
 			}
 		}
+	}
+
+	private fun buildAlternativeSearchQueries(manga: Manga, rawQuery: String): List<String> {
+		val normalizedRaw = rawQuery.normalizeSearchQuery()
+		val normalizedTitle = manga.title.normalizeSearchQuery()
+		val isSeedTitleQuery = rawQuery.equals(manga.title, ignoreCase = true) ||
+			(normalizedRaw.isNotEmpty() && normalizedRaw.equals(normalizedTitle, ignoreCase = true))
+		return if (isSeedTitleQuery) {
+			buildMangaSearchQueries(manga.title, manga.altTitles)
+		} else {
+			val sanitized = rawQuery.sanitizeMangaSearchTitle().ifEmpty { normalizedRaw }
+			if (sanitized.isBlank()) emptyList() else listOf(sanitized)
+		}
+	}
+
+	private fun buildSeedTitles(manga: Manga, rawQuery: String): List<String> = buildList(2 + manga.altTitles.size) {
+		add(rawQuery)
+		add(manga.title)
+		addAll(manga.altTitles)
+	}
+
+	private fun isSameManga(candidate: Manga, seed: Manga): Boolean {
+		return candidate.id == seed.id ||
+			(candidate.source.name == seed.source.name && candidate.url == seed.url)
 	}
 
 	private suspend fun loadDetails(manga: Manga): Manga {

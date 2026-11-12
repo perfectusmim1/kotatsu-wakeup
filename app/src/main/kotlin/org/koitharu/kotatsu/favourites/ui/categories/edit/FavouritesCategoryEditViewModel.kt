@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.core.model.FavouriteCategory
+import org.koitharu.kotatsu.core.model.FavouriteIcon
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseViewModel
@@ -51,13 +52,15 @@ class FavouritesCategoryEditViewModel @Inject constructor(
 		sortOrder: ListSortOrder,
 		isTrackerEnabled: Boolean,
 		isVisibleOnShelf: Boolean,
+		icon: FavouriteIcon = FavouriteIcon.DEFAULT,
 	) {
 		launchLoadingJob(Dispatchers.Default) {
 			check(title.isNotEmpty())
+			val iconKey = icon.persistedKey
 			if (categoryId == NO_ID) {
-				repository.createCategory(title, sortOrder, isTrackerEnabled, isVisibleOnShelf)
+				repository.createCategory(title, sortOrder, isTrackerEnabled, isVisibleOnShelf, iconKey)
 			} else {
-				repository.updateCategory(categoryId, title, sortOrder, isTrackerEnabled, isVisibleOnShelf)
+				repository.updateCategory(categoryId, title, sortOrder, isTrackerEnabled, isVisibleOnShelf, iconKey)
 			}
 			onSaved.call(Unit)
 		}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList\'ten İçe Aktar</string>
+	<string name="anilist_import_mode_label">Hedef kategori</string>
+	<string name="anilist_import_by_status">Duruma göre</string>
+	<string name="anilist_import_single_category">Tek kategori</string>
+	<string name="anilist_import_new_category">Yeni kategori</string>
+	<string name="anilist_import_new_category_hint">Kategori adı</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">AniList kitaplığı alınıyor…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Tamamlandı (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">İçe aktarılan: %1$d · Zaten mevcut: %2$d · Eşleşmeyen: %3$d</string>
+	<string name="anilist_import_empty">AniList manga listeniz boş.</string>
+	<string name="anilist_import_unmatched_title">Eşleşmeyen başlıklar</string>
+	<string name="anilist_import_start">İçe Aktarmayı Başlat</string>
+	<string name="anilist_import_retry">Tekrar İçe Aktar</string>
+	<string name="anilist_import_error_no_sources">İçe aktarmadan önce en az bir manga kaynağı etkinleştirin.</string>
+</resources>

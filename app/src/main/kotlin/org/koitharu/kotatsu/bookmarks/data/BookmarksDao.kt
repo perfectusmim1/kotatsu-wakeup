@@ -30,6 +30,9 @@ abstract class BookmarksDao {
 	@Query("SELECT * FROM bookmarks WHERE manga_id = :mangaId ORDER BY percent")
 	abstract fun observe(mangaId: Long): Flow<List<BookmarkEntity>>
 
+	@Query("SELECT * FROM bookmarks WHERE manga_id = :mangaId ORDER BY percent")
+	abstract suspend fun findAllByManga(mangaId: Long): List<BookmarkEntity>
+
 	@Transaction
 	@Query(
 		"SELECT * FROM manga JOIN bookmarks ON bookmarks.manga_id = manga.manga_id ORDER BY percent",
@@ -50,6 +53,39 @@ abstract class BookmarksDao {
 
 	@Upsert
 	abstract suspend fun upsert(bookmarks: Collection<BookmarkEntity>)
+
+	@Query(
+		"""
+		DELETE FROM bookmarks
+		WHERE manga_id = :mangaId
+			AND chapter_id = :oldChapterId
+			AND page IN (
+				SELECT page FROM bookmarks
+				WHERE manga_id = :mangaId AND chapter_id = :newChapterId
+			)
+		""",
+	)
+	protected abstract suspend fun deleteCollidingBookmarks(
+		mangaId: Long,
+		oldChapterId: Long,
+		newChapterId: Long,
+	)
+
+	@Query("UPDATE bookmarks SET chapter_id = :newChapterId WHERE manga_id = :mangaId AND chapter_id = :oldChapterId")
+	protected abstract suspend fun updateChapterIdInternal(
+		mangaId: Long,
+		oldChapterId: Long,
+		newChapterId: Long,
+	)
+
+	@Transaction
+	open suspend fun updateChapterId(mangaId: Long, oldChapterId: Long, newChapterId: Long) {
+		if (oldChapterId == newChapterId) {
+			return
+		}
+		deleteCollidingBookmarks(mangaId, oldChapterId, newChapterId)
+		updateChapterIdInternal(mangaId, oldChapterId, newChapterId)
+	}
 
 	fun dump(): Flow<Pair<MangaWithTags, List<BookmarkEntity>>> = flow {
 		val window = 4
