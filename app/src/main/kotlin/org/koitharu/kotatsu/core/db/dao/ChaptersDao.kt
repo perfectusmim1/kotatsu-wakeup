@@ -13,6 +13,26 @@ abstract class ChaptersDao {
 	@Query("SELECT * FROM chapters WHERE manga_id = :mangaId ORDER BY `index` ASC")
 	abstract suspend fun findAll(mangaId: Long): List<ChapterEntity>
 
+	@Query("SELECT * FROM chapters WHERE manga_id IN (:mangaIds) ORDER BY `index` ASC")
+	abstract suspend fun findAllByMangaIds(mangaIds: List<Long>): List<ChapterEntity>
+
+	open suspend fun findAllByMangaIdsMap(mangaIds: Collection<Long>): Map<Long, List<ChapterEntity>> {
+		if (mangaIds.isEmpty()) {
+			return emptyMap()
+		}
+		val distinctIds = mangaIds.distinct()
+		if (distinctIds.size <= 500) {
+			return findAllByMangaIds(distinctIds).groupBy { it.mangaId }
+		}
+		val result = HashMap<Long, MutableList<ChapterEntity>>(distinctIds.size)
+		for (chunk in distinctIds.chunked(500)) {
+			for (chapter in findAllByMangaIds(chunk)) {
+				result.getOrPut(chapter.mangaId) { ArrayList() }.add(chapter)
+			}
+		}
+		return result
+	}
+
 	@Query("SELECT * FROM chapters WHERE manga_id = :mangaId AND chapter_id = :chapterId")
 	abstract suspend fun find(mangaId: Long, chapterId: Long): ChapterEntity?
 

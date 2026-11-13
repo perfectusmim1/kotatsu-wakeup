@@ -29,6 +29,7 @@ import org.koitharu.kotatsu.settings.utils.validation.DomainValidator
 import org.koitharu.kotatsu.settings.utils.validation.PortNumberValidator
 import java.net.Proxy
 import javax.inject.Inject
+import javax.inject.Provider
 import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
@@ -39,7 +40,7 @@ class ProxySettingsFragment : BasePreferenceFragment(R.string.proxy),
 
 	@Inject
 	@BaseHttpClient
-	lateinit var okHttpClient: OkHttpClient
+	lateinit var okHttpClientProvider: Provider<OkHttpClient>
 
 	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
 		addPreferencesFromResource(R.xml.pref_proxy)
@@ -122,7 +123,7 @@ class ProxySettingsFragment : BasePreferenceFragment(R.string.proxy),
 						.get()
 						.url("http://neverssl.com")
 						.build()
-					okHttpClient.newCall(request).await().use { response ->
+					okHttpClientProvider.get().newCall(request).await().use { response ->
 						check(response.isSuccessful) { response.message }
 					}
 				}

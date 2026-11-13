@@ -128,7 +128,7 @@ class TranslatedPageCache @Inject constructor(
 
 	private companion object {
 		const val CACHE_DIR_NAME = "translated_pages"
-		const val RENDERER_VERSION = 3
+		const val RENDERER_VERSION = 4
 		const val MAX_CACHE_BYTES = 256L * 1024L * 1024L
 		const val TRIM_TARGET_BYTES = 216L * 1024L * 1024L
 		const val STALE_TMP_AGE_MS = 5L * 60L * 1000L

@@ -1,13 +1,9 @@
 package org.koitharu.kotatsu.suggestions.domain
 
-import org.koitharu.kotatsu.sourcescore.data.SimilarWorkDto
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.ln
 import kotlin.math.pow
-
-/** A work the server suggested, with the score it has on this device so far. */
-internal data class RankedWork(val dto: SimilarWorkDto, val score: Double)
 
 /** Something the reader has read, as a place to start suggesting from. */
 internal class SeedCandidate<T>(val item: T, val tags: Set<String>, val weight: Double)
@@ -18,11 +14,8 @@ internal class SeedCandidate<T>(val item: T, val tags: Set<String>, val weight: 
  */
 internal object SuggestionRanking {
 
-	/** How much a full genre overlap with an earlier pick costs: half its score at most. */
+	/** How much a full tag overlap with an earlier pick costs: half its score at most. */
 	const val DIVERSITY = 0.5
-
-	/** Re-ranking looks this many times deeper than it returns, so variety has something to pick. */
-	const val DIVERSITY_POOL = 3
 
 	/** Per dropped manga a candidate is like: two of them make it a quarter as likely. */
 	const val DROPPED_PENALTY = 0.5
@@ -32,43 +25,6 @@ internal object SuggestionRanking {
 
 	/** ...and untouched this long counts as left, not merely paused. */
 	val DROPPED_AFTER: Duration = Duration.ofDays(21)
-
-	/**
-	 * The best [count] of [candidates], re-ranked so the list is not twenty variations of one thing.
-	 *
-	 * Greedy maximal marginal relevance: each pick's score is discounted by how much its genres
-	 * overlap the closest pick already made, so a slightly weaker match with something new beats a
-	 * near-copy of what is already listed. Genre overlap stands in for similarity because genres are
-	 * what the scores are made of. The discounted scores come out in descending order, so they are
-	 * also what the stored relevance - and therefore the displayed order - is taken from.
-	 */
-	fun diversify(candidates: Collection<RankedWork>, count: Int): List<RankedWork> {
-		val pool = candidates.sortedByDescending { it.score }.take(count * DIVERSITY_POOL).toMutableList()
-		val picked = ArrayList<RankedWork>(minOf(count, pool.size))
-		while (pool.isNotEmpty() && picked.size < count) {
-			var bestIndex = 0
-			var bestScore = Double.NEGATIVE_INFINITY
-			pool.forEachIndexed { index, candidate ->
-				val overlap = picked.maxOfOrNull { genreOverlap(it.dto, candidate.dto) } ?: 0.0
-				val score = candidate.score * (1.0 - DIVERSITY * overlap)
-				if (score > bestScore) {
-					bestScore = score
-					bestIndex = index
-				}
-			}
-			picked += pool.removeAt(bestIndex).copy(score = bestScore)
-		}
-		return picked
-	}
-
-	/** Jaccard overlap of two works' genres; nothing in common when either has none. */
-	fun genreOverlap(a: SimilarWorkDto, b: SimilarWorkDto): Double {
-		if (a.genres.isEmpty() || b.genres.isEmpty()) {
-			return 0.0
-		}
-		val shared = a.genres.count { it in b.genres }
-		return shared.toDouble() / (a.genres.size + b.genres.size - shared)
-	}
 
 	/**
 	 * [score] for a work like [droppedHits] of the manga the reader dropped: ranked down rather than

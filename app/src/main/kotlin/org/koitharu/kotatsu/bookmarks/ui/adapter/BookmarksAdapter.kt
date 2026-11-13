@@ -31,4 +31,13 @@ class BookmarksAdapter(
 	override fun getSectionText(context: Context, position: Int): CharSequence? {
 		return findHeader(position)?.getText(context)
 	}
+
+	/**
+	 * Replaces items without running DiffUtil move animations, preventing RecyclerView
+	 * anchor-tracking jumps and DiffUtil stalls when sort order or search query changes.
+	 */
+	fun submitItemsImmediate(items: List<ListModel>, commitCallback: Runnable? = null) {
+		differ.submitList(null)
+		differ.submitList(items, commitCallback)
+	}
 }

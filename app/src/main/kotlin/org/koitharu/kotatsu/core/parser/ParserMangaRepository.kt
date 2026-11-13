@@ -94,6 +94,8 @@ class ParserMangaRepository(
 
 	fun getAuthProvider(): MangaParserAuthProvider? = parser.authorizationProvider
 
+	fun getCommunityProvider(): org.koitharu.kotatsu.parsers.MangaSourceCommunityProvider? = parser.communityProvider
+
 	fun getRequestHeaders() = parser.getRequestHeaders()
 
 	fun getConfigKeys(): List<ConfigKey<*>> = ArrayList<ConfigKey<*>>().also {

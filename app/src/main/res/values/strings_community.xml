@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">Rate</string>
+	<string name="community_rating_title">Community rating</string>
+	<string name="community_your_rating">Your rating: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Submit</string>
+	<string name="community_rating_saved">Rating saved</string>
+	<string name="community_rating_count">%1$s ratings</string>
+	<string name="community_views_count">%1$s views</string>
+	<string name="community_follows_count">%1$s follows</string>
+	<string name="community_comments_count">%1$s comments</string>
+	<string name="community_comments_sort_old">Old</string>
+	<string name="community_web_comments">Web</string>
+	<string name="community_show_replies">Show replies (%1$d)</string>
+	<string name="community_hide_replies">Hide replies</string>
+	<string name="community_load_more">Load more</string>
+	<string name="community_load_more_replies">Load more replies</string>
+	<string name="community_replying_to">Replying to %1$s</string>
+	<string name="community_editing_comment">Editing comment</string>
+	<string name="community_comment_edited">(edited)</string>
+	<string name="community_comment_deleted">Comment deleted</string>
+	<string name="community_comment_delete_confirm">Delete this comment?</string>
+	<string name="community_spoiler_warning">Spoiler — Tap to reveal</string>
+	<string name="community_spoiler_hide">Hide spoiler</string>
+	<string name="community_sign_in_to_comment">Sign in to post comments or reactions</string>
+	<string name="community_sign_in_to_rate">Sign in to rate on %1$s</string>
+	<string name="community_widget_ssl_error">Secure connection failed for this comment widget. You can open the page in your browser instead.</string>
+	<string name="community_widget_load_error">Could not load the comment widget. Check your connection or open it in your browser.</string>
+	<string name="community_widget_unavailable">WebView is unavailable on this device. Open comments in your browser instead.</string>
+	<string name="community_more_options">More options</string>
+</resources>

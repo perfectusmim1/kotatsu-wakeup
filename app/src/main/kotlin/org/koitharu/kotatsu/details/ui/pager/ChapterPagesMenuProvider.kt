@@ -126,8 +126,18 @@ class ChapterPagesMenuProvider(
 			true
 		}
 
-		R.id.action_download_bookmarked -> {
-			currentBookmarksFragment()?.downloadBookmarkedChapters()
+		R.id.action_download_bookmarked_only -> {
+			currentBookmarksFragment()?.downloadBookmarkedChapters(extraNextChapters = 0)
+			true
+		}
+
+		R.id.action_download_bookmarked_next_2 -> {
+			currentBookmarksFragment()?.downloadBookmarkedChapters(extraNextChapters = 2)
+			true
+		}
+
+		R.id.action_download_bookmarked_next_3 -> {
+			currentBookmarksFragment()?.downloadBookmarkedChapters(extraNextChapters = 3)
 			true
 		}
 

@@ -7,12 +7,16 @@ import android.view.MenuItem
 import android.view.View
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.list.ListSelectionController
@@ -30,17 +34,35 @@ import org.koitharu.kotatsu.list.ui.MangaListFragment
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.search.domain.SearchKind
 import org.koitharu.kotatsu.search.ui.MangaListActivity
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.OnClickListener {
+
+    @Inject
+    lateinit var captchaHandler: CaptchaHandler
+
+    @Inject
+    lateinit var captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator
 
     override val viewModel by viewModels<RemoteListViewModel>()
 
     override val filterCoordinator: FilterCoordinator
         get() = viewModel.filterCoordinator
 
+    private var pendingBrowserRetry = false
+    private var lastHandledBrowserVersion = 0L
+
     override fun onViewBindingCreated(binding: FragmentListBinding, savedInstanceState: Bundle?) {
         super.onViewBindingCreated(binding, savedInstanceState)
+        lastHandledBrowserVersion = captchaHandler.currentBrowserCompletionVersion()
+        viewLifecycleOwner.lifecycle.addObserver(
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    handleResumeFromBrowser()
+                }
+            },
+        )
         addMenuProvider(RemoteListMenuProvider())
         addMenuProvider(
             MangaSearchMenuProvider(filterCoordinator, viewModel) { isSearchMode ->
@@ -55,7 +77,7 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.On
                 viewModel.setCaptchaResolving(true)
                 try {
                     if (exceptionResolver.resolve(e, tryAutoResolve = true)) {
-                        viewModel.onRetry()
+                        viewModel.onAutoCaptchaRetry()
                     }
                 } finally {
                     viewModel.setCaptchaResolving(false)
@@ -67,6 +89,23 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.On
             .observe(viewLifecycleOwner) {
                 activity?.invalidateMenu()
             }
+    }
+
+    private fun handleResumeFromBrowser() {
+        val latestVersion = captchaHandler.latestBrowserCompletionVersion(viewModel.source)
+        val hasBrowserCompletion = latestVersion > lastHandledBrowserVersion
+        if (hasBrowserCompletion) {
+            lastHandledBrowserVersion = latestVersion
+        }
+        if (!pendingBrowserRetry && !hasBrowserCompletion) {
+            return
+        }
+        pendingBrowserRetry = false
+        viewLifecycleScope.launch {
+            captchaHandler.discard(viewModel.source)
+            captchaAutoResolveCoordinator.notifyManualResolveSuccess(viewModel.source)
+            viewModel.onRetry()
+        }
     }
 
     override fun onScrolledToEnd() {
@@ -111,6 +150,7 @@ class RemoteListFragment : MangaListFragment(), FilterCoordinator.Owner, View.On
 
     private fun openInBrowser(url: String?) {
         if (url?.isHttpUrl() == true) {
+            pendingBrowserRetry = true
             router.openBrowser(
                 url = url,
                 source = viewModel.source,

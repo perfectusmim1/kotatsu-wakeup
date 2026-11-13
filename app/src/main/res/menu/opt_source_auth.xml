@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto">
+
+	<item
+		android:id="@+id/action_verify"
+		android:icon="@drawable/ic_check"
+		android:title="@string/auth_verify"
+		app:showAsAction="ifRoom" />
+
+	<item
+		android:id="@+id/action_refresh"
+		android:icon="@drawable/ic_retry"
+		android:title="@string/auth_refresh"
+		app:showAsAction="ifRoom" />
+
+	<item
+		android:id="@+id/action_sign_in"
+		android:title="@string/sign_in"
+		app:showAsAction="never" />
+
+	<item
+		android:id="@+id/action_sign_up"
+		android:title="@string/sign_up"
+		app:showAsAction="never" />
+
+</menu>

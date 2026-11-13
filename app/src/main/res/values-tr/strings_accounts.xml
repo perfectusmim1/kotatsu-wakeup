@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Kaynak hesapları</string>
+	<string name="source_accounts_summary">%1$d oturum açık · %2$d desteklenen</string>
+	<string name="source_accounts_summary_none">Aktif oturum yok · %1$d desteklenen</string>
+	<string name="source_accounts_empty">Hesap desteği olan kaynak bulunamadı</string>
+	<string name="source_account_signed_in">Oturum açık</string>
+	<string name="source_account_not_signed_in">Oturum açılmadı</string>
+	<string name="source_account_switch">Hesap değiştir</string>
+	<string name="source_signed_out">Oturum kapatıldı</string>
+	<string name="sign_up">Kayıt ol</string>
+	<string name="auth_verify">Doğrula</string>
+	<string name="auth_refresh">Yenile</string>
+	<string name="auth_not_verified_yet">Oturum henüz doğrulanamadı. Girişi tamamladıktan sonra tekrar deneyin.</string>
+</resources>

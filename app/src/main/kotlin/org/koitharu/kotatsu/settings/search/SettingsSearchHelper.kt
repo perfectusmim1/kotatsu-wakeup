@@ -30,7 +30,6 @@ import org.koitharu.kotatsu.settings.sources.SourcesSettingsFragment
 import org.koitharu.kotatsu.settings.tracker.TrackerSettingsFragment
 import org.koitharu.kotatsu.settings.userdata.BackupsSettingsFragment
 import org.koitharu.kotatsu.settings.userdata.storage.DataCleanupSettingsFragment
-import org.koitharu.kotatsu.sourcescore.ui.CommunitySettingsFragment
 import javax.inject.Inject
 
 @Reusable
@@ -57,10 +56,9 @@ class SettingsSearchHelper @Inject constructor(
         preferenceManager.inflateTo(result, R.xml.pref_data_cleanup, downloads, DataCleanupSettingsFragment::class.java)
         preferenceManager.inflateTo(result, R.xml.pref_backups, emptyList(), BackupsSettingsFragment::class.java)
         preferenceManager.inflateTo(result, R.xml.pref_backup_periodic, backups, PeriodicalBackupSettingsFragment::class.java)
-        preferenceManager.inflateTo(result, R.xml.pref_accounts, emptyList(), AccountsSettingsFragment::class.java)
-        preferenceManager.inflateTo(result, R.xml.pref_sync, accounts, SyncSettingsFragment::class.java)
-        preferenceManager.inflateTo(result, R.xml.pref_community, accounts, CommunitySettingsFragment::class.java)
-        preferenceManager.inflateTo(result, R.xml.pref_discord, accounts, DiscordSettingsFragment::class.java)
+		preferenceManager.inflateTo(result, R.xml.pref_accounts, emptyList(), AccountsSettingsFragment::class.java)
+		preferenceManager.inflateTo(result, R.xml.pref_sync, accounts, SyncSettingsFragment::class.java)
+		preferenceManager.inflateTo(result, R.xml.pref_discord, accounts, DiscordSettingsFragment::class.java)
         preferenceManager.inflateTo(result, R.xml.pref_notifications, emptyList(), NotificationsSettingsFragment::class.java)
         preferenceManager.inflateTo(result, R.xml.pref_privacy, emptyList(), PrivacySettingsFragment::class.java)
         preferenceManager.inflateTo(result, R.xml.pref_network, emptyList(), NetworkSettingsFragment::class.java)

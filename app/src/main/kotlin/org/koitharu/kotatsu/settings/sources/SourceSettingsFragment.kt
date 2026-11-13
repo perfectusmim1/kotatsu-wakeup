@@ -9,7 +9,6 @@ import androidx.preference.EditTextPreferenceDialogFragmentCompat
 import androidx.preference.Preference
 import androidx.preference.SwitchPreferenceCompat
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.filterNotNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.model.getTitle
@@ -20,6 +19,7 @@ import org.koitharu.kotatsu.core.parser.ParserMangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
+import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.ui.util.ReversibleActionObserver
 import org.koitharu.kotatsu.core.util.ext.observe
 import org.koitharu.kotatsu.core.util.ext.observeEvent
@@ -50,22 +50,20 @@ class SourceSettingsFragment : BasePreferenceFragment(0), Preference.OnPreferenc
 			isVisible = isValidSource && !settings.isAllSourcesEnabled
 			onPreferenceChangeListener = this@SourceSettingsFragment
 		}
-		findPreference<Preference>(KEY_AUTH)?.run {
-			val authProvider = (viewModel.repository as? ParserMangaRepository)?.getAuthProvider()
-			isVisible = authProvider != null
-		}
+		val authProvider = (viewModel.repository as? ParserMangaRepository)?.getAuthProvider()
+		findPreference<Preference>(KEY_AUTH)?.isVisible = authProvider != null
+		findPreference<Preference>(KEY_AUTH_SIGN_UP)?.isVisible = authProvider?.signUpUrl != null
+		findPreference<Preference>(KEY_AUTH_SIGN_OUT)?.isVisible = false
 		findPreference<Preference>(SourceSettings.KEY_SLOWDOWN)?.isVisible = isValidSource
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-		viewModel.isAuthorized.filterNotNull().observe(viewLifecycleOwner) { isAuthorized ->
-			findPreference<Preference>(KEY_AUTH)?.isEnabled = !isAuthorized
+		viewModel.isAuthorized.observe(viewLifecycleOwner) {
+			updateAuthPreferences()
 		}
-		viewModel.username.observe(viewLifecycleOwner) { username ->
-			findPreference<Preference>(KEY_AUTH)?.summary = username?.let {
-				getString(R.string.logged_in_as, it)
-			}
+		viewModel.username.observe(viewLifecycleOwner) {
+			updateAuthPreferences()
 		}
 		viewModel.onError.observeEvent(
 			viewLifecycleOwner,
@@ -77,6 +75,8 @@ class SourceSettingsFragment : BasePreferenceFragment(0), Preference.OnPreferenc
 		)
 		viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
 			findPreference<Preference>(KEY_AUTH)?.isEnabled = !isLoading
+			findPreference<Preference>(KEY_AUTH_SIGN_UP)?.isEnabled = !isLoading
+			findPreference<Preference>(KEY_AUTH_SIGN_OUT)?.isEnabled = !isLoading
 		}
 		viewModel.isEnabled.observe(viewLifecycleOwner) { enabled ->
 			findPreference<SwitchPreferenceCompat>(KEY_ENABLE)?.isChecked = enabled
@@ -93,7 +93,21 @@ class SourceSettingsFragment : BasePreferenceFragment(0), Preference.OnPreferenc
 	override fun onPreferenceTreeClick(preference: Preference): Boolean {
 		return when (preference.key) {
 			KEY_AUTH -> {
-				router.openSourceAuth(viewModel.source)
+				if (viewModel.isAuthorized.value == true) {
+					showSignedInAuthDialog()
+				} else {
+					router.openSourceAuth(viewModel.source, startSignUp = false)
+				}
+				true
+			}
+
+			KEY_AUTH_SIGN_UP -> {
+				router.openSourceAuth(viewModel.source, startSignUp = true)
+				true
+			}
+
+			KEY_AUTH_SIGN_OUT -> {
+				viewModel.signOut()
 				true
 			}
 
@@ -163,9 +177,51 @@ class SourceSettingsFragment : BasePreferenceFragment(0), Preference.OnPreferenc
 		}
 	}
 
+	private fun updateAuthPreferences() {
+		val authProvider = (viewModel.repository as? ParserMangaRepository)?.getAuthProvider()
+		val isAuthorized = viewModel.isAuthorized.value
+		val username = viewModel.username.value
+		findPreference<Preference>(KEY_AUTH)?.run {
+			isVisible = authProvider != null
+			if (isAuthorized == true) {
+				setTitle(R.string.source_account_switch)
+				summary = username?.let { getString(R.string.logged_in_as, it) }
+					?: getString(R.string.source_account_signed_in)
+			} else {
+				setTitle(R.string.sign_in)
+				summary = username?.let { getString(R.string.logged_in_as, it) }
+			}
+		}
+		findPreference<Preference>(KEY_AUTH_SIGN_UP)?.isVisible =
+			authProvider?.signUpUrl != null && isAuthorized != true
+		findPreference<Preference>(KEY_AUTH_SIGN_OUT)?.isVisible =
+			authProvider != null && isAuthorized == true
+	}
+
+	private fun showSignedInAuthDialog() {
+		val ctx = context ?: return
+		val username = viewModel.username.value
+		buildAlertDialog(ctx) {
+			setTitle(viewModel.source.getTitle(ctx))
+			setMessage(
+				username?.let { getString(R.string.logged_in_as, it) }
+					?: getString(R.string.source_account_signed_in),
+			)
+			setPositiveButton(R.string.logout) { _, _ ->
+				viewModel.signOut()
+			}
+			setNeutralButton(R.string.source_account_switch) { _, _ ->
+				router.openSourceAuth(viewModel.source, startSignUp = false)
+			}
+			setNegativeButton(android.R.string.cancel, null)
+		}.show()
+	}
+
 	companion object {
 
 		private const val KEY_AUTH = "auth"
+		private const val KEY_AUTH_SIGN_UP = "auth_sign_up"
+		private const val KEY_AUTH_SIGN_OUT = "auth_sign_out"
 		private const val KEY_ENABLE = "enable"
 
 		fun newInstance(source: MangaSource) = SourceSettingsFragment().withArgs(1) {

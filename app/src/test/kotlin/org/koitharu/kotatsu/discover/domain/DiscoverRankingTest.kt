@@ -1,6 +1,5 @@
 package org.koitharu.kotatsu.discover.domain
 
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -11,8 +10,6 @@ import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.SortOrder
-import org.koitharu.kotatsu.sourcescore.data.ChartsResponse
-import org.koitharu.kotatsu.sourcescore.data.SimilarWorkDto
 
 class DiscoverRankingTest {
 
@@ -266,15 +263,6 @@ class DiscoverRankingTest {
 	}
 
 	@Test
-	fun `a chart is narrowed down by what it says about each work`() {
-		val work = SimilarWorkDto(workId = "1", title = "x", contentType = "manhwa", genres = listOf("romance", "slice of life"))
-		assertTrue(DiscoverRanking.fits(work, DiscoverFilter()))
-		assertTrue(DiscoverRanking.fits(work, DiscoverFilter(ContentType.MANHWA, "Slice Of Life")))
-		assertFalse(DiscoverRanking.fits(work, DiscoverFilter(ContentType.MANGA)))
-		assertFalse(DiscoverRanking.fits(work, DiscoverFilter(genre = "Action")))
-	}
-
-	@Test
 	fun `a genre already in a row does not get its own`() {
 		val library = List(10) { entry("Romance", "Comedy") } + List(9) { entry("Comedy", "Horror") }
 		val all = DiscoverRanking.categoriesOf(library, 3).flatMap { it.tags }
@@ -323,16 +311,5 @@ class DiscoverRankingTest {
 		assertTrue(DiscoverRanking.isAdult(manga("x", "18+")))
 		assertFalse(DiscoverRanking.isAdult(manga("x", "Romance", "Mature Protagonist")))
 		assertFalse(DiscoverRanking.isAdult(manga("x")))
-	}
-
-	/** A response captured from the server's own route test, so the two sides cannot drift unnoticed. */
-	@Test
-	fun `the server's chart response parses`() {
-		val body = """{"window":"week","generated_at":1793456531761,"works":[{"work_id":"6058","title":"The Work","year":2020,"content_type":"manhwa","nsfw":false,"genres":["romance","villainess"],"shared_genres":0,"score":2.55,"sources":[{"source":"SOURCE_A","key":"/6058","reporters":2,"last_seen":"2026-10-31","verified":false}]}]}"""
-		val parsed = Json { ignoreUnknownKeys = true }.decodeFromString<ChartsResponse>(body)
-		assertEquals("week", parsed.window)
-		val work = parsed.works.single()
-		assertEquals("6058", work.workId)
-		assertEquals("/6058", work.sources.single().key)
 	}
 }

@@ -29,7 +29,10 @@ class SourcesSettingsFragment : BasePreferenceFragment(R.string.remote_sources),
 		findPreference<ListPreference>(AppSettings.KEY_SOURCES_ORDER)?.run {
 			entryValues = SourcesSortOrder.entries.names()
 			entries = SourcesSortOrder.entries.map { context.getString(it.titleResId) }.toTypedArray()
-			setDefaultValueCompat(SourcesSortOrder.SCORE.name)
+			setDefaultValueCompat(SourcesSortOrder.POPULARITY.name)
+			if (value != null && findIndexOfValue(value) < 0) {
+				value = SourcesSortOrder.POPULARITY.name
+			}
 		}
 	}
 

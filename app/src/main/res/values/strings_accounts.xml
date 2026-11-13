@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Source accounts</string>
+	<string name="source_accounts_summary">%1$d signed in · %2$d supported</string>
+	<string name="source_accounts_summary_none">No active sessions · %1$d supported</string>
+	<string name="source_accounts_empty">No sources with account support found</string>
+	<string name="source_account_signed_in">Signed in</string>
+	<string name="source_account_not_signed_in">Not signed in</string>
+	<string name="source_account_switch">Switch account</string>
+	<string name="source_signed_out">Signed out</string>
+	<string name="sign_up">Sign up</string>
+	<string name="auth_verify">Verify</string>
+	<string name="auth_refresh">Refresh</string>
+	<string name="auth_not_verified_yet">Session not verified yet. Finish signing in and try again.</string>
+</resources>

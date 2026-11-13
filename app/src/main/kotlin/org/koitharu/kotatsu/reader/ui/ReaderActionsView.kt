@@ -32,7 +32,6 @@ import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_CHAPTERS
 import org.koitharu.kotatsu.details.ui.pager.ChaptersPagesSheet.Companion.TAB_PAGES
 import org.koitharu.kotatsu.reader.ui.ReaderControlDelegate.OnInteractionListener
-import org.koitharu.kotatsu.sourcescore.data.CommunitySettings
 import javax.inject.Inject
 import com.google.android.material.R as materialR
 
@@ -49,13 +48,6 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	@Inject
 	lateinit var settings: AppSettings
-
-	@Inject
-	lateinit var communitySettings: CommunitySettings
-
-	private val communityPrefs: SharedPreferences by lazy(LazyThreadSafetyMode.NONE) {
-		context.getSharedPreferences(CommunitySettings.FILE_NAME, Context.MODE_PRIVATE)
-	}
 
 	private val binding = LayoutReaderActionsBinding.inflate(LayoutInflater.from(context), this)
 	private val rotationObserver = object : ContentObserver(handler) {
@@ -105,6 +97,15 @@ class ReaderActionsView @JvmOverloads constructor(
 			}
 		}
 
+	var isCommentsAvailable: Boolean = false
+		set(value) {
+			if (field != value) {
+				field = value
+				binding.buttonComments.isVisible = value
+				adjustLayoutParams()
+			}
+		}
+
 	var listener: OnInteractionListener? = null
 
 	init {
@@ -132,7 +133,6 @@ class ReaderActionsView @JvmOverloads constructor(
 	override fun onAttachedToWindow() {
 		super.onAttachedToWindow()
 		settings.subscribe(this)
-		communityPrefs.registerOnSharedPreferenceChangeListener(this)
 		context.contentResolver.registerContentObserver(
 			Settings.System.CONTENT_URI, true, rotationObserver,
 		)
@@ -143,7 +143,6 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	override fun onDetachedFromWindow() {
 		settings.unsubscribe(this)
-		communityPrefs.unregisterOnSharedPreferenceChangeListener(this)
 		context.contentResolver.unregisterContentObserver(rotationObserver)
 		super.onDetachedFromWindow()
 	}
@@ -210,9 +209,6 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
 		when {
-			sharedPreferences === communityPrefs &&
-				(key == null || key == CommunitySettings.KEY_ENABLED) -> updateControlsVisibility()
-
 			key == AppSettings.KEY_READER_CONTROLS -> updateControlsVisibility()
 			key == AppSettings.KEY_PAGES_TAB ||
 				key == AppSettings.KEY_DETAILS_TAB ||
@@ -237,11 +233,10 @@ class ReaderActionsView @JvmOverloads constructor(
 
 	private fun updateControlsVisibility() {
 		val controls = settings.readerControls
-		val isCommunityEnabled = !::communitySettings.isInitialized || communitySettings.isEnabled
 		binding.buttonPrev.isVisible = ReaderControl.PREV_CHAPTER in controls
 		binding.buttonNext.isVisible = ReaderControl.NEXT_CHAPTER in controls
 		binding.buttonPagesThumbs.isVisible = ReaderControl.PAGES_SHEET in controls
-		binding.buttonComments.isVisible = ReaderControl.COMMENTS in controls && isCommunityEnabled
+		binding.buttonComments.isVisible = isCommentsAvailable
 		binding.buttonScreenRotation.isVisible = ReaderControl.SCREEN_ROTATION in controls
 		binding.buttonSave.isVisible = ReaderControl.SAVE_PAGE in controls
 		binding.buttonTimer.isVisible = ReaderControl.TIMER in controls

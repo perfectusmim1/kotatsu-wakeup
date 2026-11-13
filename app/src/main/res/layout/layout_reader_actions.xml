@@ -126,6 +126,7 @@
 		<com.google.android.material.button.MaterialButton
 			android:id="@+id/button_comments"
 			style="?materialIconButtonStyle"
+			android:visibility="gone"
 			app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Community.Comments"
 			android:layout_width="48dp"
 			android:layout_height="48dp"

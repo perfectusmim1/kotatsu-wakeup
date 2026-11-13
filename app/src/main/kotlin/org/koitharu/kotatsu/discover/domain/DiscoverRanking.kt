@@ -8,7 +8,6 @@ import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.util.almostEquals
-import org.koitharu.kotatsu.sourcescore.data.SimilarWorkDto
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -206,16 +205,6 @@ object DiscoverRanking {
 
 	/** What a manga is about, one way of spelling each. */
 	fun tagsOf(manga: Manga): Set<String> = manga.tags.mapNotNullTo(HashSet()) { canonicalTag(it.title) }
-
-	/** Whether a work on a chart fits a filter, going by what the chart says about it. */
-	fun fits(work: SimilarWorkDto, filter: DiscoverFilter): Boolean {
-		if (filter.type != null && work.contentType?.lowercase() != filter.type.name.lowercase()) {
-			return false
-		}
-		val genre = filter.genre ?: return true
-		val wanted = canonicalTag(genre) ?: titleKey(genre)
-		return work.genres.any { (canonicalTag(it) ?: titleKey(it)) == wanted }
-	}
 
 	/**
 	 * A reader's taste less what they said they are not interested in. Each one counts for little, as passing on

@@ -17,13 +17,12 @@ import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.bookmarks.domain.BookmarkSortOrder
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.bookmarks.domain.matchesBookmarkQuery
+import org.koitharu.kotatsu.bookmarks.domain.resolveBookmarkDownloadChapterIds
 import org.koitharu.kotatsu.bookmarks.domain.sortedByOrder
 import org.koitharu.kotatsu.core.LocalizedAppContext
 import org.koitharu.kotatsu.core.model.getLocalizedTitle
-import org.koitharu.kotatsu.core.model.ids
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
-import org.koitharu.kotatsu.core.util.LocaleStringComparator
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.download.ui.worker.DownloadTask
@@ -36,6 +35,7 @@ import org.koitharu.kotatsu.list.ui.model.toErrorState
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.reader.ui.PageSaveHelper
+import java.text.Collator
 import javax.inject.Inject
 
 @HiltViewModel
@@ -115,7 +115,11 @@ class AllBookmarksViewModel @Inject constructor(
 		}
 	}
 
-	fun downloadBookmarkedChapters(selectedIds: Set<Long>?, allowMeteredNetwork: Boolean) {
+	fun downloadBookmarkedChapters(
+		selectedIds: Set<Long>?,
+		allowMeteredNetwork: Boolean,
+		extraNextChapters: Int = 0,
+	) {
 		launchJob(Dispatchers.Default) {
 			val visibleMap = screenState.value.visibleByManga
 			val targetGroups: Map<Manga, List<Bookmark>> = if (selectedIds != null) {
@@ -127,13 +131,7 @@ class AllBookmarksViewModel @Inject constructor(
 				visibleMap
 			}
 			val tasks = targetGroups.mapNotNull { (manga, bookmarks) ->
-				val validChapterIds = manga.chapters?.ids()
-				val chapterIds = bookmarks.asSequence()
-					.map { it.chapterId }
-					.filter { validChapterIds == null || it in validChapterIds }
-					.distinct()
-					.toList()
-					.toLongArray()
+				val chapterIds = resolveBookmarkDownloadChapterIds(manga, bookmarks, extraNextChapters)
 				if (chapterIds.isEmpty()) {
 					null
 				} else {
@@ -188,14 +186,22 @@ class AllBookmarksViewModel @Inject constructor(
 			)
 		}
 		val normalizedQuery = rawQuery.trim()
-		val filteredGroups = ArrayList<Pair<Manga, List<Bookmark>>>(rawMap.size)
+		val filteredGroups = ArrayList<GroupSortEntry>(rawMap.size)
 		for ((manga, bookmarks) in rawMap) {
 			val chapters = manga.chapters.orEmpty()
-			val chaptersById = chapters.associateBy(MangaChapter::id)
-			val chapterOrderMap = chapters.withIndex().associate { (index, ch) -> ch.id to index }
-			val matched = if (normalizedQuery.isEmpty() || manga.matchesBookmarkQuery(normalizedQuery)) {
+			val mangaMatches = normalizedQuery.isEmpty() || manga.matchesBookmarkQuery(normalizedQuery)
+			val needChapterOrder = order == BookmarkSortOrder.CHAPTER_ASC || !mangaMatches
+			val chapterOrderMap = if (needChapterOrder && chapters.isNotEmpty()) {
+				HashMap<Long, Int>(chapters.size).apply {
+					chapters.forEachIndexed { index, ch -> put(ch.id, index) }
+				}
+			} else {
+				emptyMap()
+			}
+			val matched = if (mangaMatches) {
 				bookmarks
 			} else {
+				val chaptersById = chapters.associateBy(MangaChapter::id)
 				bookmarks.filter { b ->
 					val ch = chaptersById[b.chapterId] ?: return@filter false
 					val idx = chapterOrderMap[b.chapterId] ?: -1
@@ -206,7 +212,35 @@ class AllBookmarksViewModel @Inject constructor(
 				}
 			}
 			if (matched.isNotEmpty()) {
-				filteredGroups.add(manga to matched.sortedByOrder(order, chapterOrderMap))
+				val sortedBookmarks = matched.sortedByOrder(order, chapterOrderMap)
+				val timeKey = when (order) {
+					BookmarkSortOrder.CREATED_DESC,
+					BookmarkSortOrder.CREATED_ASC -> sortedBookmarks.first().createdAt.toEpochMilli()
+
+					BookmarkSortOrder.CHAPTER_ASC -> 0L
+				}
+				val chapterKey = if (order == BookmarkSortOrder.CHAPTER_ASC) {
+					var minKey = Float.MAX_VALUE
+					for (b in sortedBookmarks) {
+						val idx = chapterOrderMap[b.chapterId] ?: continue
+						val ch = chapters.getOrNull(idx)
+						val key = if (ch != null && ch.number >= 0f) ch.number else idx.toFloat()
+						if (key < minKey) {
+							minKey = key
+						}
+					}
+					minKey
+				} else {
+					0f
+				}
+				filteredGroups.add(
+					GroupSortEntry(
+						manga = manga,
+						bookmarks = sortedBookmarks,
+						timeKey = timeKey,
+						chapterKey = chapterKey,
+					),
+				)
 			}
 		}
 		if (filteredGroups.isEmpty()) {
@@ -223,28 +257,31 @@ class AllBookmarksViewModel @Inject constructor(
 				hasAnyBookmarks = true,
 			)
 		}
-		val titleComparator = LocaleStringComparator()
-		val sortedGroups = when (order) {
-			BookmarkSortOrder.CREATED_DESC -> filteredGroups.sortedWith { a, b ->
-				val cmp = b.second.maxOf { it.createdAt }.compareTo(a.second.maxOf { it.createdAt })
-				if (cmp != 0) cmp else titleComparator.compare(a.first.title, b.first.title)
+		val titleComparator = Collator.getInstance().apply {
+			strength = Collator.PRIMARY
+		}
+		when (order) {
+			BookmarkSortOrder.CREATED_DESC -> filteredGroups.sortWith { a, b ->
+				val cmp = b.timeKey.compareTo(a.timeKey)
+				if (cmp != 0) cmp else titleComparator.compare(a.manga.title, b.manga.title)
 			}
 
-			BookmarkSortOrder.CREATED_ASC -> filteredGroups.sortedWith { a, b ->
-				val cmp = a.second.minOf { it.createdAt }.compareTo(b.second.minOf { it.createdAt })
-				if (cmp != 0) cmp else titleComparator.compare(a.first.title, b.first.title)
+			BookmarkSortOrder.CREATED_ASC -> filteredGroups.sortWith { a, b ->
+				val cmp = a.timeKey.compareTo(b.timeKey)
+				if (cmp != 0) cmp else titleComparator.compare(a.manga.title, b.manga.title)
 			}
 
-			BookmarkSortOrder.CHAPTER_ASC -> filteredGroups.sortedWith { a, b ->
-				titleComparator.compare(a.first.title, b.first.title)
+			BookmarkSortOrder.CHAPTER_ASC -> filteredGroups.sortWith { a, b ->
+				val cmp = a.chapterKey.compareTo(b.chapterKey)
+				if (cmp != 0) cmp else titleComparator.compare(a.manga.title, b.manga.title)
 			}
 		}
-		val visibleMap = LinkedHashMap<Manga, List<Bookmark>>(sortedGroups.size)
-		val items = ArrayList<ListModel>(sortedGroups.sumOf { it.second.size + 1 })
-		for ((manga, list) in sortedGroups) {
-			visibleMap[manga] = list
-			items.add(ListHeader(manga.title, R.string.more, manga))
-			items.addAll(list)
+		val visibleMap = LinkedHashMap<Manga, List<Bookmark>>(filteredGroups.size)
+		val items = ArrayList<ListModel>(filteredGroups.sumOf { it.bookmarks.size + 1 })
+		for (entry in filteredGroups) {
+			visibleMap[entry.manga] = entry.bookmarks
+			items.add(ListHeader(entry.manga.title, R.string.more, entry.manga))
+			items.addAll(entry.bookmarks)
 		}
 		return BookmarksScreenState(
 			items = items,
@@ -252,6 +289,13 @@ class AllBookmarksViewModel @Inject constructor(
 			hasAnyBookmarks = true,
 		)
 	}
+
+	private class GroupSortEntry(
+		val manga: Manga,
+		val bookmarks: List<Bookmark>,
+		val timeKey: Long,
+		val chapterKey: Float,
+	)
 
 	private data class BookmarksScreenState(
 		val items: List<ListModel>,

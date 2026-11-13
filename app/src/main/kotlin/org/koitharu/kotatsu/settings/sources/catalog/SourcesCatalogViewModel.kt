@@ -28,8 +28,6 @@ import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.model.MangaSource
-import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
-import org.koitharu.kotatsu.sourcescore.domain.SourceRanker
 import java.util.EnumSet
 import java.util.Locale
 import javax.inject.Inject
@@ -40,7 +38,6 @@ class SourcesCatalogViewModel @Inject constructor(
 	db: MangaDatabase,
 	private val settings: AppSettings,
 	private val presetsRepository: SourcePresetsRepository,
-	private val sourceRanker: SourceRanker,
 ) : BaseViewModel() {
 
 	val onActionDone = MutableEventFlow<ReversibleAction>()
@@ -73,9 +70,7 @@ class SourcesCatalogViewModel @Inject constructor(
 		appliedFilter,
 		presetSources,
 		db.invalidationTrackerFlow(TABLE_SOURCES),
-		// Re-rank when a score download lands, not only when the sources table changes.
-		sourceRanker.observeScores(),
-	) { q, f, ps, _, _ ->
+	) { q, f, ps, _ ->
 		buildSourcesList(f, q, ps)
 	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, listOf(LoadingState()))
 
@@ -165,31 +160,13 @@ class SourcesCatalogViewModel @Inject constructor(
 				},
 			)
 		} else {
-			rankForCatalog(sources).map { (source, isHot) ->
+			sources.sortedBy { it.isBroken }.map { source ->
 				SourceCatalogItem.Source(
 					source = source,
 					isInPreset = isPreset && source.name in presetSourceNames,
-					isHot = isHot,
 				)
 			}
 		}
-	}
-
-	/**
-	 * The catalogue is where people pick sources to add, so it leads with the ones worth adding:
-	 * working before broken, popular (flame-marked) next, then by score. The query is alphabetical,
-	 * and the sort is stable, so names still break every tie - and if the community database cannot
-	 * be read the list simply stays alphabetical.
-	 */
-	private suspend fun rankForCatalog(sources: List<MangaParserSource>): List<Pair<MangaParserSource, Boolean>> {
-		val snapshot = runCatchingCancellable { sourceRanker.snapshot() }.getOrNull()
-			?: return sources.map { it to false }
-		val ranks = sources.associate { it.name to snapshot.rank(it) }
-		return sources.sortedWith(
-			compareBy<MangaParserSource> { it.isBroken }
-				.thenByDescending { ranks.getValue(it.name).isHot }
-				.thenByDescending { ranks.getValue(it.name).composite },
-		).map { it to ranks.getValue(it.name).isHot }
 	}
 
 	@WorkerThread

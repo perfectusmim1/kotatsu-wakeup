@@ -17,8 +17,6 @@ data class SearchResultsListModel(
 	val sortOrder: SortOrder?,
 	val list: List<MangaListModel>,
 	val error: Throwable?,
-	/** Really popular source: shown with a flame and listed first - see SourceRanker. */
-	val isHot: Boolean = false,
 ) : ListModel {
 
 	fun getTitle(context: Context): String = if (titleResId != 0) {

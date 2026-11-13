@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -35,6 +36,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.MangaHistory
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
@@ -60,6 +62,7 @@ import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
 import org.koitharu.kotatsu.core.util.ext.getParcelableExtraCompat
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.requireValue
+import org.koitharu.kotatsu.details.data.CommunityRepository
 import org.koitharu.kotatsu.details.data.MangaDetails
 import org.koitharu.kotatsu.details.domain.DetailsInteractor
 import org.koitharu.kotatsu.details.domain.DetailsLoadUseCase
@@ -77,6 +80,7 @@ import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaPage
+import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.parsers.util.sizeOrZero
@@ -97,7 +101,7 @@ import javax.inject.Inject
 
 private const val BOUNDS_PAGE_OFFSET = 2
 private const val PREFETCH_LIMIT = 10
-private const val MAX_DETAILS_VERIFICATION_RETRIES = 2L
+private const val MAX_DETAILS_VERIFICATION_RETRIES = 1L
 private const val NEIGHBOUR_WAIT_MS = 1500L
 
 @HiltViewModel
@@ -122,6 +126,7 @@ class ReaderViewModel @Inject constructor(
     deleteLocalMangaUseCase: DeleteLocalMangaUseCase,
     downloadScheduler: DownloadWorker.Scheduler,
     readerSettingsProducerFactory: ReaderSettings.Producer.Factory,
+    private val communityRepository: CommunityRepository,
 ) : ChaptersPagesViewModel(
     settings = settings,
     interactor = interactor,
@@ -137,6 +142,8 @@ class ReaderViewModel @Inject constructor(
     private var pageSaveJob: Job? = null
     private var bookmarkJob: Job? = null
     private var stateChangeJob: Job? = null
+    @Volatile
+    private var autoResolveAttempted = false
 
     init {
         mangaDetails.value = intent.manga?.let { MangaDetails(it) }
@@ -215,6 +222,17 @@ class ReaderViewModel @Inject constructor(
 
     val isMangaNsfw = manga.map { it?.contentRating == ContentRating.ADULT }
 
+    val isCommunityCommentsAvailable: StateFlow<Boolean> = manga
+        .map { m ->
+            if (m == null || m.source == LocalMangaSource) {
+                false
+            } else {
+                val caps = communityRepository.capabilities(m.source)
+                caps != null && (caps.supportsNativeComments || caps.supportsWidgetFallback)
+            }
+        }.distinctUntilChanged()
+        .stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
+
     val isBookmarkAdded = readingState.flatMapLatest { state ->
         val manga = mangaDetails.value?.toManga()
         if (state == null || manga == null) {
@@ -265,6 +283,7 @@ class ReaderViewModel @Inject constructor(
 
     fun reload() {
         loadingJob?.cancel()
+        autoResolveAttempted = false
         loadImpl()
     }
 
@@ -298,6 +317,7 @@ class ReaderViewModel @Inject constructor(
             mangaDetails.value = null
             selectedBranch.value = newBranch
             content.value = ReaderContent(emptyList(), null)
+            autoResolveAttempted = false
             loadImpl()
             return
         }
@@ -386,6 +406,11 @@ class ReaderViewModel @Inject constructor(
     fun getCurrentChapterPages(): List<MangaPage>? {
         val chapterId = readingState.value?.chapterId ?: return null
         return chaptersLoader.getPages(chapterId)
+    }
+
+    fun getCurrentChapter(): MangaChapter? {
+        val chapterId = readingState.value?.chapterId ?: return null
+        return mangaDetails.value?.allChapters?.findById(chapterId)
     }
 
     fun saveCurrentPage(
@@ -587,13 +612,22 @@ class ReaderViewModel @Inject constructor(
         loadingJob = launchLoadingJob(Dispatchers.Default + EventExceptionHandler(onLoadingError)) {
             var exception: Exception? = null
             var loadedDetails: MangaDetails? = null
+            var failedCfChapterId: Long? = null
             try {
                 intent.manga?.source?.let { captchaAutoResolveCoordinator.awaitActiveResolve(it) }
                 detailsLoadUseCase(intent, force = false)
                     .retryWhen { cause, attempt ->
                         val cf = cause.findCloudFlareException()
-                        attempt < MAX_DETAILS_VERIFICATION_RETRIES && cf is CloudFlareProtectedException &&
+                        if (
+                            !autoResolveAttempted &&
+                            attempt < MAX_DETAILS_VERIFICATION_RETRIES &&
+                            cf is CloudFlareProtectedException
+                        ) {
+                            autoResolveAttempted = true
                             captchaAutoResolveCoordinator.resolveIfEnabled(cf)
+                        } else {
+                            false
+                        }
                     }
                     .collect { details ->
                         loadedDetails = details
@@ -608,6 +642,9 @@ class ReaderViewModel @Inject constructor(
                             if (newState == null) {
                                 return@collect // manga not loaded yet if cannot get state
                             }
+                            if (failedCfChapterId == newState.chapterId) {
+                                return@collect
+                            }
                             readingState.value = newState
                             val mode = runCatchingCancellable {
                                 detectReaderModeUseCase(manga, newState)
@@ -619,6 +656,10 @@ class ReaderViewModel @Inject constructor(
                                 chaptersLoader.loadSingleChapter(newState.chapterId)
                             } catch (e: Exception) {
                                 readingState.value = null // try next time
+                                if (e.findCloudFlareException() != null) {
+                                    autoResolveAttempted = true
+                                    failedCfChapterId = newState.chapterId
+                                }
                                 exception = e.mergeWith(exception)
                                 return@collect
                             }
@@ -678,6 +719,9 @@ class ReaderViewModel @Inject constructor(
     private suspend fun publishPages(state: ReaderState?) = contentLock.withLock {
         val snapshot = chaptersLoader.snapshot()
         content.value = ReaderContent(snapshot, state)
+        if (snapshot.isNotEmpty()) {
+            autoResolveAttempted = false
+        }
         if (state != null && snapshot.isNotEmpty()) {
             var idx = snapshot.indexOfFirst { it.chapterId == state.chapterId && it.index == state.page }
             if (idx < 0) {

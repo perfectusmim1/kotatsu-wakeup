@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareActivity
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareHiddenActivity
@@ -31,6 +32,7 @@ import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import java.lang.ref.WeakReference
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -45,7 +47,7 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 
 	private val stateMutex = Mutex()
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-	private val recentSuccessAt = ConcurrentHashMap<MangaSource, Long>()
+	private val recentSuccess = ConcurrentHashMap<MangaSource, RecentSuccess>()
 	private val recentFailureAt = ConcurrentHashMap<MangaSource, Long>()
 	private val mainHandler = Handler(Looper.getMainLooper())
 	private val reorderPending = AtomicBoolean(false)
@@ -106,6 +108,8 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	}
 
 	fun notifyManualResolveSuccess(source: MangaSource) {
+		recentFailureAt.remove(source)
+		recentSuccess.remove(source)
 		activeSession
 			?.takeIf { it.source == source }
 			?.activityResult
@@ -129,12 +133,21 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 		activeSession?.result?.await()
 		var retryCount = 0
 		var didVerify = false
+		var staleRetryUsed = false
 		while (true) {
+			val attemptStartedAt = System.currentTimeMillis()
 			try {
 				return block()
 			} catch (e: Exception) {
 				val cf = e.findCloudFlareException()
 				if (cf !is CloudFlareProtectedException || !mayStartVerification) throw e
+				val lastSuccess = recentSuccess[cf.source]
+				if (!didVerify && !staleRetryUsed && lastSuccess != null && attemptStartedAt < lastSuccess.timestampMs) {
+					// Another caller solved Cloudflare while this in-flight request was still running;
+					// allow one clean retry with the newly persisted cookies/UA before treating it as failed.
+					staleRetryUsed = true
+					continue
+				}
 				if (didVerify) {
 					// Verification reported success and this request is *still* Cloudflare-protected.
 					// Another identical session cannot fix that, so stop asking for one.
@@ -158,7 +171,7 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	 */
 	fun notifyVerificationIneffective(source: MangaSource) {
 		Log.w(TAG, "Verification succeeded but $source is still protected; suppressing auto-resolve")
-		recentSuccessAt.remove(source)
+		recentSuccess.remove(source)
 		recentFailureAt[source] = System.currentTimeMillis()
 	}
 
@@ -166,10 +179,6 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	suspend fun resolveIfEnabled(exception: CloudFlareProtectedException): Boolean {
 		if (SourceSettings(context, exception.source).isCaptchaAutoResolveDisabled) return false
 		val now = System.currentTimeMillis()
-		val lastSuccess = recentSuccessAt[exception.source]
-		if (lastSuccess != null && now - lastSuccess < RECENT_SUCCESS_COOLDOWN_MS) {
-			return true
-		}
 		// A source whose challenge just failed must not spawn a solver Activity for every following
 		// request: one unsolvable challenge would otherwise become an app-wide verification loop, with
 		// the tracker and every open screen re-launching it back to back. Report "not resolved" instead
@@ -177,6 +186,19 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 		val lastFailure = recentFailureAt[exception.source]
 		if (lastFailure != null && now - lastFailure < RECENT_FAILURE_COOLDOWN_MS) {
 			return false
+		}
+		val lastSuccess = recentSuccess[exception.source]
+		if (lastSuccess != null && now - lastSuccess.timestampMs < RECENT_SUCCESS_COOLDOWN_MS) {
+			val incomingHost = extractNormalizedHost(exception.url)
+			if (
+				incomingHost == null ||
+				lastSuccess.host == null ||
+				incomingHost == lastSuccess.host ||
+				exception.url == lastSuccess.url
+			) {
+				notifyVerificationIneffective(exception.source)
+				return false
+			}
 		}
 		return resolve(exception.source, exception)
 	}
@@ -216,7 +238,11 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 					(if (session.isCancelledByBackground) " (cancelled by backgrounding)" else ""),
 			)
 			if (success) {
-				recentSuccessAt[session.source] = System.currentTimeMillis()
+				recentSuccess[session.source] = RecentSuccess(
+					timestampMs = System.currentTimeMillis(),
+					url = session.exception.url,
+					host = extractNormalizedHost(session.exception.url),
+				)
 				recentFailureAt.remove(session.source)
 			} else if (!session.isCancelledByBackground) {
 				// Backgrounding is the user's choice, not a verdict on the challenge, so it must not
@@ -299,6 +325,15 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 		var isInteractive = false
 	}
 
+	private fun extractNormalizedHost(url: String): String? =
+		url.toHttpUrlOrNull()?.host?.lowercase(Locale.ROOT)?.removePrefix("www.")
+
+	private data class RecentSuccess(
+		val timestampMs: Long,
+		val url: String,
+		val host: String?,
+	)
+
 	private data class SessionClaim(
 		val session: ResolveSession,
 		val isOwner: Boolean,
@@ -308,6 +343,6 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 		const val TAG = "CaptchaCoordinator"
 		const val RECENT_SUCCESS_COOLDOWN_MS = 30_000L
 		const val RECENT_FAILURE_COOLDOWN_MS = 3 * 60_000L
-		const val MAX_REQUEST_RETRIES = 2
+		const val MAX_REQUEST_RETRIES = 1
 	}
 }

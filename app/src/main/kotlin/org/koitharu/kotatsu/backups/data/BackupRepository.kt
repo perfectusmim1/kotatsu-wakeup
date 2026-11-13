@@ -41,7 +41,6 @@ import org.koitharu.kotatsu.filter.data.SavedFiltersRepository
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.data.TapGridSettings
 import org.koitharu.kotatsu.reader.data.erase.HiddenImagesRepository
-import org.koitharu.kotatsu.sourcescore.data.CommunitySettings
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.zip.ZipEntry
@@ -56,20 +55,9 @@ class BackupRepository @Inject constructor(
     private val tapGridSettings: TapGridSettings,
     private val mangaSourcesRepository: MangaSourcesRepository,
     private val savedFiltersRepository: SavedFiltersRepository,
-    /**
-     * Nullable so [org.koitharu.kotatsu.backups.domain.AppBackupAgent] can keep constructing this by
-     * hand: a backup agent runs in its own process with no Hilt graph. Dagger ignores the default and
-     * injects the real instance; the agent simply omits the identity section.
-     */
-    private val communitySettings: CommunitySettings? = null,
-    /** Nullable for the same reason: a backup agent's has no Hilt graph, and writes an empty section. */
+    /** Nullable so a backup agent with no Hilt graph can construct this and write an empty section. */
     private val hiddenImages: HiddenImagesRepository? = null,
 ) {
-
-    private companion object {
-        const val KEY_IDENTITY_SECRET = "secret"
-        const val KEY_IDENTITY_NICKNAME = "nickname"
-    }
 
     private val json = Json {
         allowSpecialFloatingPointValues = true
@@ -116,10 +104,7 @@ class BackupRepository @Inject constructor(
                     data = dumpSettings(),
                 )
 
-                BackupSection.IDENTITY -> output.writeString(
-                    section = BackupSection.IDENTITY,
-                    data = dumpIdentity(),
-                )
+                BackupSection.IDENTITY -> Unit
 
                 BackupSection.SETTINGS_READER_GRID -> output.writeString(
                     section = BackupSection.SETTINGS_READER_GRID,
@@ -207,10 +192,7 @@ class BackupRepository @Inject constructor(
                         CompositeResult.success()
                     }
 
-                    BackupSection.IDENTITY -> input.readMap().let {
-                        restoreIdentity(it)
-                        CompositeResult.success()
-                    }
+                    BackupSection.IDENTITY -> CompositeResult.EMPTY // skip legacy community identity sections
 
                     BackupSection.SETTINGS_READER_GRID -> input.readMap().let {
                         tapGridSettings.upsertAll(it)
@@ -311,33 +293,6 @@ class BackupRepository @Inject constructor(
     private fun OutputStream.write(str: String) = write(str.toByteArray())
 
     private fun InputStream.readString(): String = readBytes().decodeToString()
-
-    /**
-     * Only the key and the nickname. Deliberately not `registered` or `nickname_synced`: those
-     * describe this install's conversation with the server, and a restored device has to introduce
-     * itself again.
-     */
-    private fun dumpIdentity(): String {
-        val json = JSONObject()
-        communitySettings?.peekSecret()?.let { json.put(KEY_IDENTITY_SECRET, it) }
-        communitySettings?.nickname?.let { json.put(KEY_IDENTITY_NICKNAME, it) }
-        return json.toString()
-    }
-
-    private fun restoreIdentity(values: Map<String, Any?>) {
-        val secret = values[KEY_IDENTITY_SECRET] as? String
-        if (secret.isNullOrEmpty()) return
-        val community = communitySettings ?: return
-        if (!community.adoptSecret(secret)) return
-        (values[KEY_IDENTITY_NICKNAME] as? String)?.let { community.nickname = it }
-
-        // A key in the backup is proof this person opted in already and has had a name for months.
-        // Asking both questions again is the restore failing to restore: the account comes back but
-        // the app behaves as though it had never met them. If the backup predates the nickname being
-        // stored, the first sync takes it from the server rather than asking.
-        community.isEnabled = true
-        community.hasSeenOnboarding = true
-    }
 
     private fun dumpSettings(): String {
         val map = settings.getAllValues().toMutableMap()

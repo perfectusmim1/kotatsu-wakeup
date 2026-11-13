@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
+import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.MangaIntent
@@ -28,8 +30,10 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ListMode
 import org.koitharu.kotatsu.core.prefs.TriStateOption
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
+import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.computeSize
+import org.koitharu.kotatsu.details.data.CommunityRepository
 import org.koitharu.kotatsu.details.data.MangaDetails
 import org.koitharu.kotatsu.details.domain.BranchComparator
 import org.koitharu.kotatsu.details.domain.DetailsInteractor
@@ -48,7 +52,11 @@ import org.koitharu.kotatsu.list.ui.model.MangaListModel
 import org.koitharu.kotatsu.local.data.LocalStorageChanges
 import org.koitharu.kotatsu.local.domain.DeleteLocalMangaUseCase
 import org.koitharu.kotatsu.local.domain.model.LocalManga
+import org.koitharu.kotatsu.parsers.exception.AuthRequiredException
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaSource
+import org.koitharu.kotatsu.parsers.model.community.SourceCommunityCapabilities
+import org.koitharu.kotatsu.parsers.model.community.SourceMangaCommunityInfo
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.ui.ReaderState
@@ -76,6 +84,7 @@ class DetailsViewModel @Inject constructor(
 	private val readingTimeUseCase: ReadingTimeUseCase,
 	private val pagePreloader: PagePreloader,
 	statsRepository: StatsRepository,
+	private val communityRepository: CommunityRepository,
 ) : ChaptersPagesViewModel(
 	settings = settings,
 	interactor = interactor,
@@ -109,6 +118,24 @@ class DetailsViewModel @Inject constructor(
 		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
 
 	val remoteManga = MutableStateFlow<Manga?>(null)
+
+	val communityCapabilities: StateFlow<SourceCommunityCapabilities?> = manga
+		.map { m ->
+			if (m == null || m.source == LocalMangaSource) {
+				null
+			} else {
+				communityRepository.capabilities(m.source)?.takeIf { caps ->
+					caps.supportsRating || caps.supportsStats || caps.supportsNativeComments || caps.supportsWidgetFallback
+				}
+			}
+		}.distinctUntilChanged()
+		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, null)
+
+	val communityInfo = MutableStateFlow<SourceMangaCommunityInfo?>(null)
+	val isCommunityLoading = MutableStateFlow(false)
+	val onCommunityAuthRequired = MutableEventFlow<MangaSource>()
+	val onCommunityMessage = MutableEventFlow<Int>()
+	private var communityLoadJob: Job? = null
 
 	val historyInfo: StateFlow<HistoryInfo> = combine(
 		mangaDetails,
@@ -228,6 +255,14 @@ class DetailsViewModel @Inject constructor(
 			val manga = mangaDetails.firstOrNull { it != null && it.isLocal } ?: return@launchJob
 			remoteManga.value = interactor.findRemote(manga.toManga())
 		}
+		launchJob(Dispatchers.Default + SkipErrors) {
+			manga.filterNotNull()
+				.distinctUntilChanged { old, new ->
+					old.id == new.id && old.source == new.source && old.url == new.url
+				}.collect { m ->
+					loadCommunityInfo(m, force = false)
+				}
+		}
 	}
 
 	fun reload() {
@@ -235,6 +270,55 @@ class DetailsViewModel @Inject constructor(
 		loadingJob = doLoad(force = true)
 		loadedRelated = null
 		relatedRefresh.value++
+		refreshCommunity(force = true)
+	}
+
+	fun refreshCommunity(force: Boolean = true) {
+		val m = manga.value ?: return
+		communityLoadJob?.cancel()
+		communityLoadJob = launchJob(Dispatchers.Default + SkipErrors) {
+			loadCommunityInfo(m, force = force)
+		}
+	}
+
+	fun submitCommunityRating(score: Int) {
+		val m = manga.value ?: return
+		if (m.source == LocalMangaSource) return
+		launchJob(Dispatchers.Default) {
+			isCommunityLoading.value = true
+			try {
+				val updated = communityRepository.submitRating(m, score)
+				communityInfo.value = updated
+				onCommunityMessage.call(R.string.community_rating_saved)
+			} catch (e: AuthRequiredException) {
+				onCommunityAuthRequired.call(e.source)
+			} finally {
+				isCommunityLoading.value = false
+			}
+		}
+	}
+
+	private suspend fun loadCommunityInfo(manga: Manga, force: Boolean) {
+		if (manga.source == LocalMangaSource) {
+			communityInfo.value = null
+			return
+		}
+		val caps = communityRepository.capabilities(manga.source)
+		if (caps == null || !(caps.supportsRating || caps.supportsStats || caps.supportsNativeComments || caps.supportsWidgetFallback)) {
+			communityInfo.value = null
+			return
+		}
+		isCommunityLoading.value = true
+		try {
+			val info = runCatchingCancellable {
+				communityRepository.getInfo(manga, force = force)
+			}.getOrNull()
+			if (info != null) {
+				communityInfo.value = info
+			}
+		} finally {
+			isCommunityLoading.value = false
+		}
 	}
 
 	fun updateScrobbling(index: Int, rating: Float, status: ScrobblingStatus?) {

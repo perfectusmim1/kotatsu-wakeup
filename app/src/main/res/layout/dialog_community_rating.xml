@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:paddingHorizontal="24dp"
+	android:paddingTop="8dp"
+	android:paddingBottom="4dp">
+
+	<TextView
+		android:id="@+id/textView_stats_summary"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginBottom="12dp"
+		android:textAppearance="?attr/textAppearanceBodyMedium"
+		android:textColor="?android:attr/textColorSecondary"
+		android:visibility="gone"
+		tools:text="4.6 / 5 · 128 ratings · 12.4K views"
+		tools:visibility="visible" />
+
+	<LinearLayout
+		android:id="@+id/layout_rating_picker"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:visibility="gone"
+		tools:visibility="visible">
+
+		<TextView
+			android:id="@+id/textView_selected_score"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:gravity="center"
+			android:textAppearance="?attr/textAppearanceHeadlineMedium"
+			android:textColor="?attr/colorPrimary"
+			tools:text="8 / 10" />
+
+		<com.google.android.material.slider.Slider
+			android:id="@+id/slider_rating"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:stepSize="1"
+			android:value="5"
+			android:valueFrom="1"
+			android:valueTo="10" />
+
+		<com.google.android.material.chip.ChipGroup
+			android:id="@+id/chipGroup_quick_scores"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			app:chipSpacingHorizontal="6dp"
+			app:chipSpacingVertical="4dp"
+			app:selectionRequired="true"
+			app:singleSelection="true" />
+	</LinearLayout>
+
+	<TextView
+		android:id="@+id/textView_auth_hint"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="8dp"
+		android:textAppearance="?attr/textAppearanceBodySmall"
+		android:textColor="?android:attr/textColorSecondary"
+		android:visibility="gone"
+		tools:text="Sign in to rate on MangaDex"
+		tools:visibility="visible" />
+
+</LinearLayout>

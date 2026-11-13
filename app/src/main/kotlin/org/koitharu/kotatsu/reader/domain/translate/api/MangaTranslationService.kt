@@ -1,12 +1,15 @@
 package org.koitharu.kotatsu.reader.domain.translate.api
 
+import android.util.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import okhttp3.CookieJar
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -34,6 +37,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 import kotlin.math.min
 import kotlin.math.pow
@@ -48,12 +52,12 @@ import kotlin.math.pow
  */
 @Singleton
 class MangaTranslationService @Inject constructor(
-	@BaseHttpClient private val baseHttpClient: OkHttpClient,
+	@BaseHttpClient private val baseHttpClientProvider: Provider<OkHttpClient>,
 	private val keyPool: GeminiKeyPool,
 ) : ComicTextTranslator {
 
 	private val httpClient: OkHttpClient by lazy {
-		baseHttpClient.newBuilder().apply {
+		baseHttpClientProvider.get().newBuilder().apply {
 			// Avoid RateLimitInterceptor throwing before reading Gemini's 429 retryDelay JSON,
 			// avoid CloudFlareInterceptor interference, and prevent debug CurlLogging from printing x-goog-api-key.
 			interceptors().removeAll { interceptor ->
@@ -122,6 +126,12 @@ class MangaTranslationService @Inject constructor(
 		}
 
 		if (toTranslate.isNotEmpty()) {
+			Log.d(
+				LOG_TAG,
+				"translateBubbles: total=${bubbles.size}, prefiltered=${bubbles.size - toTranslate.size}, " +
+					"toTranslate=${toTranslate.size}, provider=${settings.provider}, " +
+					"source=${settings.sourceLang} -> $targetLang",
+			)
 			val translated = when (settings.provider) {
 				TranslationProvider.GEMINI -> translateWithGeminiOrFallback(
 					items = toTranslate,
@@ -138,6 +148,12 @@ class MangaTranslationService @Inject constructor(
 			for (item in translated) {
 				resolvedResults[item.id] = item
 			}
+		} else {
+			Log.d(
+				LOG_TAG,
+				"translateBubbles: all ${bubbles.size} bubble(s) handled by prefilter " +
+					"(trash=${resolvedResults.values.count { it.isTrash }})",
+			)
 		}
 
 		return bubbles.map { bubble ->
@@ -179,6 +195,11 @@ class MangaTranslationService @Inject constructor(
 			} catch (e: InvalidGeminiApiKeyException) {
 				throw e
 			} catch (e: TranslationException) {
+				Log.w(
+					LOG_TAG,
+					"Gemini failed (${e.message}); falling back to Google Translate for ${batch.size} bubble(s)",
+					e,
+				)
 				// All Gemini keys hit quota/cooldown or transient failure -> seamless Google Translate fallback
 				output.addAll(
 					try {
@@ -358,7 +379,8 @@ class MangaTranslationService @Inject constructor(
 					.post(bodyJson.toString().toRequestBody(JSON_MEDIA_TYPE))
 					.build()
 
-				val response = httpClient.newCall(request).await()
+				val client = withContext(Dispatchers.IO) { httpClient }
+				val response = client.newCall(request).await()
 				val statusCode = response.code
 				val retryAfterHeader = response.header("Retry-After")
 				val responseText = response.use { resp ->
@@ -368,8 +390,10 @@ class MangaTranslationService @Inject constructor(
 				if (statusCode in 200..299) {
 					val parsedItems = parseGeminiResponse(responseText, batch, settings, targetLang)
 					if (parsedItems != null) {
+						Log.d(LOG_TAG, "Gemini HTTP $statusCode: parsed ${parsedItems.size}/${batch.size} via $model/$thinkingMode")
 						return GeminiCallOutcome.Success(parsedItems)
 					}
+					Log.w(LOG_TAG, "Gemini HTTP $statusCode unparseable/empty response via $model/$thinkingMode")
 					lastFailure = GeminiCallOutcome.Failure(
 						GeminiHttpErrorInfo(
 							statusCode = statusCode,
@@ -379,6 +403,7 @@ class MangaTranslationService @Inject constructor(
 					)
 					break
 				}
+				Log.w(LOG_TAG, "Gemini HTTP $statusCode error via $model/$thinkingMode: ${responseText.take(200)}")
 
 				val errorInfo = GeminiKeyPool.classifyGeminiHttpError(
 					statusCode = statusCode,
@@ -738,12 +763,15 @@ class MangaTranslationService @Inject constructor(
 					translateChunkWithGoogleMarkers(chunk, settings, targetLang)
 				}.getOrElse { e ->
 					if (e is CancellationException) throw e
+					Log.w(LOG_TAG, "Google marker batch failed (${e.message}); falling back to individual GETs", e)
 					null
 				}
 
 				if (batchTranslated != null) {
+					Log.d(LOG_TAG, "Google marker batch translated ${batchTranslated.size} bubble(s)")
 					results.addAll(batchTranslated)
 				} else {
+					Log.d(LOG_TAG, "Google marker parse missed; translating ${chunk.size} bubble(s) individually")
 					results.addAll(translateChunkIndividuallyWithGoogle(chunk, settings, targetLang))
 				}
 			}
@@ -875,7 +903,8 @@ class MangaTranslationService @Inject constructor(
 					.get()
 					.build()
 
-				val response = httpClient.newCall(request).await()
+				val client = withContext(Dispatchers.IO) { httpClient }
+				val response = client.newCall(request).await()
 				val statusCode = response.code
 				val body = response.use { resp ->
 					resp.body.string()
@@ -884,6 +913,7 @@ class MangaTranslationService @Inject constructor(
 				if (statusCode in 200..299) {
 					return parseGoogleTranslateJson(body)
 				}
+				Log.w(LOG_TAG, "Google Translate HTTP $statusCode (attempt ${attempt + 1}/$GOOGLE_MAX_ATTEMPTS): ${body.take(160)}")
 
 				val isTransient = statusCode == 429 || statusCode == 408 || statusCode in 500..599
 				val error = TranslationServiceException(
@@ -1224,6 +1254,7 @@ class MangaTranslationService @Inject constructor(
 
 	companion object {
 
+		private const val LOG_TAG = "KotatsuTranslate"
 		const val PRIMARY_GEMINI_MODEL: String = "gemini-3.5-flash-lite"
 		const val FALLBACK_GEMINI_MODEL: String = "gemini-flash-lite-latest"
 

@@ -4,58 +4,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.koitharu.kotatsu.sourcescore.data.SimilarWorkDto
 import java.time.Duration
 import java.time.Instant
 
 class SuggestionRankingTest {
-
-	private fun work(id: String, score: Double, vararg genres: String) =
-		RankedWork(SimilarWorkDto(workId = id, title = id, genres = genres.toList()), score)
-
-	@Test
-	fun varietyBeatsANearCopy() {
-		val picked = SuggestionRanking.diversify(
-			listOf(
-				work("a", 1.0, "action", "fantasy"),
-				work("b", 0.95, "action", "fantasy"),
-				work("c", 0.8, "romance", "school-life"),
-			),
-			count = 3,
-		)
-		// b is a near-copy of a: discounted to 0.475, below c's untouched 0.8
-		assertEquals(listOf("a", "c", "b"), picked.map { it.dto.workId })
-	}
-
-	@Test
-	fun discountedScoresComeOutInDescendingOrder() {
-		val picked = SuggestionRanking.diversify(
-			(1..30).map { work("w$it", 1.0 / it, if (it % 2 == 0) "action" else "drama", "g$it") },
-			count = 10,
-		)
-		assertEquals(10, picked.size)
-		assertEquals(picked.map { it.score }.sortedDescending(), picked.map { it.score })
-	}
-
-	@Test
-	fun worksWithoutGenresAreNeverDiscounted() {
-		val picked = SuggestionRanking.diversify(listOf(work("a", 1.0), work("b", 0.9)), count = 2)
-		assertEquals(listOf(1.0, 0.9), picked.map { it.score })
-	}
-
-	@Test
-	fun diversifyHandlesFewerCandidatesThanAskedFor() {
-		assertEquals(emptyList<RankedWork>(), SuggestionRanking.diversify(emptyList(), count = 5))
-		assertEquals(1, SuggestionRanking.diversify(listOf(work("a", 1.0, "x")), count = 5).size)
-	}
-
-	@Test
-	fun genreOverlapIsJaccard() {
-		val a = SimilarWorkDto(workId = "a", title = "a", genres = listOf("action", "fantasy", "isekai"))
-		val b = SimilarWorkDto(workId = "b", title = "b", genres = listOf("fantasy", "isekai", "romance"))
-		assertEquals(0.5, SuggestionRanking.genreOverlap(a, b), 1e-9)
-		assertEquals(0.0, SuggestionRanking.genreOverlap(a, b.copy(genres = emptyList())), 1e-9)
-	}
 
 	@Test
 	fun droppedNeighboursAreRankedDownNotOut() {

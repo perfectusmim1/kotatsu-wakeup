@@ -13,7 +13,6 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeoutOrNull
-import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -30,16 +29,8 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
-import org.koitharu.kotatsu.sourcescore.data.CommunityApi
-import org.koitharu.kotatsu.sourcescore.data.CommunitySettings
-import org.koitharu.kotatsu.sourcescore.data.SimilarWorkDto
-import org.koitharu.kotatsu.suggestions.domain.CommunitySuggestionsSource
-import org.koitharu.kotatsu.suggestions.domain.SeedCandidate
-import org.koitharu.kotatsu.suggestions.domain.SuggestionRanking
 import org.koitharu.kotatsu.suggestions.domain.SuggestionRepository
 import org.koitharu.kotatsu.suggestions.domain.TagsBlacklist
-import java.time.Instant
-import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
@@ -50,11 +41,8 @@ data class DiscoverSection(val manga: List<Manga>, val isFinal: Boolean)
 
 /**
  * Where everything on the Explore screen comes from, none of it adult whatever the other settings say.
- * Charts are what the reader's enabled sources say is
- * popular, with what the community has been rating and discussing folded in when community features are
- * on; finds are what those sources have only just got, picked for this reader on the device. What the
- * reader likes stays on the phone: a chart is asked for whole and narrowed down here, so the only
- * question it takes is "what is on the chart this week".
+ * Charts are what the reader's enabled sources say is popular; finds are what those sources have only
+ * just got, picked for this reader on the device.
  */
 class DiscoverRepository @Inject constructor(
 	private val settings: AppSettings,
@@ -63,18 +51,12 @@ class DiscoverRepository @Inject constructor(
 	private val suggestions: SuggestionRepository,
 	private val history: HistoryRepository,
 	private val cache: DiscoverCache,
-	private val communitySettings: CommunitySettings,
-	private val communityApi: CommunityApi,
-	private val communitySource: CommunitySuggestionsSource,
 	private val profiles: ReaderProfiles,
 	private val dismissals: DiscoverDismissals,
 ) {
 
 	/** Every row asks the same few sites, which should not see that as a burst. */
 	private val sourceLocks = ConcurrentHashMap<String, Mutex>()
-
-	private val chartLock = Mutex()
-	private val charts = ConcurrentHashMap<DiscoverWindow, Timed<List<SimilarWorkDto>>>()
 
 	private val sourcesLock = Mutex()
 
@@ -111,7 +93,6 @@ class DiscoverRepository @Inject constructor(
 	fun invalidate() {
 		profiles.invalidate()
 		sources = null
-		charts.clear()
 	}
 
 	/**
@@ -119,8 +100,7 @@ class DiscoverRepository @Inject constructor(
 	 *
 	 * Only asks the sources they read on, and only a few: this is one row of several, and those sites are
 	 * where they would rather read it anyway. Someone with a big library has already read the top of any list,
-	 * so this goes further down it until there is enough left. What the community is rating moves a title up
-	 * at no cost to any site, since it only takes one chart, already fetched.
+	 * so this goes further down it until there is enough left.
 	 */
 	fun observeCategory(category: ReaderCategory, type: ContentType?, force: Boolean): Flow<DiscoverSection> =
 		cachedSection("category:${category.key}:$type", CATEGORY_MAX_AGE_MS, force) { emit ->
@@ -128,69 +108,27 @@ class DiscoverRepository @Inject constructor(
 			val known = knownTitles()
 			val lists = ArrayList<RankedList>()
 			val mutex = Mutex()
-			val ranks = coroutineScope {
-				val chart = async { chartRanks() }
-				coroutineScope {
-					for (source in chartSources().take(MAX_CATEGORY_SOURCES)) {
-						launch {
-							val list = fetchCategory(source, category, type, known)
-							if (list.isEmpty()) return@launch
-							val partial = mutex.withLock {
-								lists += RankedList(list, 1.0)
-								DiscoverRanking.fuse(lists, taste)
-							}
-							emit(partial)
+			coroutineScope {
+				for (source in chartSources().take(MAX_CATEGORY_SOURCES)) {
+					launch {
+						val list = fetchCategory(source, category, type, known)
+						if (list.isEmpty()) return@launch
+						val partial = mutex.withLock {
+							lists += RankedList(list, 1.0)
+							DiscoverRanking.fuse(lists, taste)
 						}
+						emit(partial)
 					}
 				}
-				chart.await()
 			}
-			mutex.withLock { DiscoverRanking.fuse(lists, taste, ranks).take(MAX_TOP) }
+			mutex.withLock { DiscoverRanking.fuse(lists, taste).take(MAX_TOP) }
 		}
 
-	/**
-	 * Works like one the reader has been enjoying, asked of the server one manga at a time like everything it is
-	 * asked: the combination of them is what would say something about the reader, and that stays here.
-	 */
-	fun observeLike(seed: Manga, force: Boolean): Flow<DiscoverSection> =
-		cachedSection("like:${seed.id}", LIKE_MAX_AGE_MS, force) { _ ->
-			runCatchingCancellable {
-				val profile = profiles.get()
-				communitySource.getSimilarTo(seed, MAX_LIKE, excludeNsfw = true, taste = currentTaste()) { work ->
-					// Unlike a chart, this answer lists adult genres: asking costs a request, and it would go anyway
-					work.genres.any(DiscoverRanking::isAdultTag) || profile.knows(work.title, work.sources.map { it.source to it.key })
-				}
-			}.onFailure { it.printStackTraceDebug() }.getOrDefault(emptyList())
-		}
-
-	/**
-	 * What to base rows of "because you read" on: a few of what they have been enjoying most, not all alike, and
-	 * different ones from one day to the next. None at all when they have turned off everything that would ask
-	 * the server about a manga.
-	 */
-	suspend fun getLikeSeeds(): List<Manga> {
-		if (!communitySettings.isEnabled && !settings.isSuggestionsEnabled) {
-			return emptyList()
-		}
-		val now = Instant.now()
-		val pagesRead = runCatchingCancellable { profiles.get().pagesRead }.getOrDefault(emptyMap())
-		val candidates = runCatchingCancellable { history.getListWithProgress(0, LIKE_SEED_POOL) }
-			.onFailure { it.printStackTraceDebug() }
-			.getOrDefault(emptyList())
-			.filterNot { (manga, progress) ->
-				manga.isLocal || manga.isNsfw() || DiscoverRanking.isAdult(manga) ||
-					SuggestionRanking.isDropped(progress.percent, progress.updatedAt, now)
-			}
-			.mapIndexed { index, (manga, progress) ->
-				SeedCandidate(manga, DiscoverRanking.tagsOf(manga), SuggestionRanking.seedWeight(index, progress.percent, isFavourite = false, pagesRead = pagesRead[manga.id] ?: 0))
-			}
-		val picks = SuggestionRanking.pickSeeds(candidates, MAX_LIKE_POOL)
-		if (picks.isEmpty()) {
-			return emptyList()
-		}
-		val first = (LocalDate.now().toEpochDay() % picks.size).toInt()
-		return List(minOf(MAX_LIKE_ROWS, picks.size)) { picks[(first + it) % picks.size] }
+	fun observeLike(seed: Manga, force: Boolean): Flow<DiscoverSection> = flow {
+		emit(DiscoverSection(emptyList(), isFinal = true))
 	}
+
+	suspend fun getLikeSeeds(): List<Manga> = emptyList()
 
 	fun observeTop(window: DiscoverWindow, filter: DiscoverFilter, force: Boolean): Flow<DiscoverSection> =
 		// The name changes with the size of the list, so a shorter one cached earlier is not shown for the rest of its day
@@ -207,7 +145,6 @@ class DiscoverRepository @Inject constructor(
 				emit(partial)
 			}
 			coroutineScope {
-				val chart = async { chartWorks(window).filter { DiscoverRanking.fits(it, filter) } }
 				val semaphore = Semaphore(MAX_PARALLELISM)
 				chartSources().map { source ->
 					launch {
@@ -219,9 +156,6 @@ class DiscoverRepository @Inject constructor(
 						}
 					}
 				}.joinAll()
-				// Last, as most of it is usually on the lists by now, and those titles cost no site another request
-				val listed = mutex.withLock { lists.flatMap { it.manga } }
-				add(RankedList(communityList(chart.await(), listed), COMMUNITY_WEIGHT))
 				// Too few sites answered, or they all list the same titles: further down those lists, one site at a
 				// time and no further than it takes, as this is requests a fuller answer would not have needed
 				for (sourceChart in sourceCharts) {
@@ -338,50 +272,6 @@ class DiscoverRepository @Inject constructor(
 		return filter { manga ->
 			!DiscoverRanking.isAdult(manga) && !manga.source.isNsfw() && manga !in tagsBlacklist
 		}
-	}
-
-	/**
-	 * The whole of one window's chart, kept briefly: asking once and narrowing it down here makes every filter
-	 * instant, and means the server never gets told which genres this reader cares about. Off means off: the
-	 * request is anonymous, but it is still a request the reader did not agree to.
-	 */
-	private suspend fun chartWorks(window: DiscoverWindow): List<SimilarWorkDto> {
-		if (!communitySettings.isEnabled) {
-			return emptyList()
-		}
-		return chartLock.withLock {
-			charts[window]?.takeIf { it.isYoungerThan(CHART_MAX_AGE_MS) }?.value
-				?: runCatchingCancellable {
-					withTimeoutOrNull(SOURCE_TIMEOUT_MS) { communityApi.fetchCharts(window.wireName, MAX_CHART) }
-				}.onFailure {
-					it.printStackTraceDebug()
-				}.getOrNull().orEmpty().also { charts[window] = Timed(it) }
-		}
-	}
-
-	private suspend fun chartRanks(): Map<String, Int> {
-		val ranks = HashMap<String, Int>()
-		chartWorks(DiscoverWindow.MONTH).forEachIndexed { index, work ->
-			ranks.putIfAbsent(DiscoverRanking.titleKey(work.title), index)
-		}
-		return ranks
-	}
-
-	/**
-	 * A chart as manga to open, in its order. A title a source has just listed is that same manga, and only those
-	 * no source listed are worth a request to get.
-	 */
-	private suspend fun communityList(works: List<SimilarWorkDto>, listed: List<Manga>): List<Manga> {
-		if (works.isEmpty()) {
-			return emptyList()
-		}
-		val byTitle = HashMap<String, Manga>(listed.size)
-		listed.forEach { byTitle.putIfAbsent(DiscoverRanking.titleKey(it.title), it) }
-		val missing = works.filter { DiscoverRanking.titleKey(it.title) !in byTitle }
-		val resolved = runCatchingCancellable { communitySource.resolveChart(missing, MAX_COMMUNITY_RESOLVED) }
-			.onFailure { it.printStackTraceDebug() }
-			.getOrDefault(emptyMap())
-		return works.mapNotNull { byTitle[DiscoverRanking.titleKey(it.title)] ?: resolved[it.workId] }
 	}
 
 	private suspend fun fetchSourceChart(
@@ -564,24 +454,11 @@ class DiscoverRepository @Inject constructor(
 		const val TOP_MAX_AGE_MS = 3 * 60 * 60 * 1000L
 		const val NEW_MAX_AGE_MS = 6 * 60 * 60 * 1000L
 		const val CATEGORY_MAX_AGE_MS = 12 * 60 * 60 * 1000L
-		const val LIKE_MAX_AGE_MS = 24 * 60 * 60 * 1000L
-
-		/** As long as the server keeps it as one answer: asking sooner gets the same thing. */
-		const val CHART_MAX_AGE_MS = 15 * 60 * 1000L
 		const val SOURCES_MAX_AGE_MS = 5 * 60 * 1000L
 
 		/** Rows of what the reader keeps coming back to: how many sites and pages each may ask. */
 		const val MAX_CATEGORY_SOURCES = 4
 		const val MAX_CATEGORY_PAGES = 3
-
-		/**
-		 * "Because you read" rows. Each costs a site request per title once a day, so there are few, but the
-		 * pool they are chosen from is deeper so the screen is not the same every day.
-		 */
-		const val MAX_LIKE_ROWS = 2
-		const val MAX_LIKE_POOL = 7
-		const val MAX_LIKE = 8
-		const val LIKE_SEED_POOL = 30
 
 		/** Long enough for a site that is merely slow. A blocked one would otherwise hold up the finished list. */
 		const val SOURCE_TIMEOUT_MS = 8_000L
@@ -599,12 +476,6 @@ class DiscoverRepository @Inject constructor(
 		const val MAX_NEW = 36
 		const val MAX_FOR_YOU = 24
 
-		/** Deep enough that a narrow genre still has a chart of its own once narrowed down here. */
-		const val MAX_CHART = 200
-
-		/** Each costs a details fetch on a source, on top of the chart requests. */
-		const val MAX_COMMUNITY_RESOLVED = 10
-		const val COMMUNITY_WEIGHT = 1.2
 		const val TAG_MATCH_THRESHOLD = 0.4f
 		const val MAX_OWN_GENRES = 6
 

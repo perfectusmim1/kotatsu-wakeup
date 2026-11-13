@@ -322,8 +322,9 @@ class AppRouter private constructor(
         )
     }
 
-    fun openSourceAuth(source: MangaSource) {
-        startActivity(sourceAuthIntent(contextOrNull() ?: return, source))
+    @JvmOverloads
+    fun openSourceAuth(source: MangaSource, startSignUp: Boolean = false) {
+        startActivity(sourceAuthIntent(contextOrNull() ?: return, source, startSignUp))
     }
 
     fun openManageSources() {
@@ -817,9 +818,15 @@ class AppRouter private constructor(
                 .putExtra(KEY_SOURCE, source.name)
         }
 
-        fun sourceAuthIntent(context: Context, source: MangaSource): Intent {
+        @JvmOverloads
+        fun sourceAuthIntent(
+            context: Context,
+            source: MangaSource,
+            startSignUp: Boolean = false,
+        ): Intent {
             return Intent(context, SourceAuthActivity::class.java)
                 .putExtra(KEY_SOURCE, source.name)
+                .putExtra(KEY_SIGN_UP, startSignUp)
         }
 
         fun overrideEditIntent(context: Context, manga: Manga): Intent =
@@ -855,6 +862,7 @@ class AppRouter private constructor(
         const val KEY_PREVIEW = "preview"
         const val KEY_QUERY = "query"
         const val KEY_READER_MODE = "reader_mode"
+        const val KEY_SIGN_UP = "sign_up"
         const val KEY_SORT_ORDER = "sort_order"
         const val KEY_SOURCE = "source"
         const val KEY_TAB = "tab"

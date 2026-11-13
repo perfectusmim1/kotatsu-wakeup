@@ -9,6 +9,9 @@
 	<string name="no_bookmarks_matching_query">No matching bookmarks</string>
 	<string name="no_bookmarks_matching_summary">No bookmarks matched your current filter</string>
 	<string name="download_bookmarked_chapters">Download bookmarked chapters</string>
+	<string name="download_bookmarked_only">Bookmarked chapters only</string>
+	<string name="download_bookmarked_next_2">Bookmarked + next 2 chapters</string>
+	<string name="download_bookmarked_next_3">Bookmarked + next 3 chapters</string>
 	<string name="no_bookmarked_chapters_to_download">No bookmarked chapters to download</string>
 	<string name="migrate_bookmarks">Migrate bookmarks to another source</string>
 	<string name="bookmark_migration_choose_series">Choose series to migrate</string>

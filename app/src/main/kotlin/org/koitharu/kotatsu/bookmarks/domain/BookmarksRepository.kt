@@ -52,10 +52,13 @@ class BookmarksRepository @Inject constructor(
 
 	fun observeBookmarksWithChapters(): Flow<Map<Manga, List<Bookmark>>> {
 		return db.getBookmarksDao().observe().map { map ->
+			if (map.isEmpty()) {
+				return@map emptyMap()
+			}
+			val chaptersByManga = db.getChaptersDao().findAllByMangaIdsMap(map.keys.map { it.manga.id })
 			val res = LinkedHashMap<Manga, List<Bookmark>>(map.size)
-			val chaptersDao = db.getChaptersDao()
 			for ((k, v) in map) {
-				val cachedChapters = chaptersDao.findAll(k.manga.id).takeUnless { it.isEmpty() }
+				val cachedChapters = chaptersByManga[k.manga.id]?.takeUnless { it.isEmpty() }
 				val manga = k.toManga(cachedChapters)
 				res[manga] = v.toBookmarks(manga)
 			}
@@ -189,6 +192,57 @@ fun List<Bookmark>.sortedByOrder(
 			.thenBy { it.page }
 			.thenBy { it.createdAt },
 	)
+}
+
+/**
+ * Resolves unique chapter IDs to download for [bookmarks] of [manga], optionally including up to
+ * [extraNextChapters] following chapters within the same branch of each bookmarked chapter.
+ * Falls back to raw bookmark chapter IDs when [Manga.chapters] is null or empty.
+ */
+fun resolveBookmarkDownloadChapterIds(
+	manga: Manga,
+	bookmarks: List<Bookmark>,
+	extraNextChapters: Int = 0,
+): LongArray {
+	if (bookmarks.isEmpty()) {
+		return longArrayOf()
+	}
+	val chapters = manga.chapters
+	if (chapters.isNullOrEmpty()) {
+		val fallbackIds = LinkedHashSet<Long>(bookmarks.size)
+		for (bookmark in bookmarks) {
+			fallbackIds.add(bookmark.chapterId)
+		}
+		return fallbackIds.toLongArray()
+	}
+	val extra = extraNextChapters.coerceAtLeast(0)
+	val chaptersById = chapters.associateBy(MangaChapter::id)
+	val result = LinkedHashSet<Long>(bookmarks.size * (extra + 1))
+	if (extra == 0) {
+		for (bookmark in bookmarks) {
+			if (bookmark.chapterId in chaptersById) {
+				result.add(bookmark.chapterId)
+			}
+		}
+		return result.toLongArray()
+	}
+	val chaptersByBranch = chapters.groupBy { it.branch }
+	val indexInBranchById = HashMap<Long, Int>(chapters.size)
+	for (branchChapters in chaptersByBranch.values) {
+		branchChapters.forEachIndexed { index, chapter ->
+			indexInBranchById[chapter.id] = index
+		}
+	}
+	for (bookmark in bookmarks) {
+		val bookmarkedChapter = chaptersById[bookmark.chapterId] ?: continue
+		val branchChapters = chaptersByBranch[bookmarkedChapter.branch] ?: continue
+		val idx = indexInBranchById[bookmarkedChapter.id] ?: continue
+		val endIdx = (idx + extra).coerceAtMost(branchChapters.lastIndex)
+		for (i in idx..endIdx) {
+			result.add(branchChapters[i].id)
+		}
+	}
+	return result.toLongArray()
 }
 
 fun Manga.matchesBookmarkQuery(normalizedQuery: String): Boolean {

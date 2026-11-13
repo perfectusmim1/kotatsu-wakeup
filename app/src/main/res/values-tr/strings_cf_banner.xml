@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$s için doğrulama gerekiyor</string>
+	<string name="cf_banner_multiple_required">%1$s (+%2$d diğer kaynak) için doğrulama gerekiyor</string>
+	<string name="cf_banner_solve">Çöz</string>
+	<string name="cf_banner_dismiss">Kapat</string>
+</resources>

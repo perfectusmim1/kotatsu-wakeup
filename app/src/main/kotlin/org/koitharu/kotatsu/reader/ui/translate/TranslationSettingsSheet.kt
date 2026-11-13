@@ -13,7 +13,6 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.FragmentManager
-import androidx.transition.TransitionManager
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -27,6 +26,7 @@ import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.databinding.SheetTranslationSettingsBinding
 import org.koitharu.kotatsu.reader.domain.translate.ReaderTranslationCoordinator
 import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages
+import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationProvider
 import java.util.Locale
 import javax.inject.Inject
@@ -43,10 +43,27 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 	private var promptAutoEnableOnDismiss = false
 	private var userTouchedEnabledSwitch = false
 	private var isUpdatingSwitchProgrammatically = false
+	private var registeredSheetVisibility = false
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		promptAutoEnableOnDismiss = arguments?.getBoolean(ARG_PROMPT_AUTO_ENABLE, false) == true
+	}
+
+	override fun onStart() {
+		super.onStart()
+		if (!registeredSheetVisibility) {
+			registeredSheetVisibility = true
+			coordinator.setSettingsSheetVisible(true)
+		}
+	}
+
+	override fun onStop() {
+		if (registeredSheetVisibility) {
+			registeredSheetVisibility = false
+			coordinator.setSettingsSheetVisible(false)
+		}
+		super.onStop()
 	}
 
 	override fun onCreateViewBinding(
@@ -109,7 +126,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 				R.id.button_provider_google
 			},
 		)
-		updateProviderVisibility(binding, currentProvider, animate = false)
+		updateProviderVisibility(binding, currentProvider)
 
 		binding.toggleGroupProvider.addOnButtonCheckedListener { _, checkedId, isChecked ->
 			if (!isChecked) return@addOnButtonCheckedListener
@@ -119,22 +136,20 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 				else -> return@addOnButtonCheckedListener
 			}
 			settings.translationProvider = nextProvider
-			updateProviderVisibility(binding, nextProvider, animate = true)
+			updateProviderVisibility(binding, nextProvider)
 		}
 	}
 
 	private fun updateProviderVisibility(
 		binding: SheetTranslationSettingsBinding,
 		provider: TranslationProvider,
-		animate: Boolean,
 	) {
 		val showGeminiFields = provider == TranslationProvider.GEMINI
-		if (animate && binding.inputLayoutApiKeys.isVisible != showGeminiFields) {
-			TransitionManager.beginDelayedTransition(binding.layoutContent)
-		}
 		binding.inputLayoutApiKeys.isVisible = showGeminiFields
 		if (showGeminiFields) {
 			updateApiKeyHelper(binding)
+		} else {
+			binding.editTextApiKeys.clearFocus()
 		}
 	}
 
@@ -264,12 +279,17 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 			val source = settings.translationSourceLang
 			val ready = coordinator.isOcrModelReady(source)
 			if (viewBinding == null || settings.translationSourceLang != source) return@launch
-			binding.layoutOcrModelAction.isVisible = !ready
+			val showDownloadButton = !ready
+			binding.layoutOcrModelAction.isVisible = showDownloadButton
 			binding.progressOcrDownload.isVisible = false
-			binding.buttonDownloadOcr.isVisible = !ready
+			binding.buttonDownloadOcr.isVisible = showDownloadButton
 			binding.buttonDownloadOcr.isEnabled = true
 			binding.inputLayoutSourceLang.helperText = getString(
-				if (ready) R.string.translation_ocr_ready else R.string.translation_ocr_not_downloaded,
+				when {
+					ready && source == OcrSourceLanguage.AUTO -> R.string.translation_ocr_auto_ready
+					ready -> R.string.translation_ocr_ready
+					else -> R.string.translation_ocr_not_downloaded
+				},
 			)
 		}
 	}

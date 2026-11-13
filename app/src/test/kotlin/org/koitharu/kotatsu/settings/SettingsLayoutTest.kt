@@ -89,8 +89,7 @@ class SettingsLayoutTest {
 
 		/** What the screens held before they were reorganised, less the links between them. */
 		val EVERY_SETTING = setOf(
-			"app_version", "updates_unstable", "changelog", "about_help", "about_github", "about_app_translation",
-			"about_discord", "sponsor",
+			"app_version", "updates_unstable", "changelog", "about_github",
 			"color_theme", "theme", "amoled_theme", "app_locale", "list_mode_2", "grid_size", "quick_filter",
 			"progress_indicators", "manga_list_badges", "description_collapse", "pages_tab", "details_tab",
 			"search_suggest_types", "nav_main", "main_fab", "nav_labels", "floating_nav", "nav_pinned", "exit_confirm",
@@ -98,7 +97,6 @@ class SettingsLayoutTest {
 			"backup_periodic", "backup_periodic_output", "backup_periodic_freq", "backup_periodic_trim",
 			"backup_periodic_count", "backup_periodic_last", "backup_periodic_tg", "backup_periodic_tg_enabled",
 			"backup_periodic_tg_chat_id", "backup_periodic_tg_open", "backup_periodic_tg_test", "backup", "restore",
-			"enabled", "telemetry", "account", "nickname", "server", "recovery", "export", "delete", "intro",
 			"search_history_clear", "updates_feed_clear", "thumbs_cache_clear", "pages_cache_clear", "http_cache_clear",
 			"manga_data_clear", "cookies_clear", "webview_clear", "chapters_clear", "chapters_clear_auto",
 			"discord_rpc", "discord_token", "discord_rpc_skip_nsfw",
@@ -115,7 +113,7 @@ class SettingsLayoutTest {
 			"eink_flash_every", "eink_flash_color", "reader_fullscreen", "reader_orientation", "reader_screen_on",
 			"reader_multitask", "reader_bar", "reader_bar_transparent", "reader_chapter_toast", "reader_background",
 			"pages_numbers",
-			"sync_settings", "community_settings", "suggestions", "related_manga", "stats_on", "reading_time", "anilist",
+			"sync_settings", "suggestions", "related_manga", "stats_on", "reading_time", "anilist",
 			"kitsu", "mal", "shikimori",
 			"sources_sort_order", "sources_grid", "remote_sources", "sources_enabled_all", "sources_catalog", "no_nsfw",
 			"incognito_nsfw", "mirror_switching", "handle_links",

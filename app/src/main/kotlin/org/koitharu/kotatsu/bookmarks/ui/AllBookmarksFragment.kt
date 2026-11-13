@@ -46,6 +46,7 @@ import org.koitharu.kotatsu.list.ui.adapter.ListItemType
 import org.koitharu.kotatsu.list.ui.adapter.ListStateHolderListener
 import org.koitharu.kotatsu.list.ui.adapter.TypedListSpacingDecoration
 import org.koitharu.kotatsu.list.ui.model.ListHeader
+import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.reader.ui.PageSaveHelper
@@ -69,6 +70,8 @@ class AllBookmarksFragment :
 	private val viewModel by viewModels<AllBookmarksViewModel>()
 	private var bookmarksAdapter: BookmarksAdapter? = null
 	private var selectionController: ListSelectionController? = null
+	private var lastSortOrder: BookmarkSortOrder? = null
+	private var lastQuery: String? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -110,8 +113,30 @@ class AllBookmarksFragment :
 			layoutManager = lm
 			selectionController?.attachToRecyclerView(this)
 		}
-		viewModel.content.observe(viewLifecycleOwner) {
-			bookmarksAdapter?.setItems(it, spanSizeLookup)
+		viewModel.content.observe(viewLifecycleOwner) { items ->
+			if (items.singleOrNull() is LoadingState) {
+				bookmarksAdapter?.setItems(items, spanSizeLookup)
+				return@observe
+			}
+			val currentOrder = viewModel.sortOrder.value
+			val currentQuery = viewModel.query.value
+			val sortChanged = lastSortOrder != null && lastSortOrder != currentOrder
+			val queryChanged = lastQuery != null && lastQuery != currentQuery
+			lastSortOrder = currentOrder
+			lastQuery = currentQuery
+			if (sortChanged || queryChanged) {
+				bookmarksAdapter?.submitItemsImmediate(items) {
+					spanSizeLookup.run()
+					val rv = viewBinding?.recyclerView ?: return@submitItemsImmediate
+					rv.stopScroll()
+					(rv.layoutManager as? GridLayoutManager)?.scrollToPositionWithOffset(0, 0)
+					if (sortChanged || currentQuery.isEmpty()) {
+						(activity as? AppBarOwner)?.appBar?.setExpanded(true, true)
+					}
+				}
+			} else {
+				bookmarksAdapter?.setItems(items, spanSizeLookup)
+			}
 		}
 		viewModel.onError.observeEvent(
 			viewLifecycleOwner,
@@ -139,6 +164,8 @@ class AllBookmarksFragment :
 		super.onDestroyView()
 		bookmarksAdapter = null
 		selectionController = null
+		lastSortOrder = null
+		lastQuery = null
 	}
 
 	override fun onItemClick(item: Bookmark, view: View) {
@@ -186,13 +213,19 @@ class AllBookmarksFragment :
 	): Boolean {
 		menuInflater.inflate(R.menu.mode_bookmarks, menu)
 		if (menu.findItem(R.id.action_download_bookmarked) == null) {
-			menu.add(
+			menu.addSubMenu(
 				Menu.NONE,
 				R.id.action_download_bookmarked,
 				Menu.NONE,
 				R.string.download_bookmarked_chapters,
-			).setIcon(R.drawable.ic_download)
-				.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+			).apply {
+				setIcon(R.drawable.ic_download)
+				item.setIcon(R.drawable.ic_download)
+				item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+				add(Menu.NONE, R.id.action_download_bookmarked_only, Menu.NONE, R.string.download_bookmarked_only)
+				add(Menu.NONE, R.id.action_download_bookmarked_next_2, Menu.NONE, R.string.download_bookmarked_next_2)
+				add(Menu.NONE, R.id.action_download_bookmarked_next_3, Menu.NONE, R.string.download_bookmarked_next_3)
+			}
 		}
 		if (menu.findItem(R.id.action_migrate_bookmarks) == null) {
 			menu.add(
@@ -225,9 +258,23 @@ class AllBookmarksFragment :
 				true
 			}
 
-			R.id.action_download_bookmarked -> {
+			R.id.action_download_bookmarked_only -> {
 				val ids = selectionController?.snapshot() ?: return false
-				downloadBookmarkedChapters(ids)
+				downloadBookmarkedChapters(ids, extraNextChapters = 0)
+				mode?.finish()
+				true
+			}
+
+			R.id.action_download_bookmarked_next_2 -> {
+				val ids = selectionController?.snapshot() ?: return false
+				downloadBookmarkedChapters(ids, extraNextChapters = 2)
+				mode?.finish()
+				true
+			}
+
+			R.id.action_download_bookmarked_next_3 -> {
+				val ids = selectionController?.snapshot() ?: return false
+				downloadBookmarkedChapters(ids, extraNextChapters = 3)
 				mode?.finish()
 				true
 			}
@@ -243,9 +290,9 @@ class AllBookmarksFragment :
 		}
 	}
 
-	private fun downloadBookmarkedChapters(selectedIds: Set<Long>?) {
+	private fun downloadBookmarkedChapters(selectedIds: Set<Long>?, extraNextChapters: Int = 0) {
 		router.askForDownloadOverMeteredNetwork { allow ->
-			viewModel.downloadBookmarkedChapters(selectedIds, allow)
+			viewModel.downloadBookmarkedChapters(selectedIds, allow, extraNextChapters)
 		}
 	}
 
@@ -329,8 +376,18 @@ class AllBookmarksFragment :
 				true
 			}
 
-			R.id.action_download_bookmarked -> {
-				downloadBookmarkedChapters(selectedIds = null)
+			R.id.action_download_bookmarked_only -> {
+				downloadBookmarkedChapters(selectedIds = null, extraNextChapters = 0)
+				true
+			}
+
+			R.id.action_download_bookmarked_next_2 -> {
+				downloadBookmarkedChapters(selectedIds = null, extraNextChapters = 2)
+				true
+			}
+
+			R.id.action_download_bookmarked_next_3 -> {
+				downloadBookmarkedChapters(selectedIds = null, extraNextChapters = 3)
 				true
 			}
 

@@ -25,7 +25,6 @@
 			android:id="@+id/layout_content"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
-			android:animateLayoutChanges="true"
 			android:orientation="vertical"
 			android:paddingBottom="@dimen/margin_normal">
 
@@ -99,21 +98,25 @@
 
 			<com.google.android.material.textfield.TextInputLayout
 				android:id="@+id/inputLayout_source_lang"
-				style="?textInputOutlinedStyle"
+				style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:layout_marginHorizontal="@dimen/margin_normal"
 				android:layout_marginTop="@dimen/margin_normal"
 				android:hint="@string/translation_source_lang"
-				app:endIconMode="dropdown_menu"
-				app:helperText="@string/translation_ocr_ready">
+				app:helperText="@string/translation_ocr_ready"
+				app:helperTextEnabled="true">
 
-				<AutoCompleteTextView
+				<com.google.android.material.textfield.MaterialAutoCompleteTextView
 					android:id="@+id/edit_source_lang"
-					style="?editTextStyle"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
+					android:clickable="true"
+					android:cursorVisible="false"
+					android:focusable="false"
+					android:focusableInTouchMode="false"
 					android:inputType="none"
+					android:longClickable="false"
 					tools:ignore="LabelFor" />
 
 			</com.google.android.material.textfield.TextInputLayout>
@@ -140,29 +143,35 @@
 
 				<com.google.android.material.button.MaterialButton
 					android:id="@+id/button_download_ocr"
-					style="?materialButtonOutlinedStyle"
+					style="@style/Widget.Material3.Button.TextButton"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
+					android:insetTop="0dp"
+					android:insetBottom="0dp"
+					android:minHeight="36dp"
 					android:text="@string/translation_ocr_download" />
 
 			</LinearLayout>
 
 			<com.google.android.material.textfield.TextInputLayout
 				android:id="@+id/inputLayout_target_lang"
-				style="?textInputOutlinedStyle"
+				style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
 				android:layout_marginHorizontal="@dimen/margin_normal"
 				android:layout_marginTop="@dimen/margin_normal"
-				android:hint="@string/translation_target_lang"
-				app:endIconMode="dropdown_menu">
+				android:hint="@string/translation_target_lang">
 
-				<AutoCompleteTextView
+				<com.google.android.material.textfield.MaterialAutoCompleteTextView
 					android:id="@+id/edit_target_lang"
-					style="?editTextStyle"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
+					android:clickable="true"
+					android:cursorVisible="false"
+					android:focusable="false"
+					android:focusableInTouchMode="false"
 					android:inputType="none"
+					android:longClickable="false"
 					tools:ignore="LabelFor" />
 
 			</com.google.android.material.textfield.TextInputLayout>

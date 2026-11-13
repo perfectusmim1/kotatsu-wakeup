@@ -379,7 +379,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		}
 
 	var sourcesSortOrder: SourcesSortOrder
-		get() = prefs.getEnumValue(KEY_SOURCES_ORDER, SourcesSortOrder.SCORE)
+		get() = prefs.getEnumValue(KEY_SOURCES_ORDER, SourcesSortOrder.POPULARITY)
 		set(value) = prefs.edit { putEnumValue(KEY_SOURCES_ORDER, value) }
 
 	var isSourcesGridMode: Boolean
@@ -568,7 +568,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	var translationSourceLang: OcrSourceLanguage
 		get() = OcrSourceLanguage.fromCode(
-			prefs.getString(KEY_TRANSLATION_SOURCE_LANG, OcrSourceLanguage.ENGLISH.code),
+			prefs.getString(KEY_TRANSLATION_SOURCE_LANG, OcrSourceLanguage.AUTO.code),
 		)
 		set(value) = prefs.edit { putString(KEY_TRANSLATION_SOURCE_LANG, value.code) }
 
@@ -828,6 +828,9 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	private fun normalizeImportedPreferences(values: Map<String, *>): Map<String, *> {
 		val result = HashMap(values)
+		if (result[KEY_SOURCES_ORDER] == "SCORE") {
+			result[KEY_SOURCES_ORDER] = SourcesSortOrder.POPULARITY.name
+		}
 		result[KEY_ACTIVE_SOURCE_PRESET]?.let { rawValue ->
 			val fixedValue = when (rawValue) {
 				is Long -> rawValue

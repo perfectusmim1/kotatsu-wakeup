@@ -3,10 +3,12 @@ package org.koitharu.kotatsu.settings.sources
 import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -14,6 +16,7 @@ import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
+import org.koitharu.kotatsu.core.parser.SourceTokenStore
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.ui.util.ReversibleAction
@@ -31,6 +34,7 @@ class SourceSettingsViewModel @Inject constructor(
 	mangaRepositoryFactory: MangaRepository.Factory,
 	private val cookieJar: MutableCookieJar,
 	private val mangaSourcesRepository: MangaSourcesRepository,
+	private val sourceTokenStore: SourceTokenStore,
 ) : BaseViewModel(), SharedPreferences.OnSharedPreferenceChangeListener {
 
 	val source = MangaSource(savedStateHandle.get<String>(AppRouter.KEY_SOURCE))
@@ -94,6 +98,38 @@ class SourceSettingsViewModel @Inject constructor(
 		}
 	}
 
+	fun signOut() {
+		if (repository !is ParserMangaRepository) return
+		launchLoadingJob(Dispatchers.Default) {
+			val authProvider = repository.getAuthProvider()
+			if (authProvider != null) {
+				try {
+					authProvider.logout()
+				} catch (e: CancellationException) {
+					throw e
+				} catch (_: Throwable) {
+					// Clear local session state even if remote logout fails.
+				}
+			}
+			val hosts = buildSet {
+				add(repository.domain)
+				authProvider?.authUrl?.toHttpUrlOrNull()?.host?.let(::add)
+				authProvider?.signUpUrl?.toHttpUrlOrNull()?.host?.let(::add)
+			}
+			for (host in hosts) {
+				val url = HttpUrl.Builder()
+					.scheme("https")
+					.host(host)
+					.build()
+				cookieJar.removeCookies(url, null)
+			}
+			sourceTokenStore.clear(source)
+			(repository as? CachingMangaRepository)?.invalidateCache()
+			onActionDone.call(ReversibleAction(R.string.source_signed_out, null))
+			loadUsername(authProvider)
+		}
+	}
+
 	fun setEnabled(value: Boolean) {
 		launchJob(Dispatchers.Default) {
 			mangaSourcesRepository.setSourcesEnabled(setOf(source), value)
@@ -109,9 +145,15 @@ class SourceSettingsViewModel @Inject constructor(
 				if (authProvider == null) {
 					return@launchLoadingJob
 				}
-				isAuthorized.value = authProvider.isAuthorized()
-				username.value = authProvider.getUsername()
+				val authorized = authProvider.isAuthorized()
+				isAuthorized.value = authorized
+				username.value = if (authorized) {
+					authProvider.getUsername()
+				} else {
+					null
+				}
 			} catch (_: AuthRequiredException) {
+				isAuthorized.value = false
 				username.value = null
 			} catch (e: ParseException) {
 				if (e.message?.contains("Cannot find username", ignoreCase = true) == true) {

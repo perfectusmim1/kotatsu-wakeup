@@ -9,6 +9,8 @@ import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import java.net.InetAddress
 import java.net.UnknownHostException
+import java.util.EnumMap
+import java.util.Locale
 
 class DoHManager(
 	cache: Cache,
@@ -17,28 +19,80 @@ class DoHManager(
 
 	private val bootstrapClient = OkHttpClient.Builder().cache(cache).build()
 
-	private var cachedDelegate: Dns? = null
-	private var cachedProvider: DoHProvider? = null
+	private val cachedDelegates = EnumMap<DoHProvider, Dns>(DoHProvider::class.java)
 
 	override fun lookup(hostname: String): List<InetAddress> {
-		return try {
-			getDelegate().lookup(hostname)
-		} catch (e: UnknownHostException) {
-			// fallback
-			Dns.SYSTEM.lookup(hostname)
+		if (shouldBypassDoH(hostname)) {
+			return Dns.SYSTEM.lookup(hostname)
 		}
+		val activeProvider = settings.dnsOverHttps
+		val providers = buildList {
+			add(activeProvider)
+			if (activeProvider != DoHProvider.NONE) {
+				add(DoHProvider.NONE)
+			}
+			if (activeProvider != DoHProvider.CLOUDFLARE) {
+				add(DoHProvider.CLOUDFLARE)
+			}
+			if (activeProvider != DoHProvider.GOOGLE) {
+				add(DoHProvider.GOOGLE)
+			}
+		}
+		var firstFailure: UnknownHostException? = null
+		for (provider in providers) {
+			try {
+				val result = getDelegate(provider).lookup(hostname)
+				if (result.isNotEmpty()) {
+					return result
+				}
+				val emptyFailure = UnknownHostException("Empty DNS result for $hostname via $provider")
+				if (firstFailure == null) {
+					firstFailure = emptyFailure
+				} else {
+					firstFailure.addSuppressed(emptyFailure)
+				}
+			} catch (e: UnknownHostException) {
+				if (firstFailure == null) {
+					firstFailure = e
+				} else {
+					firstFailure.addSuppressed(e)
+				}
+			}
+		}
+		throw firstFailure ?: UnknownHostException(hostname)
 	}
 
-	@Synchronized
-	private fun getDelegate(): Dns {
-		var delegate = cachedDelegate
-		val provider = settings.dnsOverHttps
-		if (delegate == null || provider != cachedProvider) {
-			delegate = createDelegate(provider)
-			cachedDelegate = delegate
-			cachedProvider = provider
+	private fun getDelegate(provider: DoHProvider): Dns = synchronized(cachedDelegates) {
+		cachedDelegates.getOrPut(provider) { createDelegate(provider) }
+	}
+
+	private fun shouldBypassDoH(hostname: String): Boolean {
+		val normalized = hostname.trim().trimEnd('.').lowercase(Locale.ROOT)
+		if (normalized.isEmpty()) return true
+		if (isIpLiteral(normalized)) return true
+		if ('.' !in normalized) return true
+		return LOCAL_SUFFIXES.any { suffix -> normalized.endsWith(suffix) }
+	}
+
+	private fun isIpLiteral(host: String): Boolean {
+		val unbracketed = if (host.startsWith('[') && host.endsWith(']') && host.length > 2) {
+			host.substring(1, host.length - 1)
+		} else {
+			host
 		}
-		return delegate
+		val withoutZone = unbracketed.substringBefore('%')
+		if (withoutZone.isEmpty()) return false
+		if (':' in withoutZone) {
+			return withoutZone.all { ch ->
+				ch in '0'..'9' || ch in 'a'..'f' || ch == ':' || ch == '.'
+			}
+		}
+		val parts = withoutZone.split('.')
+		if (parts.size != 4) return false
+		return parts.all { part ->
+			val num = part.toIntOrNull()
+			num != null && num in 0..255 && (part.length == 1 || !part.startsWith('0'))
+		}
 	}
 
 	private fun createDelegate(provider: DoHProvider): Dns = when (provider) {
@@ -95,5 +149,17 @@ class DoHManager(
 	} catch (e: UnknownHostException) {
 		e.printStackTraceDebug()
 		null
+	}
+
+	private companion object {
+		val LOCAL_SUFFIXES = arrayOf(
+			".local",
+			".localhost",
+			".localdomain",
+			".lan",
+			".home",
+			".internal",
+			".arpa",
+		)
 	}
 }

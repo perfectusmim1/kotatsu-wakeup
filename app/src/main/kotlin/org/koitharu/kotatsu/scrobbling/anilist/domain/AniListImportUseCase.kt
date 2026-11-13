@@ -35,7 +35,6 @@ import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerService
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingStatus
 import org.koitharu.kotatsu.search.domain.SearchKind
 import org.koitharu.kotatsu.search.domain.SearchV2Helper
-import org.koitharu.kotatsu.sourcescore.domain.SourceRanker
 import java.util.Locale
 import javax.inject.Inject
 
@@ -83,7 +82,6 @@ class AniListImportUseCase @Inject constructor(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val mangaDataRepository: MangaDataRepository,
 	private val searchHelperFactory: SearchV2Helper.Factory,
-	private val sourceRanker: SourceRanker,
 	private val settings: AppSettings,
 	private val db: MangaDatabase,
 ) {
@@ -282,26 +280,14 @@ class AniListImportUseCase @Inject constructor(
 		if (candidates.isEmpty()) return emptyList()
 
 		val appLang = Locale.getDefault().language
-		val snapshot = runCatchingCancellable { sourceRanker.snapshot() }.getOrNull()
-			?: return candidates.sortedByDescending { source ->
-				val lang = source.getLocale()?.language
-				when {
-					lang == appLang -> 2
-					lang == "en" -> 1
-					else -> 0
-				}
+		return candidates.sortedByDescending { source ->
+			val lang = source.getLocale()?.language
+			when {
+				lang == appLang -> 2
+				lang == "en" -> 1
+				else -> 0
 			}
-		return snapshot.order(
-			sources = candidates,
-			affinityOf = { source ->
-				val lang = source.getLocale()?.language
-				when {
-					lang == appLang -> 1.0
-					lang == "en" -> 0.65
-					else -> 0.25
-				}
-			},
-		).map { it.source }
+		}
 	}
 
 	private suspend fun findBestMatchAcrossSources(

@@ -1183,7 +1183,7 @@ class StyleExtractor @Inject constructor() {
 			return TextBlockKind.EMPHASIS
 		}
 		val aspect = if (blockBox.height > 0f) blockBox.width / blockBox.height else 1f
-		if (isDark && aspect > 1.8f && blockBox.width > 0.25f) {
+		if (isDark && aspect > 1.8f && blockBox.width > 250f) {
 			return TextBlockKind.NARRATION
 		}
 		return TextBlockKind.DIALOGUE

@@ -19,6 +19,12 @@
 -keep class org.koitharu.kotatsu.settings.NotificationSettingsLegacyFragment
 -keep class org.koitharu.kotatsu.settings.about.changelog.ChangelogFragment
 
+-keep public class * extends androidx.fragment.app.Fragment {
+	public <init>();
+}
+-keep class org.koitharu.kotatsu.settings.sources.accounts.** { *; }
+-keep class org.koitharu.kotatsu.comments.** { *; }
+
 -keep class org.koitharu.kotatsu.core.exceptions.* { *; }
 -keep class org.koitharu.kotatsu.core.prefs.ScreenshotsPolicy { *; }
 -keep class org.koitharu.kotatsu.backups.ui.periodical.PeriodicalBackupSettingsFragment { *; }

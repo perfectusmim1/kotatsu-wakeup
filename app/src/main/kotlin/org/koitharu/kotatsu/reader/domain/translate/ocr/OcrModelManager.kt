@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.reader.domain.translate.ocr
 
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -52,42 +54,95 @@ private data class GroupModelUrls(
 @Singleton
 class OcrModelManager @Inject constructor(
 	@ApplicationContext context: Context,
-	@BaseHttpClient baseHttpClient: OkHttpClient,
+	@BaseHttpClient private val baseHttpClientProvider: Provider<OkHttpClient>,
 ) {
 
 	private val modelsRootDir = File(context.filesDir, MODELS_DIR_NAME)
 	private val downloadMutex = Mutex()
-	private val downloadClient: OkHttpClient = baseHttpClient.newBuilder()
-		.connectTimeout(30, TimeUnit.SECONDS)
-		.readTimeout(120, TimeUnit.SECONDS)
-		.writeTimeout(30, TimeUnit.SECONDS)
-		.followRedirects(true)
-		.followSslRedirects(true)
-		.build()
+	private val downloadClient: OkHttpClient by lazy {
+		baseHttpClientProvider.get().newBuilder()
+			.connectTimeout(30, TimeUnit.SECONDS)
+			.readTimeout(120, TimeUnit.SECONDS)
+			.writeTimeout(30, TimeUnit.SECONDS)
+			.followRedirects(true)
+			.followSslRedirects(true)
+			.build()
+	}
+
+	internal val detModelFile: File
+		get() = File(modelsRootDir, DET_FILE_NAME)
 
 	fun isModelReady(sourceLang: OcrSourceLanguage): Boolean {
-		val files = resolveModelFiles(sourceLang)
+		if (sourceLang == OcrSourceLanguage.AUTO) {
+			return isValidOnnxFile(detModelFile) && AUTO_CANDIDATE_GROUPS.any(::isGroupModelOnlyReady)
+		}
+		return isGroupReady(sourceLang.modelGroup)
+	}
+
+	internal fun isGroupReady(modelGroup: String): Boolean {
+		val files = resolveGroupFiles(modelGroup)
 		return isValidOnnxFile(files.detModel) &&
 			isValidOnnxFile(files.recModel) &&
 			isValidDictFile(files.dictFile)
 	}
 
-	internal fun getModelFiles(sourceLang: OcrSourceLanguage): OcrModelFiles = resolveModelFiles(sourceLang)
+	private fun isGroupModelOnlyReady(modelGroup: String): Boolean {
+		val files = resolveGroupFiles(modelGroup)
+		return isValidOnnxFile(files.recModel) && isValidDictFile(files.dictFile)
+	}
+
+	internal fun readyGroupsInPriority(preferredFirst: String? = null): List<String> {
+		val ordered = buildList {
+			if (!preferredFirst.isNullOrBlank() && preferredFirst in AUTO_CANDIDATE_GROUPS) {
+				add(preferredFirst)
+			}
+			for (group in AUTO_CANDIDATE_GROUPS) {
+				if (group != preferredFirst) {
+					add(group)
+				}
+			}
+		}
+		return ordered.filter(::isGroupReady)
+	}
+
+	internal fun getModelFiles(sourceLang: OcrSourceLanguage): OcrModelFiles {
+		val group = if (sourceLang == OcrSourceLanguage.AUTO) DEFAULT_AUTO_GROUP else sourceLang.modelGroup
+		return resolveGroupFiles(group)
+	}
+
+	internal fun getModelFilesForGroup(modelGroup: String): OcrModelFiles = resolveGroupFiles(modelGroup)
 
 	suspend fun ensureModels(
 		sourceLang: OcrSourceLanguage,
 		onProgress: (suspend (percent: Int) -> Unit)? = null,
 	) {
-		val alreadyReady = withContext(Dispatchers.IO) { isModelReady(sourceLang) }
+		if (sourceLang == OcrSourceLanguage.AUTO) {
+			val autoReady = withContext(Dispatchers.IO) { isModelReady(OcrSourceLanguage.AUTO) }
+			if (autoReady) {
+				Log.d(LOG_TAG, "ensureModels(AUTO): ready on disk (groups=${readyGroupsInPriority()})")
+				return
+			}
+			Log.i(LOG_TAG, "ensureModels(AUTO): downloading base detector + '$DEFAULT_AUTO_GROUP' recognizer")
+			ensureGroupModels(DEFAULT_AUTO_GROUP, onProgress)
+			return
+		}
+		ensureGroupModels(sourceLang.modelGroup, onProgress)
+	}
+
+	internal suspend fun ensureGroupModels(
+		modelGroup: String,
+		onProgress: (suspend (percent: Int) -> Unit)? = null,
+	) {
+		val alreadyReady = withContext(Dispatchers.IO) { isGroupReady(modelGroup) }
 		if (alreadyReady) {
 			return
 		}
 		downloadMutex.withLock {
-			val readyLocked = withContext(Dispatchers.IO) { isModelReady(sourceLang) }
+			val readyLocked = withContext(Dispatchers.IO) { isGroupReady(modelGroup) }
 			if (readyLocked) {
 				return
 			}
-			val files = resolveModelFiles(sourceLang)
+			val files = resolveGroupFiles(modelGroup)
 			val groupUrls = modelUrlsForGroup(files.modelGroup)
 			val requiredSpecs = listOf(
 				ModelFileSpec(files.detModel, DET_MODEL_URLS, MIN_ONNX_BYTES),
@@ -102,6 +157,11 @@ class OcrModelManager @Inject constructor(
 			if (missingSpecs.isEmpty()) {
 				return
 			}
+			Log.i(
+				LOG_TAG,
+				"ensureGroupModels($modelGroup): downloading ${missingSpecs.size} file(s): " +
+					missingSpecs.joinToString { it.targetFile.name },
+			)
 
 			withContext(Dispatchers.IO) {
 				modelsRootDir.mkdirs()
@@ -129,11 +189,17 @@ class OcrModelManager @Inject constructor(
 				}
 			}
 			emitProgress(100)
+			Log.i(LOG_TAG, "ensureGroupModels($modelGroup): completed")
 		}
 	}
 
 	internal suspend fun loadDictionary(sourceLang: OcrSourceLanguage): List<String> {
-		val dictFile = resolveModelFiles(sourceLang).dictFile
+		val group = if (sourceLang == OcrSourceLanguage.AUTO) DEFAULT_AUTO_GROUP else sourceLang.modelGroup
+		return loadDictionaryForGroup(group)
+	}
+
+	internal suspend fun loadDictionaryForGroup(modelGroup: String): List<String> {
+		val dictFile = resolveGroupFiles(modelGroup).dictFile
 		return withContext(Dispatchers.IO) {
 			val raw = dictFile.readText(Charsets.UTF_8)
 			val lines = raw.replace("\r", "").split('\n').toMutableList()
@@ -145,14 +211,13 @@ class OcrModelManager @Inject constructor(
 		}
 	}
 
-	private fun resolveModelFiles(sourceLang: OcrSourceLanguage): OcrModelFiles {
-		val group = sourceLang.modelGroup
-		val groupDir = File(modelsRootDir, group)
+	private fun resolveGroupFiles(modelGroup: String): OcrModelFiles {
+		val groupDir = File(modelsRootDir, modelGroup)
 		return OcrModelFiles(
-			detModel = File(modelsRootDir, DET_FILE_NAME),
+			detModel = detModelFile,
 			recModel = File(groupDir, REC_FILE_NAME),
 			dictFile = File(groupDir, DICT_FILE_NAME),
-			modelGroup = group,
+			modelGroup = modelGroup,
 		)
 	}
 
@@ -178,6 +243,7 @@ class OcrModelManager @Inject constructor(
 			} catch (e: CancellationException) {
 				throw e
 			} catch (t: Throwable) {
+				Log.w(LOG_TAG, "downloadWithFallback failed for url=$url: ${t.message}")
 				lastError = t
 			}
 		}
@@ -209,7 +275,8 @@ class OcrModelManager @Inject constructor(
 			.get()
 			.build()
 
-		val response = downloadClient.newCall(request).awaitExecute()
+		val client = withContext(Dispatchers.IO) { downloadClient }
+		val response = client.newCall(request).awaitExecute()
 		try {
 			withContext(Dispatchers.IO) {
 				response.use { res ->
@@ -253,6 +320,7 @@ class OcrModelManager @Inject constructor(
 							"Downloaded file ${targetFile.name} is unexpectedly small ($totalRead bytes)",
 						)
 					}
+					Log.d(LOG_TAG, "downloadAtomically saved ${targetFile.absolutePath} ($totalRead bytes)")
 				}
 
 				if (targetFile.exists() && !targetFile.delete()) {
@@ -330,20 +398,25 @@ class OcrModelManager @Inject constructor(
 		)
 	}
 
-	private companion object {
-		const val MODELS_DIR_NAME = "ocr_models"
-		const val DET_FILE_NAME = "det_v3.onnx"
-		const val REC_FILE_NAME = "rec.onnx"
-		const val DICT_FILE_NAME = "dict.txt"
-		const val STREAM_BUFFER_BYTES = 16 * 1024
-		const val MIN_ONNX_BYTES = 100_000L
-		const val MIN_DICT_BYTES = 32L
+	internal companion object {
+		const val LOG_TAG = "KotatsuTranslate"
+		const val DEFAULT_AUTO_GROUP = "en"
+		val AUTO_CANDIDATE_GROUPS = listOf("en", "cjk", "korean", "latin", "eslav", "arabic")
+		val AUTO_DOWNLOAD_FALLBACK_GROUPS = listOf("cjk", "korean")
 
-		val DET_MODEL_URLS = listOf(
+		private const val MODELS_DIR_NAME = "ocr_models"
+		private const val DET_FILE_NAME = "det_v3.onnx"
+		private const val REC_FILE_NAME = "rec.onnx"
+		private const val DICT_FILE_NAME = "dict.txt"
+		private const val STREAM_BUFFER_BYTES = 16 * 1024
+		private const val MIN_ONNX_BYTES = 100_000L
+		private const val MIN_DICT_BYTES = 32L
+
+		private val DET_MODEL_URLS = listOf(
 			"https://huggingface.co/monkt/paddleocr-onnx/resolve/main/detection/v3/det.onnx",
 			"https://huggingface.co/SWHL/RapidOCR/resolve/main/PP-OCRv4/ch_PP-OCRv4_det_infer.onnx",
 		)
 
-		val NO_STORE_CACHE = CacheControl.Builder().noStore().build()
+		private val NO_STORE_CACHE = CacheControl.Builder().noStore().build()
 	}
 }

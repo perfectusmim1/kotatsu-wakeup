@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:paddingBottom="8dp">
+
+	<androidx.constraintlayout.widget.ConstraintLayout
+		android:id="@+id/container_comment"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:background="@drawable/bg_comment"
+		android:paddingStart="14dp"
+		android:paddingTop="12dp"
+		android:paddingEnd="10dp"
+		android:paddingBottom="8dp">
+
+		<com.google.android.material.imageview.ShapeableImageView
+			android:id="@+id/imageView_avatar"
+			android:layout_width="28dp"
+			android:layout_height="28dp"
+			android:background="?attr/colorSurfaceContainerHigh"
+			android:scaleType="centerCrop"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="parent"
+			app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Circle"
+			tools:src="@drawable/ic_user" />
+
+		<TextView
+			android:id="@+id/textView_author"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="8dp"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textAppearance="?attr/textAppearanceLabelLarge"
+			app:layout_constraintBottom_toTopOf="@id/textView_time"
+			app:layout_constraintEnd_toStartOf="@id/imageView_pinned"
+			app:layout_constraintHorizontal_bias="0"
+			app:layout_constraintHorizontal_chainStyle="packed"
+			app:layout_constraintStart_toEndOf="@id/imageView_avatar"
+			app:layout_constraintTop_toTopOf="@id/imageView_avatar"
+			app:layout_constraintWidth_default="wrap"
+			tools:text="reader#a1b2" />
+
+		<ImageView
+			android:id="@+id/imageView_pinned"
+			android:layout_width="14dp"
+			android:layout_height="14dp"
+			android:layout_marginStart="6dp"
+			android:contentDescription="@null"
+			android:src="@drawable/ic_pin_small"
+			android:visibility="gone"
+			app:layout_constraintBottom_toBottomOf="@id/textView_author"
+			app:layout_constraintEnd_toStartOf="@id/textView_role"
+			app:layout_constraintStart_toEndOf="@id/textView_author"
+			app:layout_constraintTop_toTopOf="@id/textView_author"
+			app:tint="?attr/colorPrimary"
+			tools:visibility="visible" />
+
+		<TextView
+			android:id="@+id/textView_role"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="6dp"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textAppearance="?attr/textAppearanceLabelSmall"
+			android:textColor="?attr/colorPrimary"
+			android:visibility="gone"
+			app:layout_constraintBaseline_toBaselineOf="@id/textView_author"
+			app:layout_constraintEnd_toStartOf="@id/button_more"
+			app:layout_constraintStart_toEndOf="@id/imageView_pinned"
+			tools:text="Moderator"
+			tools:visibility="visible" />
+
+		<TextView
+			android:id="@+id/textView_time"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="8dp"
+			android:ellipsize="end"
+			android:maxLines="1"
+			android:textAppearance="?attr/textAppearanceBodySmall"
+			android:textColor="?android:attr/textColorSecondary"
+			app:layout_constraintEnd_toStartOf="@id/button_more"
+			app:layout_constraintStart_toEndOf="@id/imageView_avatar"
+			app:layout_constraintTop_toBottomOf="@id/textView_author"
+			tools:text="2 hours ago" />
+
+		<com.google.android.material.button.MaterialButton
+			android:id="@+id/button_more"
+			style="?materialIconButtonStyle"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
+			android:contentDescription="@string/community_more_options"
+			android:insetTop="0dp"
+			android:insetBottom="0dp"
+			android:minWidth="0dp"
+			android:minHeight="0dp"
+			android:paddingStart="0dp"
+			android:paddingEnd="0dp"
+			android:visibility="gone"
+			app:icon="@drawable/abc_ic_menu_overflow_material"
+			app:iconGravity="textStart"
+			app:iconPadding="0dp"
+			app:iconSize="18dp"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintTop_toTopOf="parent"
+			tools:visibility="visible" />
+
+		<FrameLayout
+			android:id="@+id/container_body"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="8dp"
+			android:layout_marginEnd="4dp"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toBottomOf="@id/textView_time">
+
+			<TextView
+				android:id="@+id/textView_body"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:textAppearance="?attr/textAppearanceBodyMedium"
+				android:textIsSelectable="true"
+				tools:text="The art in this chapter was genuinely spectacular." />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_reveal_spoiler"
+				style="@style/Widget.Kotatsu.Expressive.Button.Tonal"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/community_spoiler_warning"
+				android:visibility="gone"
+				app:icon="@drawable/ic_eye_off"
+				app:iconGravity="textStart" />
+		</FrameLayout>
+
+		<LinearLayout
+			android:id="@+id/layout_actions"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="4dp"
+			android:gravity="center_vertical"
+			android:orientation="horizontal"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toBottomOf="@id/container_body">
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_like"
+				style="?attr/borderlessButtonStyle"
+				android:layout_width="wrap_content"
+				android:layout_height="36dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:paddingHorizontal="8dp"
+				android:textAppearance="?attr/textAppearanceLabelMedium"
+				app:icon="@drawable/ic_thumb_up"
+				app:iconPadding="4dp"
+				app:iconSize="16dp"
+				tools:text="12" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_dislike"
+				style="?attr/borderlessButtonStyle"
+				android:layout_width="wrap_content"
+				android:layout_height="36dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:paddingHorizontal="8dp"
+				android:textAppearance="?attr/textAppearanceLabelMedium"
+				app:icon="@drawable/ic_thumb_down"
+				app:iconPadding="4dp"
+				app:iconSize="16dp"
+				tools:text="1" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_reply"
+				style="?attr/borderlessButtonStyle"
+				android:layout_width="wrap_content"
+				android:layout_height="36dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:paddingHorizontal="10dp"
+				android:text="@string/community_comment_reply"
+				android:textAppearance="?attr/textAppearanceLabelMedium" />
+
+			<com.google.android.material.button.MaterialButton
+				android:id="@+id/button_replies"
+				style="?attr/borderlessButtonStyle"
+				android:layout_width="wrap_content"
+				android:layout_height="36dp"
+				android:insetTop="0dp"
+				android:insetBottom="0dp"
+				android:minWidth="0dp"
+				android:minHeight="0dp"
+				android:paddingHorizontal="10dp"
+				android:textAppearance="?attr/textAppearanceLabelMedium"
+				android:textColor="?attr/colorPrimary"
+				android:visibility="gone"
+				tools:text="Show replies (3)"
+				tools:visibility="visible" />
+
+			<com.google.android.material.loadingindicator.LoadingIndicator
+				android:id="@+id/progress_replies"
+				android:layout_width="20dp"
+				android:layout_height="20dp"
+				android:layout_marginStart="4dp"
+				android:visibility="gone"
+				app:indicatorSize="18dp" />
+		</LinearLayout>
+
+	</androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>

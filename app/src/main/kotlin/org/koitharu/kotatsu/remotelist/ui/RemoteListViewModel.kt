@@ -83,7 +83,8 @@ open class RemoteListViewModel @Inject constructor(
 	private val isResolvingCaptcha = MutableStateFlow(false)
 	private var loadingJob: Job? = null
 	private var randomJob: Job? = null
-	private var initialOpenMayStartVerification = true
+	@Volatile
+	private var autoResolveAttempted = false
 
 	override val content = combine(
 		mangaList.map { it?.skipNsfwIfNeeded() },
@@ -143,10 +144,16 @@ open class RemoteListViewModel @Inject constructor(
 	}
 
 	override fun onRefresh() {
+		autoResolveAttempted = false
 		loadList(filterCoordinator.snapshot(), append = false)
 	}
 
 	override fun onRetry() {
+		autoResolveAttempted = false
+		loadList(filterCoordinator.snapshot(), append = !mangaList.value.isNullOrEmpty())
+	}
+
+	fun onAutoCaptchaRetry() {
 		loadList(filterCoordinator.snapshot(), append = !mangaList.value.isNullOrEmpty())
 	}
 
@@ -166,12 +173,12 @@ open class RemoteListViewModel @Inject constructor(
 		loadingJob?.let {
 			if (it.isActive) return it
 		}
-		val mayStartVerification = initialOpenMayStartVerification && !append
-		initialOpenMayStartVerification = false
+		val mayStartVerification = !autoResolveAttempted && !append
 		return launchLoadingJob(Dispatchers.Default) {
 			try {
 				listError.value = null
 				val list = getListResolvingCaptcha(filterState, append, mayStartVerification)
+				autoResolveAttempted = false
 				val prevList = mangaList.value.orEmpty()
 				if (!append) {
 					mangaList.value = list.distinctById()
@@ -225,6 +232,7 @@ open class RemoteListViewModel @Inject constructor(
 				!isResolvingCaptcha.value &&
 				!SourceSettings(appContext, source).isCaptchaAutoResolveDisabled
 			) {
+				autoResolveAttempted = true
 				onCaptchaRequired.call(cfException)
 			}
 			throw cfException

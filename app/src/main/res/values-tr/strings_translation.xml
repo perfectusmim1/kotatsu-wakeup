@@ -23,6 +23,7 @@
 	<string name="translation_skip_sfx">Ses efektlerini atla</string>
 	<string name="translation_filter_promo">Ekip ve reklam sayfalarını atla</string>
 	<string name="translation_ocr_ready">OCR modeli hazır</string>
+	<string name="translation_ocr_auto_ready">Otomatik OCR hazır</string>
 	<string name="translation_ocr_not_downloaded">OCR modeli ilk kullanımda indirilecek</string>
 	<string name="translation_ocr_download">Modeli indir</string>
 	<string name="translation_ocr_downloading">OCR modeli indiriliyor… %%%1$d</string>

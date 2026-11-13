@@ -158,11 +158,10 @@ abstract class HiddenImagesDao {
 }
 
 /**
- * Its own database for the reason [org.koitharu.kotatsu.sourcescore.data.CommunityDatabase] gives: a fork
- * adding `Migration28To29` to the shared one collides with upstream the day upstream adds its own.
+ * Its own database so fork schema changes do not collide with upstream shared-database migrations.
  *
- * Unlike that one this holds what the reader decided rather than something that rebuilds itself, so it has
- * no destructive fallback. A schema change here has to ship a migration.
+ * Holds what the reader decided rather than something that rebuilds itself, so it has no
+ * destructive fallback. A schema change here has to ship a migration.
  */
 @Database(
 	entities = [HiddenImageEntity::class, HiddenPageEntity::class, PageScanEntity::class],

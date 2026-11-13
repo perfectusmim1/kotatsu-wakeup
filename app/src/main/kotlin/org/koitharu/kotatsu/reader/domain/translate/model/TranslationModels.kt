@@ -40,6 +40,7 @@ enum class OcrSourceLanguage(
 	val code: String,
 	val modelGroup: String,
 ) {
+	AUTO("auto", "auto"),
 	ENGLISH("en", "en"),
 	JAPANESE("ja", "cjk"),
 	KOREAN("ko", "korean"),
@@ -49,8 +50,10 @@ enum class OcrSourceLanguage(
 	ARABIC("ar", "arabic");
 
 	companion object {
-		fun fromCode(code: String?): OcrSourceLanguage =
-			entries.firstOrNull { it.code.equals(code, ignoreCase = true) } ?: ENGLISH
+		fun fromCode(code: String?): OcrSourceLanguage {
+			if (code.isNullOrBlank()) return AUTO
+			return entries.firstOrNull { it.code.equals(code, ignoreCase = true) } ?: AUTO
+		}
 	}
 }
 
@@ -138,7 +141,7 @@ data class TranslatedBlock(
 
 data class TranslationSettingsSnapshot(
 	val provider: TranslationProvider = TranslationProvider.GEMINI,
-	val sourceLang: OcrSourceLanguage = OcrSourceLanguage.ENGLISH,
+	val sourceLang: OcrSourceLanguage = OcrSourceLanguage.AUTO,
 	val targetLang: String = "tr",
 	val apiKeys: List<String> = emptyList(),
 	val autoTranslate: Boolean = false,

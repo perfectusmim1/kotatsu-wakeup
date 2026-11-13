@@ -163,6 +163,7 @@
 				<com.google.android.material.button.MaterialButton
 					android:id="@+id/button_community_rating"
 					style="@style/Widget.Material3Expressive.Button.TonalButton"
+					android:visibility="gone"
 					android:textColor="?attr/colorOnTertiaryContainer"
 					app:backgroundTint="?attr/colorTertiaryContainer"
 					app:iconTint="?attr/colorOnTertiaryContainer"
@@ -187,6 +188,7 @@
 				<com.google.android.material.button.MaterialButton
 					android:id="@+id/button_community_comments"
 					style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+					android:visibility="gone"
 					app:backgroundTint="?attr/colorSecondaryContainer"
 					app:iconTint="?attr/colorOnSecondaryContainer"
 					app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Kotatsu.Community.Comments"

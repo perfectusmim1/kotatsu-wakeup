@@ -22,7 +22,6 @@ import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.parsers.util.names
 import org.koitharu.kotatsu.settings.protect.ProtectSetupActivity
 import org.koitharu.kotatsu.settings.utils.SplitSwitchPreference
-import org.koitharu.kotatsu.sourcescore.data.CommunitySettings
 import org.koitharu.kotatsu.suggestions.ui.SuggestionsWorker
 import javax.inject.Inject
 
@@ -37,9 +36,6 @@ class PrivacySettingsFragment :
 
 	@Inject
 	lateinit var appShortcutManager: AppShortcutManager
-
-	@Inject
-	lateinit var communitySettings: CommunitySettings
 
 	@Inject
 	lateinit var suggestionsScheduler: SuggestionsWorker.Scheduler
@@ -62,10 +58,6 @@ class PrivacySettingsFragment :
 				router.openStatistic()
 				true
 			}
-		findPreference<TwoStatePreference>(CommunitySettings.KEY_TELEMETRY)?.setOnPreferenceChangeListener { _, value ->
-			communitySettings.isTelemetryEnabled = value == true
-			true
-		}
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -119,10 +111,6 @@ class PrivacySettingsFragment :
 		findPreference<Preference>(AppSettings.KEY_TRACKER_NO_NSFW)?.isEnabled = settings.isTrackerEnabled
 		findPreference<Preference>(AppSettings.KEY_SUGGESTIONS_EXCLUDE_NSFW)?.isEnabled = settings.isSuggestionsEnabled
 		findPreference<Preference>(AppSettings.KEY_DISCORD_RPC_SKIP_NSFW)?.isEnabled = isOn(AppSettings.KEY_DISCORD_RPC, false)
-		findPreference<TwoStatePreference>(CommunitySettings.KEY_TELEMETRY)?.run {
-			isChecked = communitySettings.isTelemetryEnabled
-			isEnabled = communitySettings.isEnabled
-		}
 	}
 
 	private fun isOn(key: String, default: Boolean): Boolean =

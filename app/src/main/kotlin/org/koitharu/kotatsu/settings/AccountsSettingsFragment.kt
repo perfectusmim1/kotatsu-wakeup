@@ -1,20 +1,31 @@
 package org.koitharu.kotatsu.settings
 
-import androidx.preference.Preference
 import android.os.Bundle
+import androidx.preference.Preference
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.model.isNsfw
 import org.koitharu.kotatsu.core.nav.router
+import org.koitharu.kotatsu.core.parser.MangaRepository
+import org.koitharu.kotatsu.core.parser.ParserMangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BasePreferenceFragment
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
+import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
+import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblerService
 import org.koitharu.kotatsu.scrobbling.common.ui.ScrobblerAuthHelper
 import javax.inject.Inject
@@ -26,6 +37,14 @@ class AccountsSettingsFragment : BasePreferenceFragment(R.string.accounts_and_sy
 	@Inject
 	lateinit var scrobblerAuthHelper: ScrobblerAuthHelper
 
+	@Inject
+	lateinit var mangaSourcesRepository: MangaSourcesRepository
+
+	@Inject
+	lateinit var mangaRepositoryFactory: MangaRepository.Factory
+
+	private var sourceAccountsSummaryJob: Job? = null
+
 	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
 		addPreferencesFromResource(R.xml.pref_accounts)
 	}
@@ -36,6 +55,7 @@ class AccountsSettingsFragment : BasePreferenceFragment(R.string.accounts_and_sy
 		bindScrobblerSummary(AppSettings.KEY_ANILIST, ScrobblerService.ANILIST)
 		bindScrobblerSummary(AppSettings.KEY_MAL, ScrobblerService.MAL)
 		bindScrobblerSummary(AppSettings.KEY_KITSU, ScrobblerService.KITSU)
+		bindSourceAccountsSummary()
 	}
 
 	override fun onPreferenceTreeClick(preference: Preference): Boolean {
@@ -61,6 +81,39 @@ class AccountsSettingsFragment : BasePreferenceFragment(R.string.accounts_and_sy
 			}
 
 			else -> super.onPreferenceTreeClick(preference)
+		}
+	}
+
+	private fun bindSourceAccountsSummary() {
+		val pref = findPreference<Preference>(KEY_SOURCE_ACCOUNTS) ?: return
+		sourceAccountsSummaryJob?.cancel()
+		sourceAccountsSummaryJob = viewLifecycleScope.launch {
+			val (signedInCount, totalCount) = withContext(Dispatchers.Default) {
+				val skipNsfw = settings.isNsfwContentDisabled
+				val authProviders = mangaSourcesRepository.allMangaSources
+					.asSequence()
+					.filter { !skipNsfw || !it.isNsfw() }
+					.mapNotNull { source ->
+						(mangaRepositoryFactory.create(source) as? ParserMangaRepository)?.getAuthProvider()
+					}
+					.toList()
+				val semaphore = Semaphore(8)
+				val signedIn = coroutineScope {
+					authProviders.map { provider ->
+						async {
+							semaphore.withPermit {
+								runCatchingCancellable { provider.isAuthorized() }.getOrDefault(false)
+							}
+						}
+					}.awaitAll().count { it }
+				}
+				signedIn to authProviders.size
+			}
+			pref.summary = if (signedInCount > 0) {
+				getString(R.string.source_accounts_summary, signedInCount, totalCount)
+			} else {
+				getString(R.string.source_accounts_summary_none, totalCount)
+			}
 		}
 	}
 
@@ -112,5 +165,9 @@ class AccountsSettingsFragment : BasePreferenceFragment(R.string.accounts_and_sy
 			}
 			setNegativeButton(android.R.string.cancel, null)
 		}.show()
+	}
+
+	private companion object {
+		const val KEY_SOURCE_ACCOUNTS = "source_accounts"
 	}
 }

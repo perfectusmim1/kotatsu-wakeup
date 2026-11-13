@@ -41,13 +41,17 @@
 
 	</PreferenceCategory>
 
-	<PreferenceScreen
-		android:fragment="org.koitharu.kotatsu.sourcescore.ui.CommunitySettingsFragment"
-		android:icon="@drawable/ic_trending_small"
-		android:key="community_settings"
-		android:summary="@string/community_summary"
-		android:title="@string/community"
-		app:allowDividerAbove="true" />
+	<PreferenceCategory android:title="@string/remote_sources">
+
+		<Preference
+			android:fragment="org.koitharu.kotatsu.settings.sources.accounts.SourceAccountsFragment"
+			android:icon="@drawable/ic_user"
+			android:key="source_accounts"
+			android:summary="@string/loading_"
+			android:title="@string/source_accounts"
+			app:icon="@drawable/ic_user" />
+
+	</PreferenceCategory>
 
 	<Preference
 		android:fragment="org.koitharu.kotatsu.settings.discord.DiscordSettingsFragment"

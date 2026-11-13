@@ -23,6 +23,7 @@
 	<string name="translation_skip_sfx">Skip sound effects</string>
 	<string name="translation_filter_promo">Skip promo &amp; credits pages</string>
 	<string name="translation_ocr_ready">OCR model ready</string>
+	<string name="translation_ocr_auto_ready">Auto-detect OCR ready</string>
 	<string name="translation_ocr_not_downloaded">OCR model downloads on first use</string>
 	<string name="translation_ocr_download">Download model</string>
 	<string name="translation_ocr_downloading">Downloading OCR model… %1$d%%</string>

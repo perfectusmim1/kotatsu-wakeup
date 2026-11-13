@@ -48,6 +48,7 @@ class MangaLoaderContextImpl @Inject constructor(
     @ApplicationContext private val androidContext: Context,
     private val webViewExecutor: WebViewExecutor,
     private val webViewRequestInterceptorExecutor: WebViewRequestInterceptorExecutor,
+    private val sourceTokenStore: SourceTokenStore,
 ) : MangaLoaderContext() {
 
     private val webViewUserAgent by lazy { obtainWebViewUserAgent() }
@@ -204,6 +205,18 @@ class MangaLoaderContextImpl @Inject constructor(
         timeout: Long
     ): List<String> {
         return webViewRequestInterceptorExecutor.captureWebViewUrls(pageUrl, urlPattern, timeout)
+    }
+
+    override suspend fun getAuthValue(source: MangaSource, key: String): String? {
+        return sourceTokenStore.get(source, key)
+    }
+
+    override suspend fun setAuthValue(source: MangaSource, key: String, value: String?) {
+        sourceTokenStore.set(source, key, value)
+    }
+
+    override suspend fun clearAuthValues(source: MangaSource) {
+        sourceTokenStore.clear(source)
     }
 
     private fun obtainWebViewUserAgent(): String {

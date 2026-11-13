@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">Verification required for %1$s</string>
+	<string name="cf_banner_multiple_required">Verification required for %1$s (+%2$d more)</string>
+	<string name="cf_banner_solve">Solve</string>
+	<string name="cf_banner_dismiss">Dismiss</string>
+</resources>

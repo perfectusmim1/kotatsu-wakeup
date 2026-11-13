@@ -19,10 +19,10 @@ import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.bookmarks.domain.BookmarkSortOrder
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.bookmarks.domain.matchesBookmarkQuery
+import org.koitharu.kotatsu.bookmarks.domain.resolveBookmarkDownloadChapterIds
 import org.koitharu.kotatsu.bookmarks.domain.sortedByOrder
 import org.koitharu.kotatsu.core.LocalizedAppContext
 import org.koitharu.kotatsu.core.model.getLocalizedTitle
-import org.koitharu.kotatsu.core.model.ids
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.observeAsStateFlow
 import org.koitharu.kotatsu.core.ui.BaseViewModel
@@ -119,7 +119,11 @@ class BookmarksViewModel @Inject constructor(
 		}
 	}
 
-	fun downloadBookmarkedChapters(selectedIds: Set<Long>?, allowMeteredNetwork: Boolean) {
+	fun downloadBookmarkedChapters(
+		selectedIds: Set<Long>?,
+		allowMeteredNetwork: Boolean,
+		extraNextChapters: Int = 0,
+	) {
 		launchJob(Dispatchers.Default) {
 			val m = manga.value ?: return@launchJob
 			val sourceBookmarks = if (selectedIds != null) {
@@ -129,13 +133,7 @@ class BookmarksViewModel @Inject constructor(
 					bookmarksRepository.getBookmarks(m)
 				}
 			}
-			val validChapterIds = m.chapters?.ids()
-			val chapterIds = sourceBookmarks.asSequence()
-				.map { it.chapterId }
-				.filter { validChapterIds == null || it in validChapterIds }
-				.distinct()
-				.toList()
-				.toLongArray()
+			val chapterIds = resolveBookmarkDownloadChapterIds(m, sourceBookmarks, extraNextChapters)
 			if (chapterIds.isEmpty()) {
 				onActionDone.call(ReversibleAction(R.string.no_bookmarked_chapters_to_download, null))
 				return@launchJob

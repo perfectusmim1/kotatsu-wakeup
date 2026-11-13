@@ -82,7 +82,6 @@ import org.koitharu.kotatsu.parsers.util.almostEquals
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.parsers.util.sizeOrZero
 import org.koitharu.kotatsu.settings.work.PeriodicWorkScheduler
-import org.koitharu.kotatsu.suggestions.domain.CommunitySuggestionsSource
 import org.koitharu.kotatsu.suggestions.domain.MangaSuggestion
 import org.koitharu.kotatsu.suggestions.domain.SeedCandidate
 import org.koitharu.kotatsu.suggestions.domain.SuggestionRanking
@@ -109,7 +108,6 @@ class SuggestionsWorker @AssistedInject constructor(
 	private val workManager: WorkManager,
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val sourcesRepository: MangaSourcesRepository,
-	private val communitySuggestions: CommunitySuggestionsSource,
 	private val tagStatistics: TagStatistics,
 	private val readerProfiles: ReaderProfiles,
 	private val dismissals: DiscoverDismissals,
@@ -230,28 +228,10 @@ class SuggestionsWorker @AssistedInject constructor(
 			return 0
 		}
 		val tagsBlacklist = TagsBlacklist(appSettings.suggestionsTagsBlacklist, TAG_EQ_THRESHOLD)
-		val excludeNsfw = appSettings.isSuggestionsExcludeNsfw || appSettings.isNsfwContentDisabled
-
-		// The server knows which works are the same work across sources, which sources still carry
-		// them, and genres many readers agree on - none of which a per-source tag search can see.
-		// It is asked first, and everything below remains exactly as it was for when it cannot
-		// answer: community features off, no network, a library nobody else has opened.
-		val remote = runCatchingCancellable {
-			communitySuggestions.getSuggestions(seed, dropped, MAX_RESULTS, tagsBlacklist, excludeNsfw, taste) { work ->
-				isDismissed(work.title) || profile?.knows(work.title, work.sources.map { it.source to it.key }) == true
-			}
-		}.onFailure { it.printStackTraceDebug() }.getOrDefault(emptyList())
-			// The server only knows its own name for a work and the addresses it has seen
+		val suggestions = localSuggestions(seed, sources, tagsBlacklist)
 			.filterNot { profile?.knows(it.manga) == true || isDismissed(it.manga.title) }
-
-		val suggestions = if (remote.size >= MIN_REMOTE_RESULTS) {
-			remote
-		} else {
-			localSuggestions(seed, sources, tagsBlacklist)
-				.filterNot { profile?.knows(it.manga) == true || isDismissed(it.manga.title) }
-				.map { it.copy(relevance = DiscoverRanking.personalize(it.relevance.toDouble(), it.manga.tags.map { tag -> tag.title }, taste).toFloat().coerceIn(0f, 1f)) }
-				.sortedByDescending { it.relevance }
-		}
+			.map { it.copy(relevance = DiscoverRanking.personalize(it.relevance.toDouble(), it.manga.tags.map { tag -> tag.title }, taste).toFloat().coerceIn(0f, 1f)) }
+			.sortedByDescending { it.relevance }
 		return publish(suggestions, tagsBlacklist)
 	}
 
@@ -579,12 +559,6 @@ class SuggestionsWorker @AssistedInject constructor(
 
 		/** Deep enough that a long series they went back to matters, without reading the whole history. */
 		const val MAX_SEED_POOL = 40
-
-		/**
-		 * Below this the server has told us too little to be worth showing on its own - a library of
-		 * works nobody else has opened yet - so the local sweep runs instead.
-		 */
-		const val MIN_REMOTE_RESULTS = 12
 		const val MAX_PARALLELISM = 3
 		const val MAX_SOURCE_RESULTS = 20
 		const val MAX_RAW_RESULTS = 280

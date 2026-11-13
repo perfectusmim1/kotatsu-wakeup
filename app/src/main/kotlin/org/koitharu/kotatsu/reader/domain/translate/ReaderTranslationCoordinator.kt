@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.reader.domain.translate
 
 import android.net.Uri
+import android.util.Log
 import dagger.hilt.android.ActivityRetainedLifecycle
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.CancellationException
@@ -37,6 +38,7 @@ import org.koitharu.kotatsu.reader.domain.translate.model.TranslationSettingsSna
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationStage
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 
@@ -59,9 +61,13 @@ class ReaderTranslationCoordinator @Inject constructor(
 
 	private val scope = lifecycle.lifecycleScope + Dispatchers.Default
 	private val generationCounter = AtomicLong(0L)
+	private val settingsSheetDepth = AtomicInteger(0)
 	private val jobsLock = Any()
 	private val inFlightJobs = HashMap<Long, Job>()
 	private val executionSemaphore = Semaphore(MAX_CONCURRENT_JOBS)
+
+	@Volatile
+	private var pendingRescheduleAfterSettings = false
 
 	@Volatile
 	private var pageUriProvider: (suspend (MangaPage) -> Uri)? = null
@@ -133,17 +139,47 @@ class ReaderTranslationCoordinator @Inject constructor(
 	init {
 		settingsSnapshot
 			.drop(1)
-			.onEach {
+			.onEach { snap ->
+				Log.d(
+					LOG_TAG,
+					"Settings changed: provider=${snap.provider} source=${snap.sourceLang} target=${snap.targetLang}",
+				)
 				resetSessionState()
 				if (_isEnabled.value) {
-					scheduleCurrentWindow()
+					if (settingsSheetDepth.get() > 0) {
+						pendingRescheduleAfterSettings = true
+					} else {
+						scheduleCurrentWindow()
+					}
 				}
 			}
 			.launchIn(scope)
 	}
 
+	fun setSettingsSheetVisible(visible: Boolean) {
+		if (visible) {
+			settingsSheetDepth.incrementAndGet()
+		} else {
+			val remaining = settingsSheetDepth.updateAndGet { (it - 1).coerceAtLeast(0) }
+			if (remaining == 0 && pendingRescheduleAfterSettings) {
+				pendingRescheduleAfterSettings = false
+				if (_isEnabled.value) {
+					val snap = settingsSnapshot.value
+					Log.d(
+						LOG_TAG,
+						"Settings sheet closed; scheduling window (${snap.sourceLang} -> ${snap.targetLang}, ${snap.provider})",
+					)
+					scheduleCurrentWindow()
+				}
+			}
+		}
+	}
+
 	internal fun attachPageUriProvider(provider: suspend (MangaPage) -> Uri) {
 		pageUriProvider = provider
+		if (_isEnabled.value && settingsSheetDepth.get() == 0) {
+			scheduleCurrentWindow()
+		}
 	}
 
 	/**
@@ -156,6 +192,8 @@ class ReaderTranslationCoordinator @Inject constructor(
 
 	fun setEnabled(enable: Boolean, fromUserTap: Boolean = false): Boolean {
 		if (!enable) {
+			Log.i(LOG_TAG, "Translation disabled (fromUserTap=$fromUserTap)")
+			pendingRescheduleAfterSettings = false
 			_isEnabled.value = false
 			generationCounter.incrementAndGet()
 			cancelAllJobs()
@@ -165,6 +203,7 @@ class ReaderTranslationCoordinator @Inject constructor(
 
 		val snapshot = settingsSnapshot.value
 		if (snapshot.provider == TranslationProvider.GEMINI && snapshot.apiKeys.isEmpty()) {
+			Log.w(LOG_TAG, "Cannot enable Gemini translation: no API keys configured")
 			_isEnabled.value = false
 			if (fromUserTap) {
 				_uiEvents.tryEmit(TranslationUiEvent.PromptMissingApiKey)
@@ -178,10 +217,19 @@ class ReaderTranslationCoordinator @Inject constructor(
 			return false
 		}
 
+		Log.i(
+			LOG_TAG,
+			"Translation enabled (fromUserTap=$fromUserTap, source=${snapshot.sourceLang}, " +
+				"target=${snapshot.targetLang}, provider=${snapshot.provider})",
+		)
 		if (!_isEnabled.value) {
 			_isEnabled.value = true
 		}
-		scheduleCurrentWindow()
+		if (settingsSheetDepth.get() > 0) {
+			pendingRescheduleAfterSettings = true
+		} else {
+			scheduleCurrentWindow()
+		}
 		return true
 	}
 
@@ -216,15 +264,18 @@ class ReaderTranslationCoordinator @Inject constructor(
 
 	fun downloadOcrModel(sourceLang: OcrSourceLanguage) {
 		if (manualDownloadJob?.isActive == true) return
+		Log.i(LOG_TAG, "Manual OCR download requested for $sourceLang")
 		manualDownloadJob = scope.launch {
 			_manualDownloadProgress.value = 0
 			try {
 				ocrEngine.ensureModels(sourceLang) { percent ->
 					_manualDownloadProgress.value = percent.coerceIn(0, 100)
 				}
+				Log.i(LOG_TAG, "Manual OCR download completed for $sourceLang")
 			} catch (ce: CancellationException) {
 				throw ce
 			} catch (t: Throwable) {
+				Log.e(LOG_TAG, "Manual OCR download failed for $sourceLang", t)
 				emitErrorOnce(
 					key = "model_download:${t.message}",
 					message = t.message,
@@ -294,7 +345,16 @@ class ReaderTranslationCoordinator @Inject constructor(
 						if (!_isEnabled.value || generation != generationCounter.get()) {
 							return@withPermit
 						}
-						val uriProvider = pageUriProvider ?: return@withPermit
+						val uriProvider = pageUriProvider
+						if (uriProvider == null) {
+							Log.w(LOG_TAG, "Skipping page=${page.id}: pageUriProvider is not attached yet")
+							return@withPermit
+						}
+						Log.d(
+							LOG_TAG,
+							"Starting translation job page=${page.id} (prefetch=$isPrefetch, " +
+								"source=${snapshot.sourceLang} -> ${snapshot.targetLang})",
+						)
 						val result = translatePageUseCase(
 							page = page,
 							settings = snapshot,
@@ -315,6 +375,10 @@ class ReaderTranslationCoordinator @Inject constructor(
 						)
 						if (generation == generationCounter.get() && _isEnabled.value) {
 							val filePath = (result as? PageTranslationResult.Translated)?.file?.absolutePath
+							Log.d(
+								LOG_TAG,
+								"Finished page=${page.id}: result=${if (filePath != null) "Translated" else "NoText"}",
+							)
 							updatePageState(
 								PageTranslationState(
 									pageId = page.id,
@@ -328,6 +392,7 @@ class ReaderTranslationCoordinator @Inject constructor(
 				} catch (ce: CancellationException) {
 					throw ce
 				} catch (e: MissingGeminiApiKeyException) {
+					Log.w(LOG_TAG, "Translation stopped on page=${page.id}: MissingGeminiApiKeyException")
 					if (generation == generationCounter.get()) {
 						_isEnabled.value = false
 						clearInProgressStates()
@@ -338,6 +403,7 @@ class ReaderTranslationCoordinator @Inject constructor(
 						)
 					}
 				} catch (e: InvalidGeminiApiKeyException) {
+					Log.w(LOG_TAG, "Translation failed on page=${page.id}: InvalidGeminiApiKeyException: ${e.message}")
 					if (generation == generationCounter.get()) {
 						updatePageState(
 							PageTranslationState(
@@ -353,6 +419,7 @@ class ReaderTranslationCoordinator @Inject constructor(
 						)
 					}
 				} catch (t: Throwable) {
+					Log.e(LOG_TAG, "Translation failed on page=${page.id}", t)
 					if (generation == generationCounter.get() && _isEnabled.value) {
 						updatePageState(
 							PageTranslationState(
@@ -432,6 +499,7 @@ class ReaderTranslationCoordinator @Inject constructor(
 	}
 
 	companion object {
+		private const val LOG_TAG = "KotatsuTranslate"
 		private const val MAX_CONCURRENT_JOBS = 2
 		const val PREFETCH_PAGE_COUNT = 2
 		private const val ERROR_DEBOUNCE_MS = 4_000L

@@ -27,6 +27,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withResumed
 import androidx.recyclerview.widget.ItemTouchHelper
 import com.google.android.material.appbar.AppBarLayout
@@ -35,6 +36,7 @@ import com.google.android.material.appbar.AppBarLayout.LayoutParams.SCROLL_FLAG_
 import com.google.android.material.appbar.AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL
 import com.google.android.material.appbar.AppBarLayout.LayoutParams.SCROLL_FLAG_SNAP
 import com.google.android.material.search.SearchView
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -50,7 +52,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.backups.ui.periodical.PeriodicalBackupService
+import org.koitharu.kotatsu.browser.cloudflare.CloudFlareActivity
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
+import org.koitharu.kotatsu.core.exceptions.resolve.PendingCaptchaAlert
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
+import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.os.VoiceInputContract
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -78,6 +84,7 @@ import org.koitharu.kotatsu.main.ui.nav.BottomFadeDrawable
 import org.koitharu.kotatsu.main.ui.owners.AppBarOwner
 import org.koitharu.kotatsu.main.ui.owners.BottomNavOwner
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.remotelist.ui.MangaSearchMenuProvider
 import org.koitharu.kotatsu.search.ui.suggestion.SearchSuggestionItemCallback
 import org.koitharu.kotatsu.search.ui.suggestion.SearchSuggestionListenerImpl
@@ -88,13 +95,6 @@ import org.koitharu.kotatsu.search.ui.suggestion.SearchSuggestionViewModel
 import org.koitharu.kotatsu.search.ui.suggestion.adapter.SearchSuggestionAdapter
 import javax.inject.Inject
 import com.google.android.material.R as materialR
-import org.koitharu.kotatsu.sourcescore.data.CommunitySettings
-import org.koitharu.kotatsu.sourcescore.ui.CommunityCommentsSheet
-import org.koitharu.kotatsu.sourcescore.ui.CommunityOnboardingDialog
-import org.koitharu.kotatsu.sourcescore.domain.CommunityReplyNotifier
-import org.koitharu.kotatsu.sourcescore.domain.DonationReminder
-import org.koitharu.kotatsu.sourcescore.ui.DonationReminderDialog
-import org.koitharu.kotatsu.sourcescore.ui.SourceScoreSyncWorker
 
 @AndroidEntryPoint
 class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNavOwner,
@@ -105,18 +105,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	SearchView.TransitionListener {
 
 	@Inject
-	lateinit var communitySettings: CommunitySettings
-
-	@Inject
-	lateinit var sourceScoreSyncScheduler: SourceScoreSyncWorker.Scheduler
-
-	@Inject
-	lateinit var communityReplyNotifier: CommunityReplyNotifier
-
-	@Inject
-	lateinit var donationReminder: DonationReminder
-
-	@Inject
 	lateinit var settings: AppSettings
 
 	private val viewModel by viewModels<MainViewModel>()
@@ -125,9 +113,23 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	@Inject
 	lateinit var screenSearchQuery: ScreenSearchQuery
 
+	@Inject
+	lateinit var captchaHandler: CaptchaHandler
+
 	/** Mirrors the filter of the screen currently shown, so the menu can be prepared synchronously. */
 	private var activeScreenFilter: String = ""
 	private var floatingNavInset = 0
+	private var captchaAlertSnackbar: Snackbar? = null
+	private var pendingSolveSource: MangaSource? = null
+	private val captchaAlertLauncher = registerForActivityResult(CloudFlareActivity.Contract()) { solved ->
+		val source = pendingSolveSource
+		pendingSolveSource = null
+		if (solved && source != null) {
+			lifecycleScope.launch {
+				captchaHandler.discard(source)
+			}
+		}
+	}
 	private val voiceInputLauncher = registerForActivityResult(VoiceInputContract()) { result ->
 		if (result != null) {
 			viewBinding.searchView.setText(result)
@@ -168,25 +170,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 
 		addMenuProvider(MainMenuProvider(router, viewModel))
 
-		// The community features introduce themselves once, on the first launch that reaches the main
-		// screen. Nothing is created before the user answers: the identity is generated lazily, so
-		// declining means no request is ever made and no row exists anywhere.
-		CommunityOnboardingDialog.showIfNeeded(this, communitySettings, supportFragmentManager)
-		// Idempotent, and reads the toggles - so it also cancels the job when the feature is off.
-		sourceScoreSyncScheduler.schedule()
-		// Polled while the app is open rather than pushed: push would mean a device token and a third
-		// party learning when this user opens a manga app, to save a request that costs nothing.
-		communityReplyNotifier.watchWhileOpen(this)
-		if (savedInstanceState == null) {
-			// One thing at a time: not over the introduction, or a thread the reader came here to see
-			if (!CommunityOnboardingDialog.isNeeded(communitySettings)
-				&& intent?.action != CommunityReplyNotifier.ACTION_OPEN_COMMENTS
-			) {
-				showDonationReminderIfDue()
-			}
-			openCommentsFromNotification(intent)
-		}
-
 		val exitCallback = ExitCallback(this, viewBinding.container)
 		onBackPressedDispatcher.addCallback(exitCallback)
 		onBackPressedDispatcher.addCallback(navigationDelegate)
@@ -225,34 +208,59 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		viewBinding.searchView.addTransitionListener(this)
 		viewBinding.searchView.addTransitionListener(exitCallback)
 		initSearch()
+		observePendingCaptchaAlerts()
 	}
 
-	private fun showDonationReminderIfDue() {
+	private fun observePendingCaptchaAlerts() {
 		lifecycleScope.launch {
-			if (donationReminder.takeIfDue()) {
-				withResumed { DonationReminderDialog.show(supportFragmentManager) }
+			repeatOnLifecycle(Lifecycle.State.STARTED) {
+				captchaHandler.pendingAlerts.collect { alerts ->
+					updateCaptchaAlertBanner(alerts)
+				}
 			}
 		}
 	}
 
-	override fun onNewIntent(intent: Intent) {
-		super.onNewIntent(intent)
-		openCommentsFromNotification(intent)
-	}
-
-	/** A tapped reply notification: open that thread over whatever screen is showing. */
-	private fun openCommentsFromNotification(intent: Intent?) {
-		if (intent?.action != CommunityReplyNotifier.ACTION_OPEN_COMMENTS) return
-		val workId = intent.getStringExtra(CommunityReplyNotifier.EXTRA_WORK_ID) ?: return
-		val chapterId = intent.getLongExtra(CommunityReplyNotifier.EXTRA_CHAPTER_ID, 0L).takeIf { it != 0L }
-		CommunityCommentsSheet.show(
-			fm = supportFragmentManager,
-			workId = workId,
-			chapterId = chapterId,
-			focusCommentId = intent.getStringExtra(CommunityReplyNotifier.EXTRA_COMMENT_ID),
-		)
-		// Consumed: a configuration change re-delivers the same intent, which must not reopen the sheet.
-		intent.action = null
+	private fun updateCaptchaAlertBanner(alerts: List<PendingCaptchaAlert>) {
+		val latest = alerts.lastOrNull()
+		if (latest == null) {
+			captchaAlertSnackbar?.dismiss()
+			captchaAlertSnackbar = null
+			return
+		}
+		val sourceTitle = latest.source.getTitle(this)
+		val message = if (alerts.size > 1) {
+			getString(R.string.cf_banner_multiple_required, sourceTitle, alerts.size - 1)
+		} else {
+			getString(R.string.cf_banner_required, sourceTitle)
+		}
+		val oldSnackbar = captchaAlertSnackbar
+		captchaAlertSnackbar = null
+		oldSnackbar?.dismiss()
+		val snackbar = Snackbar.make(viewBinding.container, message, Snackbar.LENGTH_INDEFINITE).apply {
+			val anchor = (bottomNav as? View)?.takeIf { it.isShown } ?: viewBinding.fab?.takeIf { it.isShown }
+			if (anchor != null) {
+				anchorView = anchor
+			}
+			setAction(R.string.cf_banner_solve) {
+				pendingSolveSource = latest.source
+				captchaAlertLauncher.launch(latest.exception)
+			}
+			addCallback(
+				object : Snackbar.Callback() {
+					override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+						if (captchaAlertSnackbar === transientBottomBar) {
+							captchaAlertSnackbar = null
+							if (event == DISMISS_EVENT_SWIPE || event == DISMISS_EVENT_MANUAL) {
+								captchaHandler.dismissInAppAlert(latest.source)
+							}
+						}
+					}
+				},
+			)
+		}
+		captchaAlertSnackbar = snackbar
+		snackbar.show()
 	}
 
 	override fun onRestoreInstanceState(savedInstanceState: Bundle) {

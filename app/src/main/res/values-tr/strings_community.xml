@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- Existing community keys missing from values-tr/strings.xml -->
+	<string name="community">Topluluk</string>
+	<string name="community_rating">Okuyucu puanı</string>
+	<string name="community_rating_summary">%1$s · %2$s</string>
+	<string name="community_rating_none">Henüz puan yok</string>
+	<string name="community_comments">Yorumlar</string>
+	<string name="community_comments_sort_top">En İyi</string>
+	<string name="community_comments_sort_new">Yeni</string>
+	<string name="community_comments_empty">Henüz yorum yok. İlk yorumu sen yap.</string>
+	<string name="community_comment_hint">Yorum ekle</string>
+	<string name="community_comment_spoiler">Spoiler</string>
+	<string name="community_comment_send">Gönder</string>
+	<string name="community_comment_reply">Yanıtla</string>
+	<string name="community_comment_edit">Düzenle</string>
+	<string name="community_comment_delete">Sil</string>
+	<string name="community_comment_like">Beğen</string>
+	<string name="community_comment_dislike">Beğenme</string>
+
+	<!-- New community UI strings -->
+	<string name="community_rate">Puan ver</string>
+	<string name="community_rating_title">Topluluk puanı</string>
+	<string name="community_your_rating">Puanın: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Gönder</string>
+	<string name="community_rating_saved">Puan kaydedildi</string>
+	<string name="community_rating_count">%1$s oy</string>
+	<string name="community_views_count">%1$s görüntülenme</string>
+	<string name="community_follows_count">%1$s takipçi</string>
+	<string name="community_comments_count">%1$s yorum</string>
+	<string name="community_comments_sort_old">Eski</string>
+	<string name="community_web_comments">Web</string>
+	<string name="community_show_replies">Yanıtları göster (%1$d)</string>
+	<string name="community_hide_replies">Yanıtları gizle</string>
+	<string name="community_load_more">Daha fazla yükle</string>
+	<string name="community_load_more_replies">Daha fazla yanıt yükle</string>
+	<string name="community_replying_to">%1$s kullanıcısına yanıt</string>
+	<string name="community_editing_comment">Yorum düzenleniyor</string>
+	<string name="community_comment_edited">(düzenlendi)</string>
+	<string name="community_comment_deleted">Yorum silindi</string>
+	<string name="community_comment_delete_confirm">Bu yorum silinsin mi?</string>
+	<string name="community_spoiler_warning">Spoiler — Görmek için dokun</string>
+	<string name="community_spoiler_hide">Spoiler\'ı gizle</string>
+	<string name="community_sign_in_to_comment">Yorum yapmak veya tepki vermek için oturum açın</string>
+	<string name="community_sign_in_to_rate">%1$s üzerinde puan vermek için oturum açın</string>
+	<string name="community_widget_ssl_error">Bu yorum bileşeni için güvenli bağlantı kurulamadı. Sayfayı tarayıcıda açabilirsiniz.</string>
+	<string name="community_widget_load_error">Yorum bileşeni yüklenemedi. Bağlantınızı kontrol edin veya tarayıcıda açın.</string>
+	<string name="community_widget_unavailable">Bu cihazda WebView kullanılamıyor. Yorumları tarayıcıda açabilirsiniz.</string>
+	<string name="community_more_options">Diğer seçenekler</string>
+</resources>

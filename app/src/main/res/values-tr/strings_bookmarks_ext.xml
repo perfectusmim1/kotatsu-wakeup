@@ -9,6 +9,9 @@
 	<string name="no_bookmarks_matching_query">Eşleşen yer imi bulunamadı</string>
 	<string name="no_bookmarks_matching_summary">Mevcut arama ölçütüne uygun yer imi yok</string>
 	<string name="download_bookmarked_chapters">Yer imi olan bölümleri indir</string>
+	<string name="download_bookmarked_only">Yalnızca yer imli bölümler</string>
+	<string name="download_bookmarked_next_2">Yer imli + sonraki 2 bölüm</string>
+	<string name="download_bookmarked_next_3">Yer imli + sonraki 3 bölüm</string>
 	<string name="no_bookmarked_chapters_to_download">İndirilecek yer imli bölüm yok</string>
 	<string name="migrate_bookmarks">Yer imlerini başka kaynağa taşı</string>
 	<string name="bookmark_migration_choose_series">Taşınacak seriyi seçin</string>

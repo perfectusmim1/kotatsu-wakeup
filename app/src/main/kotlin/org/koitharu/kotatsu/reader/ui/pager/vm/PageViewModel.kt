@@ -333,7 +333,12 @@ class PageViewModel(
 		}
 		val isCropEnabled = settingsProducer.value.isPagesCropEnabled(isWebtoon)
 		val trim = if (isCropEnabled) {
-			cachedTrimBounds ?: loader.getTrimmedBounds(rawSourceUri)?.also { cachedTrimBounds = it }
+			if (displayUri == rawSourceUri) {
+				cachedTrimBounds ?: loader.getTrimmedBounds(rawSourceUri)?.also { cachedTrimBounds = it }
+			} else {
+				// Translated pages may be resized relative to rawSourceUri; measure trim directly on displayUri.
+				loader.getTrimmedBounds(displayUri)
+			}
 		} else {
 			null
 		}

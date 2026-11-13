@@ -19,21 +19,27 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Cookie
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareCallback
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareClient
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareInterceptClient
 import org.koitharu.kotatsu.core.exceptions.CloudFlareException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.network.CommonHeaders
+import org.koitharu.kotatsu.core.network.cookies.AndroidCookieJar
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.network.proxy.ProxyProvider
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
+import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.util.ForegroundActivityHolder
 import org.koitharu.kotatsu.core.util.ext.configureForParser
 import org.koitharu.kotatsu.core.util.ext.prepareDetachedParserViewport
@@ -206,6 +212,8 @@ class WebViewExecutor @Inject constructor(
 				recentFailureUntil.remove(cooldownHost)
 			}
 		}
+		var syncedUrls: List<String> = emptyList()
+		var effectiveUserAgent: String? = null
 		val resolved = mutex.withLock {
 			// Re-check cooldown after acquiring the mutex: a previous waiter may have just failed for the same host.
 			if (cooldownHost != null) {
@@ -240,7 +248,8 @@ class WebViewExecutor @Inject constructor(
 						?.headers
 						?.get(CommonHeaders.USER_AGENT)
 						?: exception.source.getUserAgent()
-					requestUserAgent?.let {
+					val alignedUserAgent = requestUserAgent?.let(::alignUserAgentWithEngine)
+					alignedUserAgent?.let {
 						webView.settings.userAgentString = it
 					}
 					val resolved = withTimeoutOrNull(timeout) {
@@ -251,7 +260,13 @@ class WebViewExecutor @Inject constructor(
 							webView.loadUrl(exception.url)
 						}
 					}
-					if (resolved == null) {
+					if (resolved == true) {
+						syncedUrls = listOfNotNull(exception.url, webView.url).distinct()
+						effectiveUserAgent = webView.settings.userAgentString
+							?.sanitizeHeaderValue()
+							?.trim()
+							?.nullIfEmpty()
+					} else if (resolved == null) {
 						Log.w(TAG, "Captcha auto-resolve timed out for ${exception.url}, dumping page HTML:")
 						dumpPageHtml(webView)
 					}
@@ -276,6 +291,9 @@ class WebViewExecutor @Inject constructor(
 				}
 			}
 		}
+		if (resolved) {
+			persistSolvedState(exception.source, syncedUrls, effectiveUserAgent)
+		}
 		if (cooldownHost != null) {
 			if (resolved) {
 				recentFailureUntil.remove(cooldownHost)
@@ -284,6 +302,56 @@ class WebViewExecutor @Inject constructor(
 			}
 		}
 		return resolved
+	}
+
+	private fun alignUserAgentWithEngine(candidate: String): String {
+		val engineUserAgent = defaultUserAgent?.takeIf { it.isNotEmpty() && ANDROID_UA_TOKEN in it }
+			?: return candidate
+		val isNonAndroidUa = ANDROID_UA_TOKEN !in candidate
+		val isNonChromiumUa = "Firefox/" in candidate ||
+			"FxiOS" in candidate ||
+			"Gecko/" in candidate ||
+			"Windows" in candidate ||
+			"Macintosh" in candidate ||
+			"X11;" in candidate
+		if (!isNonAndroidUa && !isNonChromiumUa) {
+			return candidate
+		}
+		Log.w(
+			TAG,
+			"Configured User-Agent contradicts the WebView engine, realigning so the challenge can pass." +
+				"\n  was: $candidate\n  now: $engineUserAgent",
+		)
+		return engineUserAgent
+	}
+
+	private suspend fun persistSolvedState(
+		source: MangaSource,
+		urls: List<String>,
+		webViewUserAgent: String?,
+	) = runInterruptible(Dispatchers.IO) {
+		val cookieManager = CookieManager.getInstance()
+		cookieManager.flush()
+		if (cookieJar !is AndroidCookieJar) {
+			for (rawUrl in urls) {
+				val httpUrl = rawUrl.toHttpUrlOrNull() ?: continue
+				val rawCookies = cookieManager.getCookie(rawUrl) ?: continue
+				val cookies = rawCookies.split(';').mapNotNull { part ->
+					Cookie.parse(httpUrl, part.trim())
+				}
+				if (cookies.isNotEmpty()) {
+					cookieJar.saveFromResponse(httpUrl, cookies)
+				}
+			}
+		}
+		val targetSource = source.takeUnless { it == UnknownMangaSource }
+		if (targetSource != null && !webViewUserAgent.isNullOrEmpty()) {
+			runCatching {
+				SourceSettings(context, targetSource).cloudFlareUserAgent = webViewUserAgent
+			}.onFailure {
+				it.printStackTraceDebug()
+			}
+		}
 	}
 
 	/**
@@ -479,5 +547,6 @@ class WebViewExecutor @Inject constructor(
 		// After a failed auto-resolve for a host, skip new attempts for this long so a burst of failing
 		// requests (favicon + catalog + chapters + …) doesn't queue up multiple full timeouts.
 		const val FAILURE_COOLDOWN_MS = 30_000L
+		const val ANDROID_UA_TOKEN = "Android"
 	}
 }

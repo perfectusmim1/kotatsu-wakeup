@@ -75,16 +75,6 @@
 			android:key="stats_on"
 			android:title="@string/reading_stats" />
 
-		<!-- Kept in the community settings' own file, so this one is read and written by hand. Separate from
-		     the community switch on purpose: it carries a pseudonym that rotates daily and no manga titles,
-		     so someone may reasonably want one without the other. -->
-		<SwitchPreferenceCompat
-			android:icon="@drawable/ic_trending_small"
-			android:key="telemetry"
-			android:persistent="false"
-			android:summary="@string/community_telemetry_summary"
-			android:title="@string/community_telemetry" />
-
 	</PreferenceCategory>
 
 </PreferenceScreen>

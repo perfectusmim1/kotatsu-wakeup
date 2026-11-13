@@ -166,6 +166,7 @@ object TranslationLanguages {
 	): String {
 		val isTurkish = locale.language.equals("tr", ignoreCase = true)
 		return when (source) {
+			OcrSourceLanguage.AUTO -> if (isTurkish) "Otomatik algıla" else "Auto-detect"
 			OcrSourceLanguage.ENGLISH -> if (isTurkish) "İngilizce" else "English"
 			OcrSourceLanguage.JAPANESE -> if (isTurkish) "Japonca" else "Japanese"
 			OcrSourceLanguage.KOREAN -> if (isTurkish) "Korece" else "Korean"
@@ -177,6 +178,7 @@ object TranslationLanguages {
 	}
 
 	fun OcrSourceLanguage.toGoogleSourceCode(): String = when (this) {
+		OcrSourceLanguage.AUTO -> "auto"
 		OcrSourceLanguage.ENGLISH -> "en"
 		OcrSourceLanguage.JAPANESE -> "ja"
 		OcrSourceLanguage.KOREAN -> "ko"
@@ -187,6 +189,7 @@ object TranslationLanguages {
 	}
 
 	fun OcrSourceLanguage.toGeminiPromptLabel(): String = when (this) {
+		OcrSourceLanguage.AUTO -> "the original comic language (auto-detect each bubble's source language automatically)"
 		OcrSourceLanguage.ENGLISH -> "English"
 		OcrSourceLanguage.JAPANESE -> "Japanese"
 		OcrSourceLanguage.KOREAN -> "Korean"

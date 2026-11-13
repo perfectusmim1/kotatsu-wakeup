@@ -48,8 +48,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
-import org.koitharu.kotatsu.sourcescore.ui.CommunityRatingDelegate
-import org.koitharu.kotatsu.sourcescore.ui.CommunityCommentsSheet
+import org.koitharu.kotatsu.comments.SourceCommentsSheet
 import org.koitharu.kotatsu.core.exceptions.resolve.DialogErrorObserver
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -102,9 +101,6 @@ class ReaderActivity :
     ZoomControl.ZoomControlListener,
     View.OnClickListener,
     ScrollTimerControlView.OnVisibilityChangeListener {
-
-    @Inject
-    lateinit var communityRating: CommunityRatingDelegate
 
     @Inject
     lateinit var imageHider: ImageHider
@@ -172,6 +168,7 @@ class ReaderActivity :
         idlingDetector.bindToLifecycle(this)
         screenOrientationHelper.applySettings()
         viewModel.isBookmarkAdded.observe(this) { viewBinding.actionsView.isBookmarkAdded = it }
+        viewModel.isCommunityCommentsAvailable.observe(this) { viewBinding.actionsView.isCommentsAvailable = it }
         scrollTimer.isActive.observe(this) {
             updateScrollTimerButton()
             viewBinding.actionsView.setTimerActive(it)
@@ -614,34 +611,9 @@ class ReaderActivity :
         viewModel.toggleBookmark()
     }
 
-    /**
-     * The one place the reader touches the community feature, mirroring the details screen: this file
-     * is upstream Kotatsu's and the fork has to keep rebasing onto it.
-     *
-     * Scoped to the chapter rather than the work - the comments worth reading while you are three
-     * pages into chapter 40 are the ones about chapter 40.
-     */
     override fun onCommentsClick() {
-        if (!communityRating.isAvailable) {
-            Snackbar.make(viewBinding.root, R.string.community_comments_unavailable, Snackbar.LENGTH_SHORT).show()
-            return
-        }
         val manga = viewModel.getMangaOrNull() ?: return
-        // The chapter *number*, resolved through the same key the details screen would use. The
-        // reading state carries Kotatsu's local chapter id, which is a hash of the source's url and
-        // so is unique to this source and this install - scoping a thread to it would have given
-        // every reader a private thread and called it a community.
-        val localId = viewModel.getCurrentState()?.chapterId
-        val number = manga.chapters?.firstOrNull { it.id == localId }?.number
-        val chapterId = number?.let { communityRating.chapterKey(it) }
-        lifecycleScope.launch {
-            val workId = communityRating.workId(manga)
-            if (workId == null) {
-                Snackbar.make(viewBinding.root, R.string.community_comments_unavailable, Snackbar.LENGTH_SHORT).show()
-            } else {
-                CommunityCommentsSheet.show(supportFragmentManager, workId, chapterId)
-            }
-        }
+        SourceCommentsSheet.show(supportFragmentManager, manga, viewModel.getCurrentChapter())
     }
 
     override fun onTranslateClick() {

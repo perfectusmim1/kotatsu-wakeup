@@ -25,11 +25,18 @@ import coil3.request.allowConversionToBitmap
 import coil3.request.allowHardware
 import coil3.request.lifecycle
 import coil3.size.Scale
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -57,9 +64,17 @@ import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.network.CloudFlareHelper
 import org.koitharu.kotatsu.parsers.util.mapToArray
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
+
+data class PendingCaptchaAlert(
+	val source: MangaSource,
+	val exception: CloudFlareProtectedException,
+	val timestampMs: Long = System.currentTimeMillis(),
+)
 
 @Singleton
 class CaptchaHandler @Inject constructor(
@@ -71,6 +86,10 @@ class CaptchaHandler @Inject constructor(
 
 	private val exceptionMap = MutableScatterMap<MangaSource, CloudFlareProtectedException>()
 	private val mutex = Mutex()
+	private val _pendingAlerts = MutableStateFlow<List<PendingCaptchaAlert>>(emptyList())
+	val pendingAlerts: StateFlow<List<PendingCaptchaAlert>> = _pendingAlerts.asStateFlow()
+	private val browserCompletionCounter = AtomicLong(0L)
+	private val browserCompletions = ConcurrentHashMap<MangaSource, Long>()
 
 	@CheckResult
 	suspend fun handle(exception: CloudFlareException, tryAutoResolve: Boolean = true): Boolean =
@@ -78,6 +97,22 @@ class CaptchaHandler @Inject constructor(
 
 	suspend fun discard(source: MangaSource) {
 		handleException(source, null, notify = true, tryAutoResolve = false)
+	}
+
+	fun markBrowserSessionCompleted(source: MangaSource) {
+		if (source != UnknownMangaSource) {
+			browserCompletions[source] = browserCompletionCounter.incrementAndGet()
+		}
+	}
+
+	fun currentBrowserCompletionVersion(): Long = browserCompletionCounter.get()
+
+	fun latestBrowserCompletionVersion(source: MangaSource): Long = browserCompletions[source] ?: 0L
+
+	fun dismissInAppAlert(source: MangaSource) {
+		_pendingAlerts.update { current ->
+			current.filterNot { it.source == source }
+		}
 	}
 
 	override fun onError(request: ImageRequest, result: ErrorResult) {
@@ -123,9 +158,14 @@ class CaptchaHandler @Inject constructor(
 				exceptionMap[source] = exception
 			} else {
 				removedException = exceptionMap.remove(source)
+				dismissInAppAlert(source)
 			}
 			val dao = databaseProvider.get().getSourcesDao()
 			dao.setCfState(source.name, exception?.state ?: CloudFlareHelper.PROTECTION_NOT_DETECTED)
+
+			if (notify && exception is CloudFlareProtectedException && !SourceSettings(context, source).isCaptchaNotificationsDisabled) {
+				upsertInAppAlert(source, exception)
+			}
 
 			if (notify && context.checkNotificationPermission(CHANNEL_ID)) {
 				val exceptions = dao.findAllCaptchaRequired().mapNotNull {
@@ -142,6 +182,17 @@ class CaptchaHandler @Inject constructor(
 			}
 		}
 		false
+	}
+
+	private fun upsertInAppAlert(source: MangaSource, exception: CloudFlareProtectedException) {
+		val alert = PendingCaptchaAlert(
+			source = source,
+			exception = exception,
+			timestampMs = System.currentTimeMillis(),
+		)
+		_pendingAlerts.update { current ->
+			current.filterNot { it.source == source } + alert
+		}
 	}
 
 	@RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
@@ -278,6 +329,13 @@ class CaptchaHandler @Inject constructor(
 				captchaHandler.handleException(MangaSource(sourceName), exception = null, notify = false)
 			}
 		}
+	}
+
+	@EntryPoint
+	@InstallIn(SingletonComponent::class)
+	interface CaptchaEntryPoint {
+		fun captchaHandler(): CaptchaHandler
+		fun captchaAutoResolveCoordinator(): CaptchaAutoResolveCoordinator
 	}
 
 	companion object {

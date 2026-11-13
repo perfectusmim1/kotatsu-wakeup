@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.browser
 
 import android.os.Bundle
 import android.view.View
+import android.webkit.WebSettings
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
@@ -45,8 +46,25 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 		val userAgent = intent?.getStringExtra(AppRouter.KEY_USER_AGENT)?.nullIfEmpty()
 			?: repository?.getRequestHeaders()?.get(CommonHeaders.USER_AGENT)
 		viewBinding.webView.configureForParser(userAgent)
+		alignUserAgentWithEngineIfNeeded()
 
 		onCreate2(savedInstanceState, mangaSource, repository)
+	}
+
+	private fun alignUserAgentWithEngineIfNeeded() {
+		val engineUserAgent = runCatching { WebSettings.getDefaultUserAgent(this) }.getOrNull()
+		if (engineUserAgent.isNullOrEmpty() || ANDROID_UA_TOKEN !in engineUserAgent) return
+		val currentUserAgent = viewBinding.webView.settings.userAgentString
+		if (currentUserAgent.isNullOrEmpty()) return
+		val isNonAndroidUa = ANDROID_UA_TOKEN !in currentUserAgent
+		val isNonChromiumUa = "Firefox/" in currentUserAgent ||
+			"FxiOS" in currentUserAgent ||
+			"Gecko/" in currentUserAgent ||
+			"Windows" in currentUserAgent ||
+			"Macintosh" in currentUserAgent ||
+			"X11;" in currentUserAgent
+		if (!isNonAndroidUa && !isNonChromiumUa) return
+		viewBinding.webView.settings.userAgentString = engineUserAgent
 	}
 
 	protected abstract fun onCreate2(
@@ -103,5 +121,9 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 
 	override fun onHistoryChanged() {
 		onBackPressedCallback.onHistoryChanged()
+	}
+
+	private companion object {
+		const val ANDROID_UA_TOKEN = "Android"
 	}
 }

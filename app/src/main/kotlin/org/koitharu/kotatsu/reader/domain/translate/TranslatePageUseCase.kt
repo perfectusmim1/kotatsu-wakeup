@@ -1,11 +1,13 @@
 package org.koitharu.kotatsu.reader.domain.translate
 
+import android.content.ContentResolver
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.core.net.toFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +21,7 @@ import org.koitharu.kotatsu.core.util.ext.isAnimatedImage
 import org.koitharu.kotatsu.core.util.ext.isFileUri
 import org.koitharu.kotatsu.core.util.ext.isZipUri
 import org.koitharu.kotatsu.core.util.ext.ramAvailable
+import org.koitharu.kotatsu.core.util.ext.toMimeTypeOrNull
 import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.reader.domain.translate.api.MissingGeminiApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.model.ComicTextTranslator
@@ -56,24 +59,37 @@ class TranslatePageUseCase @Inject constructor(
 		onProgress: suspend (stage: TranslationStage, progressPercent: Int) -> Unit,
 	): PageTranslationResult {
 		if (page.url.isAnimatedImage()) {
+			Log.d(LOG_TAG, "Skipping animated page id=${page.id} url=${page.url}")
 			return PageTranslationResult.NoText
 		}
 
 		val pageIdentity = "${page.source.name}:${page.id}:${page.url}"
 		val cacheKey = cacheStore.buildCacheKey(pageIdentity, settings)
 		cacheStore.getCachedFile(cacheKey)?.takeIf { it.isFile && it.length() > 0L }?.let { cached ->
+			Log.d(LOG_TAG, "Cache hit page=${page.id} file=${cached.name} (${cached.length()} bytes)")
 			onProgress(TranslationStage.DONE, 100)
 			return PageTranslationResult.Translated(cached)
 		}
 
 		if (settings.provider == TranslationProvider.GEMINI && settings.apiKeys.isEmpty()) {
+			Log.w(LOG_TAG, "Missing Gemini API key for page=${page.id}")
 			throw MissingGeminiApiKeyException()
 		}
 
 		val sourceUri = loadSourceUri()
+		Log.d(
+			LOG_TAG,
+			"Translating page=${page.id} source=${settings.sourceLang} -> ${settings.targetLang} " +
+				"provider=${settings.provider} uri=$sourceUri",
+		)
 		val sourceBitmap = decodeSoftwareBitmap(sourceUri)
+		Log.d(
+			LOG_TAG,
+			"Decoded page=${page.id} bitmap=${sourceBitmap.width}x${sourceBitmap.height} config=${sourceBitmap.config}",
+		)
 		try {
 			if (!ocrEngine.isModelReady(settings.sourceLang)) {
+				Log.i(LOG_TAG, "OCR models missing for ${settings.sourceLang}, downloading...")
 				onProgress(TranslationStage.DOWNLOADING_MODELS, 0)
 				ocrEngine.ensureModels(settings.sourceLang) { percent ->
 					onProgress(TranslationStage.DOWNLOADING_MODELS, percent)
@@ -87,17 +103,30 @@ class TranslatePageUseCase @Inject constructor(
 				skipPureSfx = settings.skipPureSfx,
 				filterPromoAndCredits = settings.filterPromoAndCredits,
 				onModelDownloadProgress = { percent ->
-					onProgress(TranslationStage.DOWNLOADING_MODELS, percent)
+					if (percent >= 100) {
+						onProgress(TranslationStage.RUNNING_OCR, -1)
+					} else {
+						onProgress(TranslationStage.DOWNLOADING_MODELS, percent)
+					}
 				},
 			)
+			Log.d(LOG_TAG, "OCR finished page=${page.id}: bubbles=${bubbles.size}")
 			if (bubbles.isEmpty()) {
+				Log.i(LOG_TAG, "No translatable bubbles detected on page=${page.id}")
 				onProgress(TranslationStage.DONE, 100)
 				return PageTranslationResult.NoText
 			}
 
 			onProgress(TranslationStage.TRANSLATING_TEXT, -1)
 			val translations = textTranslator.translateBubbles(bubbles, settings)
-			if (translations.none { !it.isTrash && it.text.isNotBlank() }) {
+			val validTranslations = translations.count { !it.isTrash && it.text.isNotBlank() }
+			Log.d(
+				LOG_TAG,
+				"Translation finished page=${page.id}: valid=$validTranslations/${translations.size} " +
+					"provider=${settings.provider}",
+			)
+			if (validTranslations == 0) {
+				Log.i(LOG_TAG, "All bubbles filtered/empty after translation on page=${page.id}")
 				onProgress(TranslationStage.DONE, 100)
 				return PageTranslationResult.NoText
 			}
@@ -113,16 +142,22 @@ class TranslatePageUseCase @Inject constructor(
 					targetLang = settings.targetLang,
 				)
 				if (!rendered.isFile || rendered.length() <= 0L) {
+					Log.w(LOG_TAG, "Rendered output missing/empty for page=${page.id}: ${rendered.absolutePath}")
 					if (targetFile.exists()) {
 						targetFile.delete()
 					}
 					onProgress(TranslationStage.DONE, 100)
 					PageTranslationResult.NoText
 				} else {
+					Log.i(
+						LOG_TAG,
+						"Page=${page.id} translated & baked: ${rendered.name} (${rendered.length()} bytes)",
+					)
 					onProgress(TranslationStage.DONE, 100)
 					PageTranslationResult.Translated(rendered)
 				}
 			} catch (t: Throwable) {
+				Log.e(LOG_TAG, "Rendering failed for page=${page.id}", t)
 				if (targetFile.exists()) {
 					targetFile.delete()
 				}
@@ -140,9 +175,37 @@ class TranslatePageUseCase @Inject constructor(
 			val decoded = when {
 				uri.isFileUri() -> decodeFileSoftwareBitmap(uri.toFile())
 				uri.isZipUri() -> decodeZipSoftwareBitmap(uri)
+				uri.scheme.equals(ContentResolver.SCHEME_CONTENT, ignoreCase = true) -> decodeContentSoftwareBitmap(uri)
 				else -> error("Unsupported page URI scheme for translation: ${uri.scheme}")
 			}
 			ensureSoftwareArgb8888(decoded)
+		}
+	}
+
+	@Blocking
+	private fun decodeContentSoftwareBitmap(uri: Uri): Bitmap {
+		val maxBytes = effectiveMaxBitmapBytes()
+		val mime = context.contentResolver.getType(uri)?.toMimeTypeOrNull()
+		val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+			?: error("Unable to open content URI: $uri")
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+			mime?.subtype != FORMAT_AVIF &&
+			mime?.subtype != FORMAT_JXL
+		) {
+			val source = ImageDecoder.createSource(bytes)
+			return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+				decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+				applyScaledTargetIfNeeded(decoder, info.size.width, info.size.height, maxBytes)
+			}
+		}
+		val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+		BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+		val opts = BitmapFactory.Options().apply {
+			inSampleSize = computeSampleSize(bounds.outWidth, bounds.outHeight, maxBytes)
+			inPreferredConfig = Bitmap.Config.ARGB_8888
+		}
+		return checkNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)) {
+			"Unable to decode content URI bitmap: $uri"
 		}
 	}
 
@@ -261,6 +324,7 @@ class TranslatePageUseCase @Inject constructor(
 	}
 
 	private companion object {
+		const val LOG_TAG = "KotatsuTranslate"
 		const val FORMAT_AVIF = "avif"
 		const val FORMAT_JXL = "jxl"
 		const val MAX_BITMAP_WIDTH = 2400

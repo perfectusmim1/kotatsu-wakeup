@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.details.ui
 
 import android.app.assist.AssistContent
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.RenderEffect
 import android.graphics.Shader
@@ -37,17 +38,19 @@ import coil3.size.Precision
 import coil3.target.ImageViewTarget
 import coil3.transform.RoundedCornersTransformation
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
+import org.koitharu.kotatsu.comments.SourceCommentsSheet
 import org.koitharu.kotatsu.core.image.CoilMemoryCacheKey
 import org.koitharu.kotatsu.core.model.FavouriteCategory
 import org.koitharu.kotatsu.core.model.LocalMangaSource
@@ -92,6 +95,7 @@ import org.koitharu.kotatsu.core.util.ext.start
 import org.koitharu.kotatsu.core.util.ext.textAndVisible
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.databinding.ActivityDetailsBinding
+import org.koitharu.kotatsu.databinding.DialogCommunityRatingBinding
 import org.koitharu.kotatsu.databinding.LayoutDetailsTableBinding
 import org.koitharu.kotatsu.details.data.MangaDetails
 import org.koitharu.kotatsu.details.data.ReadingTime
@@ -110,23 +114,20 @@ import org.koitharu.kotatsu.list.ui.size.StaticItemSizeResolver
 import org.koitharu.kotatsu.main.ui.owners.BottomSheetOwner
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.MangaTag
+import org.koitharu.kotatsu.parsers.model.community.SourceCommunityCapabilities
+import org.koitharu.kotatsu.parsers.model.community.SourceMangaCommunityInfo
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.toTitleCase
 import org.koitharu.kotatsu.scrobbling.common.domain.model.ScrobblingInfo
+import org.koitharu.kotatsu.settings.sources.auth.SourceAuthActivity
+import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
+import androidx.appcompat.R as appcompatR
 import com.google.android.material.R as materialR
-import org.koitharu.kotatsu.sourcescore.ui.CommunityCommentsSheet
-import org.koitharu.kotatsu.sourcescore.ui.CommunityRatingDelegate
-import org.koitharu.kotatsu.sourcescore.ui.StarRowBinder
-import org.koitharu.kotatsu.sourcescore.ui.CommunityNameGate
-import androidx.lifecycle.lifecycleScope
-import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.launch
-import org.koitharu.kotatsu.sourcescore.data.RatingResponse
-import java.util.Locale
 
 @AndroidEntryPoint
 class DetailsActivity :
@@ -141,12 +142,6 @@ class DetailsActivity :
 	BottomSheetOwner {
 
 	@Inject
-	lateinit var communityRating: CommunityRatingDelegate
-
-	@Inject
-	lateinit var communityNameGate: CommunityNameGate
-
-	@Inject
 	lateinit var shortcutManager: AppShortcutManager
 
 	@Inject
@@ -159,6 +154,12 @@ class DetailsActivity :
 	private lateinit var menuProvider: DetailsMenuProvider
 	private lateinit var infoBinding: LayoutDetailsTableBinding
 
+	private val communityAuthLauncher = registerForActivityResult(SourceAuthActivity.Contract()) { isAuthorized ->
+		if (isAuthorized) {
+			viewModel.refreshCommunity(force = true)
+		}
+	}
+
 	override val bottomSheet: View?
 		get() = viewBinding.containerBottomSheet
 
@@ -167,11 +168,9 @@ class DetailsActivity :
 		setContentView(ActivityDetailsBinding.inflate(layoutInflater))
 		infoBinding = LayoutDetailsTableBinding.bind(viewBinding.root)
 		configureTransparentAppBar()
-		if (!communityRating.isAvailable) {
-			viewBinding.loadingIndicatorCommunity?.isVisible = false
-			viewBinding.groupCommunityStars?.isVisible = false
-			viewBinding.groupCommunityRating.isVisible = false
-		}
+		viewBinding.loadingIndicatorCommunity?.isVisible = false
+		viewBinding.groupCommunityStars?.isVisible = false
+		viewBinding.groupCommunityRating.isVisible = false
 		setDisplayHomeAsUp(isEnabled = true, showUpAsClose = false)
 		supportActionBar?.setDisplayShowTitleEnabled(false)
 		viewBinding.chipFavorite.setOnClickListener(this)
@@ -182,6 +181,23 @@ class DetailsActivity :
 		viewBinding.buttonDescriptionMore.setOnClickListener(this)
 		viewBinding.buttonScrobblingMore.setOnClickListener(this)
 		viewBinding.buttonRelatedMore.setOnClickListener(this)
+		viewBinding.buttonCommunityRating?.setOnClickListener(this)
+		viewBinding.buttonCommunityComments.setOnClickListener(this)
+		viewBinding.textViewCommunityRatingSummary?.setOnClickListener(this)
+		viewBinding.ratingBarCommunity?.setOnClickListener(this)
+		viewBinding.ratingBarCommunity?.setOnRatingBarChangeListener { _, rating, fromUser ->
+			if (fromUser) {
+				val caps = viewModel.communityCapabilities.value
+				if (caps != null && caps.supportsRating && caps.maxRatingScale <= 5) {
+					val score = rating.roundToInt().coerceIn(1, caps.maxRatingScale)
+					viewModel.submitCommunityRating(score)
+				}
+			}
+		}
+		communityStarButtons().forEach { it.setOnClickListener(this) }
+		supportFragmentManager.setFragmentResultListener(SourceCommentsSheet.RESULT_KEY, this) { _, _ ->
+			viewModel.refreshCommunity(force = true)
+		}
 		viewBinding.textViewDescription.addOnLayoutChangeListener(this)
 		viewBinding.swipeRefreshLayout.setOnRefreshListener(this)
 		viewBinding.textViewDescription.viewTreeObserver.addOnDrawListener(this)
@@ -203,10 +219,6 @@ class DetailsActivity :
 
 		val appRouter = router
 		viewModel.mangaDetails.filterNotNull().observe(this, ::onMangaUpdated)
-		// Once per manga, not on every refresh of its details: each bind loads the rating again, and the
-		// refreshes land while the first load is still out.
-		viewModel.mangaDetails.filterNotNull().distinctUntilChangedBy { it.id }
-			.observe(this) { bindCommunityRating(it.toManga()) }
 		viewModel.coverUrl.observe(this, ::loadCover)
 		viewModel.onMangaRemoved.observeEvent(this, ::onMangaRemoved)
 		viewModel.onError
@@ -231,6 +243,19 @@ class DetailsActivity :
 		viewModel.onDownloadStarted
 			.filterNot { appRouter.isChapterPagesSheetShown() }
 			.observeEvent(this, DownloadStartedObserver(viewBinding.scrollView))
+		combine(
+			viewModel.communityCapabilities,
+			viewModel.communityInfo,
+			viewModel.isCommunityLoading,
+		) { caps, info, isLoading ->
+			Triple(caps, info, isLoading)
+		}.observe(this) { (caps, info, isLoading) ->
+			onCommunityChanged(caps, info, isLoading)
+		}
+		viewModel.onCommunityAuthRequired.observeEvent(this, ::onCommunityAuthRequired)
+		viewModel.onCommunityMessage.observeEvent(this) { messageRes ->
+			Snackbar.make(viewBinding.scrollView, messageRes, Snackbar.LENGTH_SHORT).show()
+		}
 		menuProvider = DetailsMenuProvider(
 			activity = this,
 			viewModel = viewModel,
@@ -309,6 +334,38 @@ class DetailsActivity :
 						copyToClipboard(getString(R.string.content_type_manga), title)
 					}
 				}.show()
+			}
+
+			R.id.button_community_rating,
+			R.id.ratingBar_community,
+			R.id.textView_community_rating_summary -> {
+				val caps = viewModel.communityCapabilities.value ?: return
+				val info = viewModel.communityInfo.value
+				val manga = viewModel.getMangaOrNull() ?: return
+				if (v.id == R.id.button_community_rating &&
+					caps.supportsRating &&
+					caps.maxRatingScale <= 5 &&
+					viewBinding.groupCommunityStars != null
+				) {
+					val starsGroup = viewBinding.groupCommunityStars ?: return
+					if (isAnimationsEnabled) {
+						starsGroup.parentView?.let { TransitionManager.beginDelayedTransition(it) }
+					}
+					starsGroup.isVisible = !starsGroup.isVisible
+				} else if (caps.supportsRating || caps.supportsStats) {
+					showCommunityRatingDialog(manga, caps, info)
+				}
+			}
+
+			R.id.button_star_1 -> submitInlineStarRating(1)
+			R.id.button_star_2 -> submitInlineStarRating(2)
+			R.id.button_star_3 -> submitInlineStarRating(3)
+			R.id.button_star_4 -> submitInlineStarRating(4)
+			R.id.button_star_5 -> submitInlineStarRating(5)
+
+			R.id.button_community_comments -> {
+				val manga = viewModel.getMangaOrNull() ?: return
+				SourceCommentsSheet.show(supportFragmentManager, manga, null)
 			}
 		}
 	}
@@ -626,6 +683,290 @@ class DetailsActivity :
 		}.nullIfEmpty()
 	}
 
+	private fun communityStarButtons(): List<MaterialButton> = listOfNotNull(
+		viewBinding.buttonStar1,
+		viewBinding.buttonStar2,
+		viewBinding.buttonStar3,
+		viewBinding.buttonStar4,
+		viewBinding.buttonStar5,
+	)
+
+	private fun submitInlineStarRating(score: Int) {
+		val maxScale = viewModel.communityCapabilities.value?.maxRatingScale ?: 5
+		if (score > maxScale) return
+		viewBinding.groupCommunityStars?.isVisible = false
+		viewModel.submitCommunityRating(score)
+	}
+
+	private fun onCommunityChanged(
+		caps: SourceCommunityCapabilities?,
+		info: SourceMangaCommunityInfo?,
+		isLoading: Boolean,
+	) {
+		if (caps == null) {
+			hideAllCommunityControls()
+			return
+		}
+		val showRating = caps.supportsRating || caps.supportsStats
+		val showComments = caps.supportsNativeComments || caps.supportsWidgetFallback
+		if (!showRating && !showComments) {
+			hideAllCommunityControls()
+			return
+		}
+		val ratingButton = viewBinding.buttonCommunityRating
+		if (ratingButton != null && isLoading && info == null) {
+			viewBinding.loadingIndicatorCommunity?.isVisible = true
+			viewBinding.groupCommunityStars?.isVisible = false
+			viewBinding.groupCommunityRating.isVisible = false
+			ratingButton.isVisible = false
+			viewBinding.buttonCommunityComments.isVisible = false
+			return
+		}
+		viewBinding.loadingIndicatorCommunity?.isVisible = false
+
+		val visibleIds = ArrayList<Int>(3)
+		if (ratingButton != null) {
+			if (showRating) {
+				ratingButton.text = formatCommunityRatingButtonText(caps, info)
+				ratingButton.isEnabled = !isLoading
+				visibleIds.add(R.id.button_community_rating)
+				updateStarButtons(caps, info)
+				if (!caps.supportsRating || caps.maxRatingScale > 5) {
+					viewBinding.groupCommunityStars?.isVisible = false
+				}
+			} else {
+				ratingButton.isVisible = false
+				viewBinding.groupCommunityStars?.isVisible = false
+			}
+		} else {
+			if (showRating) {
+				viewBinding.ratingBarCommunity?.let { bar ->
+					val maxScale = caps.maxRatingScale.coerceAtLeast(1)
+					val normalized = info?.userRating?.let { it * 5f / maxScale }
+						?: info?.averageRating?.let {
+							if (info.rawScale > 5 && it > 5f) it * 5f / info.rawScale else it
+						}
+						?: info?.rawRating?.let { it * 5f / info.rawScale.coerceAtLeast(1) }
+						?: 0f
+					bar.setIsIndicator(!caps.supportsRating || caps.maxRatingScale > 5 || isLoading)
+					bar.rating = normalized.coerceIn(0f, 5f)
+					visibleIds.add(R.id.ratingBar_community)
+				}
+				viewBinding.textViewCommunityRatingSummary?.let { tv ->
+					tv.text = formatCommunitySummaryText(caps, info)
+					visibleIds.add(R.id.textView_community_rating_summary)
+				}
+			} else {
+				viewBinding.ratingBarCommunity?.isVisible = false
+				viewBinding.textViewCommunityRatingSummary?.isVisible = false
+			}
+		}
+
+		if (showComments) {
+			if (ratingButton == null) {
+				val commentCount = info?.commentCount
+				viewBinding.buttonCommunityComments.text = if (commentCount != null && commentCount > 0) {
+					getString(R.string.community_comments_count, formatCompactCount(commentCount.toLong()))
+				} else {
+					getString(R.string.community_comments)
+				}
+			}
+			visibleIds.add(R.id.button_community_comments)
+		} else {
+			viewBinding.buttonCommunityComments.isVisible = false
+		}
+
+		viewBinding.groupCommunityRating.referencedIds = visibleIds.toIntArray()
+		viewBinding.groupCommunityRating.isVisible = visibleIds.isNotEmpty()
+	}
+
+	private fun hideAllCommunityControls() {
+		viewBinding.loadingIndicatorCommunity?.isVisible = false
+		viewBinding.groupCommunityStars?.isVisible = false
+		viewBinding.groupCommunityRating.isVisible = false
+		viewBinding.buttonCommunityRating?.isVisible = false
+		viewBinding.buttonCommunityComments.isVisible = false
+		viewBinding.ratingBarCommunity?.isVisible = false
+		viewBinding.textViewCommunityRatingSummary?.isVisible = false
+	}
+
+	private fun updateStarButtons(caps: SourceCommunityCapabilities, info: SourceMangaCommunityInfo?) {
+		val buttons = communityStarButtons()
+		if (buttons.isEmpty()) return
+		val userScore = info?.userRating ?: 0
+		val activeTint = ColorStateList.valueOf(getThemeColor(appcompatR.attr.colorPrimary))
+		val inactiveTint = ColorStateList.valueOf(getThemeColor(materialR.attr.colorOnSurfaceVariant))
+		buttons.forEachIndexed { index, button ->
+			val starValue = index + 1
+			button.isVisible = starValue <= caps.maxRatingScale
+			val filled = starValue <= userScore
+			button.setIconResource(if (filled) R.drawable.ic_star_rate else R.drawable.ic_star_rate_outline)
+			button.iconTint = if (filled) activeTint else inactiveTint
+		}
+	}
+
+	private fun showCommunityRatingDialog(
+		manga: Manga,
+		caps: SourceCommunityCapabilities,
+		info: SourceMangaCommunityInfo?,
+	) {
+		val dialogBinding = DialogCommunityRatingBinding.inflate(layoutInflater)
+		val statsSummary = buildCommunityStatsSummary(caps, info)
+		dialogBinding.textViewStatsSummary.textAndVisible = statsSummary
+
+		val maxScale = caps.maxRatingScale.coerceAtLeast(1)
+		var selectedScore = (info?.userRating ?: ((maxScale + 1) / 2)).coerceIn(1, maxScale)
+
+		if (caps.supportsRating) {
+			dialogBinding.layoutRatingPicker.isVisible = true
+			dialogBinding.textViewSelectedScore.text = "$selectedScore / $maxScale"
+			dialogBinding.sliderRating.valueFrom = 1f
+			dialogBinding.sliderRating.valueTo = maxScale.toFloat()
+			dialogBinding.sliderRating.stepSize = 1f
+			dialogBinding.sliderRating.value = selectedScore.toFloat()
+
+			var isSyncing = false
+			val scoreChips = ArrayList<Chip>(maxScale)
+			dialogBinding.chipGroupQuickScores.removeAllViews()
+			for (score in 1..maxScale) {
+				val chip = Chip(this).apply {
+					id = View.generateViewId()
+					text = score.toString()
+					isCheckable = true
+					isChecked = score == selectedScore
+					setEnsureMinTouchTargetSize(false)
+					setOnClickListener {
+						if (isSyncing) return@setOnClickListener
+						isSyncing = true
+						selectedScore = score
+						dialogBinding.sliderRating.value = score.toFloat()
+						dialogBinding.textViewSelectedScore.text = "$score / $maxScale"
+						isSyncing = false
+					}
+				}
+				scoreChips.add(chip)
+				dialogBinding.chipGroupQuickScores.addView(chip)
+			}
+
+			dialogBinding.sliderRating.addOnChangeListener { _, value, fromUser ->
+				if (!fromUser || isSyncing) return@addOnChangeListener
+				isSyncing = true
+				selectedScore = value.roundToInt().coerceIn(1, maxScale)
+				dialogBinding.textViewSelectedScore.text = "$selectedScore / $maxScale"
+				scoreChips.getOrNull(selectedScore - 1)?.isChecked = true
+				isSyncing = false
+			}
+
+			if (caps.requiresAuthForRating && info != null && !info.canCurrentUserRate && info.currentUsername == null) {
+				dialogBinding.textViewAuthHint.textAndVisible =
+					getString(R.string.community_sign_in_to_rate, manga.source.getTitle(this))
+			} else {
+				dialogBinding.textViewAuthHint.isVisible = false
+			}
+		} else {
+			dialogBinding.layoutRatingPicker.isVisible = false
+			dialogBinding.textViewAuthHint.isVisible = false
+		}
+
+		buildAlertDialog(this) {
+			setTitle(R.string.community_rating_title)
+			setView(dialogBinding.root)
+			setNegativeButton(R.string.close, null)
+			if (caps.supportsRating) {
+				setPositiveButton(R.string.community_submit_rating) { _, _ ->
+					viewModel.submitCommunityRating(selectedScore)
+				}
+			}
+		}.show()
+	}
+
+	private fun onCommunityAuthRequired(source: MangaSource) {
+		Snackbar.make(
+			viewBinding.scrollView,
+			getString(R.string.community_sign_in_to_rate, source.getTitle(this)),
+			Snackbar.LENGTH_LONG,
+		).setAction(R.string.sign_in) {
+			communityAuthLauncher.launch(source)
+		}.show()
+	}
+
+	private fun formatCommunityRatingButtonText(
+		caps: SourceCommunityCapabilities,
+		info: SourceMangaCommunityInfo?,
+	): String {
+		if (info == null) {
+			return if (caps.supportsRating) getString(R.string.community_rate) else getString(R.string.community_rating_none)
+		}
+		val displayScore = info.rawRating ?: info.averageRating
+		val viewCount = info.viewCount
+		val followCount = info.followCount
+		val base = when {
+			displayScore != null -> {
+				val scoreFormatted = String.format(Locale.getDefault(), "%.1f", displayScore)
+				val ratingCount = info.ratingCount
+				if (ratingCount != null && ratingCount > 0) {
+					"$scoreFormatted (${formatCompactCount(ratingCount.toLong())})"
+				} else {
+					scoreFormatted
+				}
+			}
+			info.userRating != null -> getString(R.string.community_your_rating, info.userRating, caps.maxRatingScale)
+			viewCount != null && viewCount > 0L -> getString(R.string.community_views_count, formatCompactCount(viewCount))
+			followCount != null && followCount > 0L -> getString(R.string.community_follows_count, formatCompactCount(followCount))
+			caps.supportsRating -> getString(R.string.community_rate)
+			else -> getString(R.string.community_rating_none)
+		}
+		val userRating = info.userRating
+		return if (displayScore != null && userRating != null) {
+			"$base · ${getString(R.string.community_your_rating_short, userRating)}"
+		} else {
+			base
+		}
+	}
+
+	private fun formatCommunitySummaryText(
+		caps: SourceCommunityCapabilities,
+		info: SourceMangaCommunityInfo?,
+	): String {
+		return buildCommunityStatsSummary(caps, info)
+			?: if (caps.supportsRating) getString(R.string.community_rate) else getString(R.string.community_rating_none)
+	}
+
+	private fun buildCommunityStatsSummary(
+		caps: SourceCommunityCapabilities,
+		info: SourceMangaCommunityInfo?,
+	): String? {
+		if (info == null) return null
+		val parts = ArrayList<String>(5)
+		val displayScore = info.rawRating ?: info.averageRating
+		if (displayScore != null) {
+			val scale = if (info.rawRating != null) info.rawScale else caps.maxRatingScale
+			parts.add("${String.format(Locale.getDefault(), "%.1f", displayScore)} / $scale")
+		}
+		info.userRating?.let { userScore ->
+			parts.add(getString(R.string.community_your_rating, userScore, caps.maxRatingScale))
+		}
+		info.ratingCount?.takeIf { it > 0 }?.let { count ->
+			parts.add(getString(R.string.community_rating_count, formatCompactCount(count.toLong())))
+		}
+		info.viewCount?.takeIf { it > 0L }?.let { count ->
+			parts.add(getString(R.string.community_views_count, formatCompactCount(count)))
+		}
+		info.followCount?.takeIf { it > 0L }?.let { count ->
+			parts.add(getString(R.string.community_follows_count, formatCompactCount(count)))
+		}
+		info.commentCount?.takeIf { it > 0 }?.let { count ->
+			parts.add(getString(R.string.community_comments_count, formatCompactCount(count.toLong())))
+		}
+		return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+	}
+
+	private fun formatCompactCount(value: Long): String = when {
+		value >= 1_000_000L -> String.format(Locale.getDefault(), "%.1fM", value / 1_000_000.0)
+		value >= 1_000L -> String.format(Locale.getDefault(), "%.1fK", value / 1_000.0)
+		else -> value.toString()
+	}
+
 	private class PrefetchObserver(
 		private val context: Context,
 	) : FlowCollector<List<ChapterListItem>?> {
@@ -647,109 +988,6 @@ class DetailsActivity :
 	companion object {
 
 		private const val FAV_LABEL_LIMIT = 16
-	}
-	/**
-	 * The one place the details screen touches the community feature.
-	 *
-	 * Silent by default: with the feature off, the views absent from this layout variant, or the
-	 * server unreachable, the row simply does not appear. Nothing here may delay or break reading.
-	 */
-	private fun bindCommunityRating(manga: Manga) {
-		val loading = viewBinding.loadingIndicatorCommunity
-		val group = viewBinding.groupCommunityRating
-		val stars = viewBinding.groupCommunityStars
-		if (!communityRating.isAvailable || stars == null) {
-			loading?.isVisible = false
-			stars?.isVisible = false
-			group.isVisible = false
-			return
-		}
-		val binder = StarRowBinder(
-			stars = listOfNotNull(
-				viewBinding.buttonStar1,
-				viewBinding.buttonStar2,
-				viewBinding.buttonStar3,
-				viewBinding.buttonStar4,
-				viewBinding.buttonStar5,
-			),
-			scope = lifecycleScope,
-		) { value ->
-			// A rating is published under the user's name, so there has to be one first.
-			if (!communityNameGate.ensureNamed(supportFragmentManager)) return@StarRowBinder false
-			val updated = communityRating.rate(manga, value)
-			if (updated == null) {
-				Snackbar.make(
-					viewBinding.root,
-					R.string.community_rating_failed,
-					Snackbar.LENGTH_SHORT,
-				).show()
-			} else {
-				showCommunityRating(updated)
-			}
-			true
-		}
-
-		// Up immediately, in its loading state. Waiting for the round trip meant the row appeared a
-		// second or two after everything else and pushed the page around as it landed.
-		binder.setEnabled(false)
-		loading?.isVisible = false
-		group.isVisible = false
-		stars.isVisible = false
-
-		// The score is the resting state; the stars are the editor. Five permanent star buttons took
-		// a whole row across the screen for something you touch once.
-		viewBinding.buttonCommunityRating?.setOnClickListener {
-			stars.isVisible = !stars.isVisible
-		}
-
-		viewBinding.buttonCommunityComments?.setOnClickListener {
-			// The work id is already known once the rating has loaded, so the sheet opens on the tap
-			// rather than after a resolve. Only a tap that beats the load takes the slow path.
-			val known = resolvedWorkId
-			if (known != null) {
-				CommunityCommentsSheet.show(supportFragmentManager, known)
-				return@setOnClickListener
-			}
-			lifecycleScope.launch {
-				val workId = communityRating.workId(manga)
-				if (workId == null) {
-					Snackbar.make(
-						viewBinding.root,
-						R.string.community_comments_unavailable,
-						Snackbar.LENGTH_SHORT,
-					).show()
-				} else {
-					resolvedWorkId = workId
-					CommunityCommentsSheet.show(supportFragmentManager, workId)
-				}
-			}
-		}
-		lifecycleScope.launch {
-			val rating = communityRating.load(manga)
-			loading?.isVisible = false
-			if (rating == null) {
-				// Unresolvable or unreachable. The row collapses rather than sitting there broken.
-				group.isVisible = false
-				return@launch
-			}
-			resolvedWorkId = communityRating.workId(manga)
-			binder.setRating(rating.mine?.toFloat() ?: 0f)
-			binder.setEnabled(true)
-			showCommunityRating(rating)
-			group.isVisible = true
-		}
-	}
-
-	/** Cached so the Comments button does not have to resolve the work before it can open. */
-	private var resolvedWorkId: String? = null
-
-	private fun showCommunityRating(rating: RatingResponse) {
-		// The score, and nothing else. How many people voted is not what anyone came to find out.
-		viewBinding.buttonCommunityRating?.text = if (rating.count == 0) {
-			getString(R.string.community_rating_dash)
-		} else {
-			String.format(Locale.getDefault(), "%.1f", rating.average)
-		}
 	}
 
 }

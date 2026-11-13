@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:background="?selectableItemBackground"
+	android:gravity="center_vertical"
+	android:minHeight="?listPreferredItemHeightSmall"
+	android:orientation="horizontal"
+	android:paddingVertical="@dimen/margin_small"
+	android:paddingStart="?listPreferredItemPaddingStart"
+	android:paddingEnd="?listPreferredItemPaddingEnd">
+
+	<org.koitharu.kotatsu.core.ui.image.FaviconView
+		android:id="@+id/imageView_icon"
+		android:layout_width="32dp"
+		android:layout_height="32dp"
+		android:background="?colorControlHighlight"
+		android:labelFor="@id/textView_title"
+		android:scaleType="fitCenter"
+		app:iconStyle="@style/FaviconDrawable.Small"
+		app:shapeAppearance="?shapeAppearanceCornerSmall"
+		tools:src="@tools:sample/avatars" />
+
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="?android:listPreferredItemPaddingStart"
+		android:layout_marginEnd="?android:listPreferredItemPaddingEnd"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+		<TextView
+			android:id="@+id/textView_title"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:ellipsize="end"
+			android:singleLine="true"
+			android:textAppearance="?attr/textAppearanceTitleSmall"
+			tools:text="MangaDex" />
+
+		<TextView
+			android:id="@+id/textView_summary"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="2dp"
+			android:ellipsize="end"
+			android:singleLine="true"
+			android:textAppearance="?attr/textAppearanceBodySmall"
+			android:textColor="?android:textColorSecondary"
+			tools:text="Logged in as user" />
+
+	</LinearLayout>
+
+	<ImageView
+		android:id="@+id/imageView_status"
+		android:layout_width="20dp"
+		android:layout_height="20dp"
+		android:contentDescription="@string/source_account_signed_in"
+		android:src="@drawable/ic_check"
+		android:visibility="gone"
+		app:tint="?attr/colorPrimary"
+		tools:visibility="visible" />
+
+</LinearLayout>

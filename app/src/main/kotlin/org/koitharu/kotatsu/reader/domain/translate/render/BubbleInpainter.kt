@@ -1224,7 +1224,7 @@ class BubbleInpainter @Inject constructor(
 					PixelColorMath.green(extractedStyle.textColor),
 					PixelColorMath.blue(extractedStyle.textColor),
 				) >= 0.30f -> TextBlockKind.SFX
-			extractedStyle.isDark && origRect.width() / origRect.height().coerceAtLeast(1f) > 1.8f && bubble.box.width > 0.25f ->
+			extractedStyle.isDark && origRect.width() / origRect.height().coerceAtLeast(1f) > 1.8f && bubble.box.width > 250f ->
 				TextBlockKind.NARRATION
 			else -> TextBlockKind.DIALOGUE
 		}
@@ -1250,10 +1250,10 @@ class BubbleInpainter @Inject constructor(
 		}
 
 		val refinedBox = NormalizedBox(
-			yMin = (refinedRect.top / imgH).coerceIn(0f, 1f),
-			xMin = (refinedRect.left / imgW).coerceIn(0f, 1f),
-			yMax = (refinedRect.bottom / imgH).coerceIn(0f, 1f),
-			xMax = (refinedRect.right / imgW).coerceIn(0f, 1f),
+			yMin = (refinedRect.top / imgH * 1000f).coerceIn(0f, 1000f),
+			xMin = (refinedRect.left / imgW * 1000f).coerceIn(0f, 1000f),
+			yMax = (refinedRect.bottom / imgH * 1000f).coerceIn(0f, 1000f),
+			xMax = (refinedRect.right / imgW * 1000f).coerceIn(0f, 1000f),
 		)
 
 		val formattedText = smartTextLayout.formatScanlationText(translatedText, targetLang)
