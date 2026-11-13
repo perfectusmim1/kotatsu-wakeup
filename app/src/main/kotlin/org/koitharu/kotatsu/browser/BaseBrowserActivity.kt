@@ -53,18 +53,14 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 
 	private fun alignUserAgentWithEngineIfNeeded() {
 		val engineUserAgent = runCatching { WebSettings.getDefaultUserAgent(this) }.getOrNull()
-		if (engineUserAgent.isNullOrEmpty() || ANDROID_UA_TOKEN !in engineUserAgent) return
 		val currentUserAgent = viewBinding.webView.settings.userAgentString
-		if (currentUserAgent.isNullOrEmpty()) return
-		val isNonAndroidUa = ANDROID_UA_TOKEN !in currentUserAgent
-		val isNonChromiumUa = "Firefox/" in currentUserAgent ||
-			"FxiOS" in currentUserAgent ||
-			"Gecko/" in currentUserAgent ||
-			"Windows" in currentUserAgent ||
-			"Macintosh" in currentUserAgent ||
-			"X11;" in currentUserAgent
-		if (!isNonAndroidUa && !isNonChromiumUa) return
-		viewBinding.webView.settings.userAgentString = engineUserAgent
+		val aligned = org.koitharu.kotatsu.core.network.webview.alignUserAgentWithEngine(
+			candidate = currentUserAgent,
+			engineUserAgent = engineUserAgent,
+		)
+		if (aligned != null && aligned != currentUserAgent) {
+			viewBinding.webView.settings.userAgentString = aligned
+		}
 	}
 
 	protected abstract fun onCreate2(
@@ -121,9 +117,5 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 
 	override fun onHistoryChanged() {
 		onBackPressedCallback.onHistoryChanged()
-	}
-
-	private companion object {
-		const val ANDROID_UA_TOKEN = "Android"
 	}
 }

@@ -13,6 +13,7 @@ import org.koitharu.kotatsu.parsers.model.MangaPage
 import org.koitharu.kotatsu.reader.data.erase.HiddenImagesRepository
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import javax.inject.Inject
+import kotlin.math.abs
 
 private const val PAGES_TRIM_THRESHOLD = 120
 
@@ -33,31 +34,26 @@ internal fun withoutHidden(pages: List<ReaderPage>, hidden: Set<Long>): List<Rea
 
 /**
  * Where to go for a saved position in [pages]: the page itself or, if it has since been hidden, the next
- * one still there. Null if the chapter is not in the list at all.
+ * one still there, or else the last one before it. Null if the chapter is not in the list at all.
+ *
+ * Goes by the pages' own numbers and not by where they are in the list: right-to-left readers hand over the
+ * list back to front, where the first page numbered at least [page] is the last page of the chapter.
  */
 internal fun List<ReaderPage>.indexOfPosition(chapterId: Long, page: Int): Int? {
-	var bestNextPos: Int? = null
-	var bestNextIndex = Int.MAX_VALUE
-	var maxPos: Int? = null
-	var maxIndex = Int.MIN_VALUE
+	var next: Int? = null
+	var previous: Int? = null
 	for (i in indices) {
 		val item = this[i]
 		if (item.chapterId != chapterId || item.index < 0) {
 			continue
 		}
-		if (item.index == page) {
-			return i
-		}
-		if (item.index > page && item.index < bestNextIndex) {
-			bestNextIndex = item.index
-			bestNextPos = i
-		}
-		if (item.index > maxIndex) {
-			maxIndex = item.index
-			maxPos = i
+		when {
+			item.index == page -> return i
+			item.index > page -> if (next == null || item.index < this[next].index) next = i
+			else -> if (previous == null || item.index > this[previous].index) previous = i
 		}
 	}
-	return bestNextPos ?: maxPos
+	return next ?: previous
 }
 
 @ViewModelScoped
@@ -83,11 +79,19 @@ class ChaptersLoader @Inject constructor(
 		}
 	}
 
+	/**
+	 * Adds the chapter after or before [currentId], dropping the one at the far end once there are many pages.
+	 *
+	 * The chapter at the far end is kept while it is [readingChapterId] or right next to it. Inside a chapter of a page or two
+	 * both ends are in reach at once: loading the one before dropped the one just left, which was then loaded again, dropping
+	 * the one before, for as long as the reader kept scrolling - neither end could ever be reached.
+	 */
 	suspend fun loadPrevNextChapter(
 		manga: MangaDetails,
 		currentId: Long,
 		isNext: Boolean,
 		trimPages: Boolean = true,
+		readingChapterId: Long? = null,
 	): Boolean {
 		val chapters = manga.allChapters
 		val predicate: (MangaChapter) -> Boolean = { it.id == currentId }
@@ -97,9 +101,9 @@ class ChaptersLoader @Inject constructor(
 		val newPages = loadChapter(newChapter.id, mayStartVerification = false)
 		mutex.withLock {
 			synchronized(chapterPages) {
-				if (trimPages && chapterPages.chaptersSize > 1) {
-					// trim pages
-					if (chapterPages.size > PAGES_TRIM_THRESHOLD) {
+				if (trimPages && chapterPages.chaptersSize > 1 && chapterPages.size > PAGES_TRIM_THRESHOLD) {
+					val farChapterId = if (isNext) chapterPages.first().chapterId else chapterPages.last().chapterId
+					if (!isNextToReading(chapters, farChapterId, readingChapterId)) {
 						if (isNext) {
 							chapterPages.removeFirst()
 						} else {
@@ -168,6 +172,15 @@ class ChaptersLoader @Inject constructor(
 	}
 
 	fun observeHiddenPages() = hiddenImages.observeHiddenPages()
+
+	private fun isNextToReading(chapters: List<MangaChapter>, chapterId: Long, readingChapterId: Long?): Boolean {
+		if (readingChapterId == null) {
+			return false
+		}
+		val index = chapters.indexOfFirst { it.id == chapterId }
+		val readingIndex = chapters.indexOfFirst { it.id == readingChapterId }
+		return index >= 0 && readingIndex >= 0 && abs(index - readingIndex) <= 1
+	}
 
 	/** The page right before or after another, hidden or not, as long as it is in the same chapter. */
 	fun findNeighbour(pageId: Long, isBefore: Boolean): ReaderPage? {

@@ -917,4 +917,13 @@
     <string name="source_replacement_summary_sources">Kullanılan kaynak</string>
     <string name="source_replacement_summary_mix">Kaynak dağılımı</string>
     <string name="source_replacement_summary_source_item">%1$s · %2$d</string>
+    <string name="not_interested_tip">İlginizi çekmediğini belirtmek için kapağın üzerindeki beğenmeme simgesine dokunun veya basılı tutun. Bir daha önerilmeyecek ve benzer başlıklar daha az ağırlığa sahip olacaktır.</string>
+    <string name="dismissed_titles">İlgi duymadığım başlıklar</string>
+    <string name="sources_auto_update">Kaynakları otomatik güncelle</string>
+    <string name="sources_auto_update_summary">Onarılan ve yeni manga kaynaklarını uygulama güncellemesi beklemeden yayınlandığı anda alın</string>
+    <string name="sources_version">Manga kaynakları</string>
+    <string name="sources_version_built_in">%1$s, uygulamayla birlikte gelen sürüm</string>
+    <string name="sources_version_downloaded">%1$s, uygulama yüklendikten sonra güncellendi</string>
+    <string name="sources_up_to_date">Manga kaynakları güncel</string>
+    <string name="sources_updated">Manga kaynakları güncellendi</string>
 </resources>

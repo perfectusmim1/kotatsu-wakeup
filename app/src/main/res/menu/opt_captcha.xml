@@ -8,4 +8,9 @@
 		android:title="@string/try_again"
 		app:showAsAction="never" />
 
+	<item
+		android:id="@+id/action_open_browser"
+		android:title="@string/open_in_browser"
+		app:showAsAction="never" />
+
 </menu>

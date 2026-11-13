@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Filter
 import androidx.core.view.WindowInsetsCompat
@@ -85,7 +86,6 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 
 		if (savedInstanceState == null && promptAutoEnableOnDismiss) {
 			binding.inputLayoutApiKeys.error = getString(R.string.translation_api_key_required)
-			binding.editTextApiKeys.requestFocus()
 		}
 
 		coordinator.isEnabled.observe(viewLifecycleOwner) { enabled ->
@@ -100,7 +100,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
-		val typeMask = WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
+		val typeMask = WindowInsetsCompat.Type.systemBars()
 		viewBinding?.scrollView?.updatePadding(
 			bottom = insets.getInsets(typeMask).bottom,
 		)
@@ -135,6 +135,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 				R.id.button_provider_google -> TranslationProvider.GOOGLE
 				else -> return@addOnButtonCheckedListener
 			}
+			clearApiKeysFocus(binding)
 			settings.translationProvider = nextProvider
 			updateProviderVisibility(binding, nextProvider)
 		}
@@ -149,8 +150,18 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 		if (showGeminiFields) {
 			updateApiKeyHelper(binding)
 		} else {
-			binding.editTextApiKeys.clearFocus()
+			clearApiKeysFocus(binding)
 		}
+	}
+
+	private fun clearApiKeysFocus(binding: SheetTranslationSettingsBinding) {
+		val editText = binding.editTextApiKeys
+		if (editText.hasFocus()) {
+			editText.clearFocus()
+			binding.layoutContent.requestFocus()
+		}
+		val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+		imm?.hideSoftInputFromWindow(binding.root.windowToken, 0)
 	}
 
 	private fun setupApiKeysField(binding: SheetTranslationSettingsBinding) {
@@ -187,6 +198,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 		refreshOcrModelStatus(binding)
 
 		binding.editSourceLang.setOnItemClickListener { _, _, position, _ ->
+			clearApiKeysFocus(binding)
 			val selected = sources.getOrNull(position) ?: return@setOnItemClickListener
 			settings.translationSourceLang = selected
 			refreshOcrModelStatus(binding)
@@ -206,6 +218,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 		binding.editTargetLang.setText(labels[currentIndex], false)
 
 		binding.editTargetLang.setOnItemClickListener { _, _, position, _ ->
+			clearApiKeysFocus(binding)
 			val selected = targets.getOrNull(position) ?: return@setOnItemClickListener
 			settings.translationTargetLang = selected.code
 		}
@@ -226,34 +239,41 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 					binding.editTextApiKeys.requestFocus()
 					return@setOnCheckedChangeListener
 				}
+				clearApiKeysFocus(binding)
 				coordinator.setEnabled(true, fromUserTap = false)
 			} else {
+				clearApiKeysFocus(binding)
 				coordinator.setEnabled(false, fromUserTap = false)
 			}
 		}
 
 		binding.switchAutoTranslate.isChecked = settings.isTranslationAutoEnabled
 		binding.switchAutoTranslate.setOnCheckedChangeListener { _, isChecked ->
+			clearApiKeysFocus(binding)
 			settings.isTranslationAutoEnabled = isChecked
 		}
 
 		binding.switchSkipSfx.isChecked = settings.isTranslationSkipPureSfx
 		binding.switchSkipSfx.setOnCheckedChangeListener { _, isChecked ->
+			clearApiKeysFocus(binding)
 			settings.isTranslationSkipPureSfx = isChecked
 		}
 
 		binding.switchFilterPromo.isChecked = settings.isTranslationFilterPromo
 		binding.switchFilterPromo.setOnCheckedChangeListener { _, isChecked ->
+			clearApiKeysFocus(binding)
 			settings.isTranslationFilterPromo = isChecked
 		}
 	}
 
 	private fun setupActions(binding: SheetTranslationSettingsBinding) {
 		binding.buttonDownloadOcr.setOnClickListener {
+			clearApiKeysFocus(binding)
 			coordinator.downloadOcrModel(settings.translationSourceLang)
 		}
 
 		binding.buttonClearCache.setOnClickListener {
+			clearApiKeysFocus(binding)
 			viewLifecycleScope.launch {
 				val freedBytes = coordinator.clearCache()
 				val message = if (freedBytes > 0L) {

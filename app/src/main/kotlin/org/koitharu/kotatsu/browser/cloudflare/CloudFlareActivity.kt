@@ -35,13 +35,17 @@ import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.network.cookies.AndroidCookieJar
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.network.webview.CF_STATE_JS
+import org.koitharu.kotatsu.core.network.webview.alignUserAgentWithEngine as alignUserAgentForWebView
+import org.koitharu.kotatsu.core.network.webview.applyCloudFlareRequestedWithPolicy
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.core.util.ext.processLifecycleScope
 import org.koitharu.kotatsu.parsers.config.ConfigKey
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.network.CloudFlareHelper
@@ -111,17 +115,13 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		clearanceAtLaunch = CloudFlareHelper.getClearanceCookie(cookieJar, url)
 		alignUserAgentWithEngine(repository)
 
-		// Check if source needs header interception
+		// Configure native X-Requested-With stripping when requested by source instead of hijacking main-frame HTTP
+		// traffic through OkHttp (preserving Chromium's genuine TLS/HTTP2 fingerprint and cookie handling).
 		val needsInterception = shouldUseInterception(source, repository)
-		Log.d(TAG, "Source: ${source.name}, needsInterception: $needsInterception")
+		val appliedNativeStrip = applyCloudFlareRequestedWithPolicy(viewBinding.webView.settings, needsInterception)
+		Log.d(TAG, "Source: ${source.name}, needsInterception: $needsInterception, nativeStrip: $appliedNativeStrip")
 
-		cfClient = if (needsInterception) {
-			Log.d(TAG, "Using CloudFlareInterceptClient with header filtering")
-			CloudFlareInterceptClient(cookieJar, this, url)
-		} else {
-			Log.d(TAG, "Using regular CloudFlareClient (no interception)")
-			CloudFlareClient(cookieJar, this, url)
-		}
+		cfClient = CloudFlareClient(cookieJar, this, url)
 
 		viewBinding.webView.webViewClient = cfClient
 		lifecycleScope.launch {
@@ -174,7 +174,44 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			true
 		}
 
+		R.id.action_open_browser -> {
+			val targetUrl = viewBinding.webView.url ?: intent?.dataString
+			if (!targetUrl.isNullOrEmpty()) {
+				val targetSource = mangaSource.takeUnless { it == UnknownMangaSource }
+					?: intent?.getStringExtra(AppRouter.KEY_SOURCE)?.let(::MangaSource)
+				router.openBrowser(targetUrl, targetSource, title?.toString())
+			}
+			viewBinding.webView.stopLoading()
+			finishAfterTransition()
+			true
+		}
+
 		else -> super.onOptionsItemSelected(item)
+	}
+
+	override fun onPause() {
+		if (!isAutoResolve && !escalationRequested && pendingResult != RESULT_OK && hasClearanceCookie()) {
+			pendingResult = RESULT_OK
+			val webViewUserAgent = viewBinding.webView.settings.userAgentString?.nullIfEmpty()
+			val urls = listOfNotNull(intent?.dataString, viewBinding.webView.url).distinct()
+			CookieManager.getInstance().flush()
+			val targetSource = mangaSource.takeUnless { it == UnknownMangaSource }
+				?: intent?.getStringExtra(AppRouter.KEY_SOURCE)?.let(::MangaSource)
+			if (targetSource != null) {
+				if (!webViewUserAgent.isNullOrEmpty()) {
+					runCatching {
+						SourceSettings(this, targetSource).cloudFlareUserAgent = webViewUserAgent
+					}.onFailure {
+						it.printStackTraceDebug()
+					}
+				}
+				captchaHandler.markBrowserSessionCompleted(targetSource)
+			}
+			processLifecycleScope.launch {
+				persistCookiesAndUserAgent(urls, webViewUserAgent)
+			}
+		}
+		super.onPause()
 	}
 
 	override fun finish() {
@@ -195,6 +232,7 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 					)
 				} else if (pendingResult == RESULT_OK) {
 					resultNotified = true
+					captchaHandler.markBrowserSessionCompleted(targetSource)
 					captchaAutoResolveCoordinator.notifyManualResolveSuccess(targetSource)
 				}
 			}
@@ -446,11 +484,13 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			persistCookiesAndUserAgent(urls, webViewUserAgent)
 			val source = intent?.getStringExtra(AppRouter.KEY_SOURCE)
 			if (source != null) {
+				val resolvedSource = MangaSource(source)
 				runCatchingCancellable {
-					captchaHandler.discard(MangaSource(source))
+					captchaHandler.discard(resolvedSource)
 				}.onFailure {
 					it.printStackTraceDebug()
 				}
+				captchaHandler.markBrowserSessionCompleted(resolvedSource)
 			}
 			finishAfterTransition()
 		}
@@ -556,22 +596,19 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 	 * WebView's actual User-Agent in [SourceSettings.cloudFlareUserAgent] for `CommonHeadersInterceptor`.
 	 */
 	private fun alignUserAgentWithEngine(repository: ParserMangaRepository?) {
-		if (repository == null) return
 		val engineUserAgent = runCatching { WebSettings.getDefaultUserAgent(this) }.getOrNull()
-		if (engineUserAgent.isNullOrEmpty() || ANDROID_UA_TOKEN !in engineUserAgent) return
 		val currentUserAgent = viewBinding.webView.settings.userAgentString
-		if (currentUserAgent.isNullOrEmpty()) return
-		val isNonAndroidUa = ANDROID_UA_TOKEN !in currentUserAgent
-		val isNonChromiumMobileUa = "Firefox/" in currentUserAgent || "FxiOS" in currentUserAgent || "Gecko/" in currentUserAgent
-		if (!isNonAndroidUa && !isNonChromiumMobileUa) return
+		val aligned = alignUserAgentForWebView(currentUserAgent, engineUserAgent) ?: return
+		if (aligned == currentUserAgent) return
 		Log.w(
 			TAG,
 			"Configured User-Agent contradicts the WebView engine, realigning so the challenge can pass." +
-				"\n  was: $currentUserAgent\n  now: $engineUserAgent",
+				"\n  was: $currentUserAgent\n  now: $aligned",
 		)
-		viewBinding.webView.settings.userAgentString = engineUserAgent
+		viewBinding.webView.settings.userAgentString = aligned
+		repository ?: return
 		runCatching {
-			repository.getConfig().cloudFlareUserAgent = engineUserAgent
+			repository.getConfig().cloudFlareUserAgent = aligned
 		}.onFailure {
 			it.printStackTraceDebug()
 		}
@@ -636,7 +673,6 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		private const val CF_INTERACTIVE_NONE = "none"
 		private const val CF_INTERACTIVE_CHECKBOX = "checkbox"
 		private const val CF_INTERACTIVE_WIDGET = "widget"
-		private const val ANDROID_UA_TOKEN = "Android"
 
 		private const val CF_INTERACTIVE_JS = """
 			(function(){

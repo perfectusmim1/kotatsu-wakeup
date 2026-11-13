@@ -24,6 +24,7 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.os.AppValidator
 import org.koitharu.kotatsu.core.os.RomCompat
+import org.koitharu.kotatsu.core.parser.bundle.ParsersUpdater
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.CrashReportActivity
 import org.koitharu.kotatsu.core.util.SentryInitializer
@@ -62,6 +63,9 @@ open class BaseApp : Application(), Configuration.Provider {
 	lateinit var workScheduleManager: WorkScheduleManager
 
 	@Inject
+	lateinit var parsersUpdater: ParsersUpdater
+
+	@Inject
 	lateinit var localMangaIndexProvider: Provider<LocalMangaIndex>
 
 	@Inject
@@ -79,6 +83,8 @@ open class BaseApp : Application(), Configuration.Provider {
 		if (ACRA.isACRASenderServiceProcess()) {
 			return
 		}
+		// Before anything gets to ask which sources there are: the answer is in the parsers kept from the last run
+		parsersUpdater.start(this)
 		// The app process is the one that can hang, so ANR reporting is armed here. Everything else
 		// Sentry could do stays off; see SentryInitializer.
 		SentryInitializer.ensureInitialized(this, enableAnr = true)

@@ -10,6 +10,27 @@ import java.time.Instant
 class SuggestionRankingTest {
 
 	@Test
+	fun `scores past one keep their order instead of all becoming one`() {
+		// Cut off at 1, these three were a tie, and most of a list came out in no order
+		val scaled = SuggestionRanking.rescale(listOf(1.7, 0.85, 1.2))
+		assertEquals(1f, scaled[0], 1e-6f)
+		assertEquals(0.5f, scaled[1], 1e-6f)
+		assertEquals(1.2f / 1.7f, scaled[2], 1e-6f)
+		assertTrue(scaled[0] > scaled[2] && scaled[2] > scaled[1])
+	}
+
+	@Test
+	fun `scores within one are stored as they are`() {
+		assertEquals(listOf(0.2f, 1f, 0.5f), SuggestionRanking.rescale(listOf(0.2, 1.0, 0.5)))
+		assertEquals(emptyList<Float>(), SuggestionRanking.rescale(emptyList()))
+	}
+
+	@Test
+	fun `a score that is not a number, or below nothing, counts as nothing`() {
+		assertEquals(listOf(0f, 0f, 0.4f), SuggestionRanking.rescale(listOf(Double.NaN, -0.3, 0.4)))
+	}
+
+	@Test
 	fun droppedNeighboursAreRankedDownNotOut() {
 		assertEquals(1.0, SuggestionRanking.penalizeDropped(1.0, 0), 1e-9)
 		assertEquals(0.5, SuggestionRanking.penalizeDropped(1.0, 1), 1e-9)

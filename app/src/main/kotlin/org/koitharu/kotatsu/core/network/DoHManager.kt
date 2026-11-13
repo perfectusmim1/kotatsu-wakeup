@@ -57,6 +57,15 @@ class DoHManager(
 				} else {
 					firstFailure.addSuppressed(e)
 				}
+			} catch (e: RuntimeException) {
+				// A name that cannot be looked up at all, or the secure lookup itself failing to start: neither is
+				// anything the caller expects from here, and both took the app down
+				val wrapped = UnknownHostException(hostname).apply { initCause(e) }
+				if (firstFailure == null) {
+					firstFailure = wrapped
+				} else {
+					firstFailure.addSuppressed(wrapped)
+				}
 			}
 		}
 		throw firstFailure ?: UnknownHostException(hostname)

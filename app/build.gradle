@@ -79,6 +79,13 @@ android {
 		def sentryDsn = readSecret('sentry_dsn', 'SENTRY_DSN')
 		buildConfigField 'String', 'SENTRY_DSN', "\"${sentryDsn}\""
 
+		def parsersBundleUrl = readSecret('parsers_bundle_url', 'PARSERS_BUNDLE_URL') ?: 'https://github.com/perfectusmim1/kotatsu-parsers-wakeup/releases/download/parsers-bundle'
+		buildConfigField 'String', 'PARSERS_BUNDLE_URL', "\"${parsersBundleUrl}\""
+
+		def parsersBundlePublicKey = readSecret('parsers_bundle_key', 'PARSERS_BUNDLE_KEY') ?: ''
+		if (parsersBundlePublicKey == 'none') parsersBundlePublicKey = ''
+		buildConfigField 'String', 'PARSERS_BUNDLE_KEY', "\"${parsersBundlePublicKey}\""
+
 		// Host that serves the shareable https manga links and the assetlinks.json that lets Android
 		// verify them. Must match the deployed worker's hostname in web/wrangler.toml exactly, or the
 		// links stop opening the app directly. Used by the manifest and by Manga.appUrl.

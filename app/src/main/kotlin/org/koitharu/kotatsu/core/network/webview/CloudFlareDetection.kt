@@ -18,13 +18,24 @@ internal const val CF_STATE_JS = """
 			if (href === '' || href === 'about:blank') return 'wait';
 			if (document.readyState !== 'interactive' && document.readyState !== 'complete') return 'wait';
 			var t = (document.title || '').toLowerCase();
-			if (t.indexOf('attention required') !== -1 || t.indexOf('access denied') !== -1) return 'error';
+			if (t.indexOf('attention required') !== -1 || t.indexOf('access denied') !== -1 ||
+				t.indexOf('dikkat gerekli') !== -1 || t.indexOf('erişim reddedildi') !== -1) return 'error';
 			if (t.indexOf('just a moment') !== -1 || t.indexOf('un instant') !== -1 ||
 				t.indexOf('einen moment') !== -1 || t.indexOf('un momento') !== -1 ||
-				t.indexOf('один момент') !== -1) return 'wait';
+				t.indexOf('один момент') !== -1 || t.indexOf('bir dakika') !== -1 ||
+				t.indexOf('bir saniye') !== -1 || t.indexOf('lütfen bekleyin') !== -1 ||
+				t.indexOf('tarayıcınız kontrol ediliyor') !== -1 ||
+				t.indexOf('insan olduğunuzu doğrulayın') !== -1 ||
+				t.indexOf('um momento') !== -1 || t.indexOf('un attimo') !== -1 ||
+				t.indexOf('chwilę') !== -1 || t.indexOf('chwile') !== -1 ||
+				t.indexOf('momentito') !== -1 || t.indexOf('attendere') !== -1 ||
+				t.indexOf('checking your browser') !== -1 || t.indexOf('verify you are human') !== -1 ||
+				t.indexOf('please wait') !== -1) return 'wait';
 			var challengeNodes = document.querySelectorAll(
 				'#challenge-running, #challenge-stage, #cf-challenge-running, ' +
-				'.cf-browser-verification, #turnstile-wrapper, #cf-please-wait'
+				'#challenge-form, #cf-wrapper, #challenge-error-title, #challenge-error-text, ' +
+				'.cf-browser-verification, #turnstile-wrapper, #cf-please-wait, ' +
+				'iframe[src*="challenges.cloudflare.com"]'
 			);
 			for (var i = 0; i < challengeNodes.length; i++) {
 				var node = challengeNodes[i];
@@ -39,6 +50,8 @@ internal const val CF_STATE_JS = """
 			// replies with "0" - and children counts elements only, so an empty element list is not
 			// proof the page is still loading. Only treat it as unfinished when there is no text either.
 			if (body.children.length === 0 && (body.textContent || '').trim().length === 0) return 'wait';
+			var turnstileResp = document.querySelector('input[name="cf-turnstile-response"]');
+			if (turnstileResp && !(turnstileResp.value || '').trim()) return 'wait';
 			return 'ok';
 		} catch (e) { return 'wait'; }
 	})()

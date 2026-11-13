@@ -126,11 +126,18 @@ class BookmarksFragment : BaseFragment<FragmentMangaBookmarksBinding>(),
 			lastSortOrder = currentOrder
 			lastQuery = currentQuery
 			if (sortChanged || queryChanged) {
-				bookmarksAdapter?.submitItemsImmediate(items) {
+				val rv = viewBinding?.recyclerView
+				rv?.stopScroll()
+				bookmarksAdapter?.setItems(items) {
 					listCommitCallback.run()
-					val rv = viewBinding?.recyclerView ?: return@submitItemsImmediate
-					rv.stopScroll()
-					(rv.layoutManager as? GridLayoutManager)?.scrollToPositionWithOffset(0, 0)
+					val currentRv = viewBinding?.recyclerView ?: return@setItems
+					currentRv.stopScroll()
+					(currentRv.layoutManager as? GridLayoutManager)?.scrollToPositionWithOffset(0, 0)
+					currentRv.post {
+						val postedRv = viewBinding?.recyclerView ?: return@post
+						postedRv.stopScroll()
+						(postedRv.layoutManager as? GridLayoutManager)?.scrollToPositionWithOffset(0, 0)
+					}
 				}
 			} else {
 				bookmarksAdapter?.setItems(items, listCommitCallback)

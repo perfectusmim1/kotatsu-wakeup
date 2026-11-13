@@ -29,7 +29,6 @@ import okhttp3.Cookie
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareCallback
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareClient
-import org.koitharu.kotatsu.browser.cloudflare.CloudFlareInterceptClient
 import org.koitharu.kotatsu.core.exceptions.CloudFlareException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
@@ -252,6 +251,8 @@ class WebViewExecutor @Inject constructor(
 					alignedUserAgent?.let {
 						webView.settings.userAgentString = it
 					}
+					val stripRequestedWith = needsCloudFlareInterception(exception.source)
+					applyCloudFlareRequestedWithPolicy(webView.settings, stripRequestedWith)
 					val resolved = withTimeoutOrNull(timeout) {
 						awaitVisibleLayout(webView)
 						webView.requestFocus()
@@ -305,24 +306,15 @@ class WebViewExecutor @Inject constructor(
 	}
 
 	private fun alignUserAgentWithEngine(candidate: String): String {
-		val engineUserAgent = defaultUserAgent?.takeIf { it.isNotEmpty() && ANDROID_UA_TOKEN in it }
-			?: return candidate
-		val isNonAndroidUa = ANDROID_UA_TOKEN !in candidate
-		val isNonChromiumUa = "Firefox/" in candidate ||
-			"FxiOS" in candidate ||
-			"Gecko/" in candidate ||
-			"Windows" in candidate ||
-			"Macintosh" in candidate ||
-			"X11;" in candidate
-		if (!isNonAndroidUa && !isNonChromiumUa) {
-			return candidate
+		val aligned = alignUserAgentWithEngine(candidate, defaultUserAgent) ?: candidate
+		if (aligned != candidate) {
+			Log.w(
+				TAG,
+				"Configured User-Agent contradicts the WebView engine, realigning so the challenge can pass." +
+					"\n  was: $candidate\n  now: $aligned",
+			)
 		}
-		Log.w(
-			TAG,
-			"Configured User-Agent contradicts the WebView engine, realigning so the challenge can pass." +
-				"\n  was: $candidate\n  now: $engineUserAgent",
-		)
-		return engineUserAgent
+		return aligned
 	}
 
 	private suspend fun persistSolvedState(
@@ -463,11 +455,7 @@ class WebViewExecutor @Inject constructor(
 			// page-state poll sees the real page (or the overall timeout fires).
 			override fun onLoopDetected() = Unit
 		}
-		return if (needsCloudFlareInterception(exception.source)) {
-			CloudFlareInterceptClient(cookieJar, callback, exception.url)
-		} else {
-			CloudFlareClient(cookieJar, callback, exception.url)
-		}
+		return CloudFlareClient(cookieJar, callback, exception.url)
 	}
 
 	private fun needsCloudFlareInterception(source: MangaSource): Boolean = runCatching {
@@ -547,6 +535,5 @@ class WebViewExecutor @Inject constructor(
 		// After a failed auto-resolve for a host, skip new attempts for this long so a burst of failing
 		// requests (favicon + catalog + chapters + …) doesn't queue up multiple full timeouts.
 		const val FAILURE_COOLDOWN_MS = 30_000L
-		const val ANDROID_UA_TOKEN = "Android"
 	}
 }

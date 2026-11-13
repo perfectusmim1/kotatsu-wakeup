@@ -70,6 +70,7 @@ import org.koitharu.kotatsu.core.util.ext.trySetForeground
 import org.koitharu.kotatsu.discover.domain.DiscoverRanking
 import org.koitharu.kotatsu.discover.domain.ReaderProfiles
 import org.koitharu.kotatsu.discover.data.DiscoverDismissals
+import org.koitharu.kotatsu.discover.data.DismissedIndex
 import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
 import org.koitharu.kotatsu.history.data.HistoryRepository
@@ -201,9 +202,8 @@ class SuggestionsWorker @AssistedInject constructor(
 	private suspend fun doWorkImpl(): Int {
 		val profile = runCatchingCancellable { readerProfiles.get() }.onFailure { it.printStackTraceDebug() }.getOrNull()
 		// "Not interested" said on the Explore screen goes for this list too
-		val dismissed = runCatchingCancellable { dismissals.get() }.onFailure { it.printStackTraceDebug() }.getOrDefault(emptyMap())
-		val taste = DiscoverRanking.applyDismissals(profile?.taste.orEmpty(), dismissed.values)
-		fun isDismissed(title: String) = DiscoverRanking.titleKey(title) in dismissed
+		val dismissed = runCatchingCancellable { dismissals.get() }.onFailure { it.printStackTraceDebug() }.getOrDefault(DismissedIndex.EMPTY)
+		val taste = DiscoverRanking.applyDismissals(profile?.taste.orEmpty(), dismissed.tagLists)
 		val history = historyRepository.getListWithProgress(0, MAX_SEED_POOL)
 		val favourites = favouritesRepository.getLastManga(20)
 		val favouriteIds = favourites.mapTo(HashSet()) { it.id }
@@ -228,9 +228,13 @@ class SuggestionsWorker @AssistedInject constructor(
 			return 0
 		}
 		val tagsBlacklist = TagsBlacklist(appSettings.suggestionsTagsBlacklist, TAG_EQ_THRESHOLD)
-		val suggestions = localSuggestions(seed, sources, tagsBlacklist)
-			.filterNot { profile?.knows(it.manga) == true || isDismissed(it.manga.title) }
-			.map { it.copy(relevance = DiscoverRanking.personalize(it.relevance.toDouble(), it.manga.tags.map { tag -> tag.title }, taste).toFloat().coerceIn(0f, 1f)) }
+		val local = localSuggestions(seed, sources, tagsBlacklist)
+			.filterNot { profile?.knows(it.manga) == true || dismissed.matches(it.manga) }
+		// Not cut off at 1: that left most of the list tied at the top, in no order at all
+		val relevances = SuggestionRanking.rescale(
+			local.map { DiscoverRanking.personalize(it.relevance.toDouble(), it.manga.tags.map { tag -> tag.title }, taste) },
+		)
+		val suggestions = local.mapIndexed { index, suggestion -> suggestion.copy(relevance = relevances[index]) }
 			.sortedByDescending { it.relevance }
 		return publish(suggestions, tagsBlacklist)
 	}

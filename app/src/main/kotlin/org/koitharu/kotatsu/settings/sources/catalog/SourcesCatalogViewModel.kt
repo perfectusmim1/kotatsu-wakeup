@@ -26,8 +26,8 @@ import org.koitharu.kotatsu.explore.data.SourcesSortOrder
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingState
 import org.koitharu.kotatsu.parsers.model.ContentType
-import org.koitharu.kotatsu.parsers.model.MangaParserSource
 import org.koitharu.kotatsu.parsers.model.MangaSource
+import org.koitharu.kotatsu.parsers.model.ParserMangaSource
 import java.util.EnumSet
 import java.util.Locale
 import javax.inject.Inject
@@ -97,7 +97,7 @@ class SourcesCatalogViewModel @Inject constructor(
 		}
 	}
 
-	fun togglePresetSource(source: MangaParserSource) {
+	fun togglePresetSource(source: ParserMangaSource) {
 		if (activePresetId == 0L) return
 		launchJob(Dispatchers.Default) {
 			val current = presetSources.value.toMutableSet()

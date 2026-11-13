@@ -57,12 +57,25 @@ class PageViewModel(
 	private var rawUri: Uri? = null
 	private var displayedUri: Uri? = null
 
+	/** The page itself, when it is one that moves: what is on screen is then its first frame. See [toShown]. */
+	private var animatedUri: Uri? = null
+
 	@Volatile
 	private var pendingPreserveViewState: Boolean = false
 
 	/** The file behind what is on screen, once it is on screen. */
 	val shownImage: Uri?
 		get() = rawUri.takeIf { state.value is PageState.Shown }
+
+	/**
+	 * The file to play over what is on screen, for a page that moves and is shown whole. One with a part of it
+	 * erased stays still: the frames know nothing of what was taken out of the page, and would put it back.
+	 */
+	val shownAnimation: Uri?
+		get() = animatedUri.takeIf {
+			val shown = state.value as? PageState.Shown
+			shown != null && shown.mask == null
+		}
 
 	/** What the view is showing of that file, in the coordinates it was given. */
 	val shownRegion: Rect?
@@ -86,6 +99,7 @@ class PageViewModel(
 		val prevSwapJob = swapJob
 		pendingPreserveViewState = false
 		displayedUri = null
+		animatedUri = null
 		cachedTrimBounds = null
 		cachedVisibility = null
 		job = scope.launch(Dispatchers.Default) {
@@ -126,6 +140,7 @@ class PageViewModel(
 		cachedVisibility = null
 		rawUri = null
 		displayedUri = null
+		animatedUri = null
 		boundPage = null
 		pendingPreserveViewState = false
 		swapJob?.cancel()
@@ -159,7 +174,7 @@ class PageViewModel(
 	fun onTranslationMapUpdated(translatedFiles: Map<Long, File>) {
 		val page = boundPage ?: return
 		val raw = rawUri ?: return
-		if (page.url.isAnimatedImage()) return
+		if (animatedUri != null || page.url.isAnimatedImage()) return
 		val current = state.value
 		if (current !is PageState.Shown && current !is PageState.Loaded) return
 		val desiredUri = resolveDisplayUri(page, raw, translatedFiles)
@@ -245,7 +260,8 @@ class PageViewModel(
 			prevJob?.join()
 			state.value = PageState.Converting()
 			try {
-				val newUri = loader.convertBimap(uri)
+				// A page that moves stays as it is, to be played: what the view can open of it is put beside it
+				val newUri = if (uri == animatedUri) loader.getStillOf(uri) else loader.convertBimap(uri)
 				rawUri = newUri
 				cachedTrimBounds = null
 				// The check before this could not read the image, which is why it needed converting
@@ -287,12 +303,13 @@ class PageViewModel(
 			}
 			progressObserver.cancelAndJoin()
 			previewJob.cancel()
-			rawUri = uri
+			val shown = toShown(uri)
+			rawUri = shown
 			cachedTrimBounds = null
-			val visibility = loader.imageHider.resolve(data, uri)
+			val visibility = loader.imageHider.resolve(data, shown)
 			cachedVisibility = visibility as? PageVisibility.Show
-			val displayUri = resolveDisplayUri(data, uri)
-			present(displayUri, uri, visibility, isConverted = false, preserveViewState = false)
+			val displayUri = resolveDisplayUri(data, shown)
+			present(displayUri, shown, visibility, isConverted = false, preserveViewState = false)
 		} catch (e: CancellationException) {
 			throw e
 		} catch (e: Throwable) {
@@ -302,6 +319,31 @@ class PageViewModel(
 				networkState.awaitForConnection()
 				retry(data, isFromUser = false)
 			}
+		}
+	}
+
+	/**
+	 * What the view is given of the page at [uri], after noting whether it is one that moves.
+	 *
+	 * The page itself, as for any other. The view lays a page out, zooms it and crops it from a picture that stays as
+	 * it is, and the frames are played over that, so getting a page on screen is done the way it always was and costs
+	 * what it always did, on any phone. A page the view turns out not to be able to open, as it cannot a GIF, has its
+	 * first frame made for it then, see [tryConvert], and that is handed over directly from the next time on.
+	 */
+	private suspend fun toShown(uri: Uri): Uri {
+		animatedUri = null
+		val animations = loader.animatedPages
+		if (!animations.isSupported || !animations.isAnimated(uri)) {
+			return uri
+		}
+		animatedUri = uri
+		return try {
+			loader.findStillOf(uri) ?: uri
+		} catch (e: CancellationException) {
+			throw e
+		} catch (e: Exception) {
+			e.printStackTraceDebug()
+			uri
 		}
 	}
 
@@ -360,7 +402,7 @@ class PageViewModel(
 		rawUri: Uri,
 		translatedFiles: Map<Long, File> = loader.translationCoordinator.activeTranslatedPages.value,
 	): Uri {
-		if (page.url.isAnimatedImage()) return rawUri
+		if (animatedUri != null || page.url.isAnimatedImage()) return rawUri
 		val translated = translatedFiles[page.id]
 		return if (translated != null && translated.isFile && translated.length() > 0L) {
 			translated.toUri()

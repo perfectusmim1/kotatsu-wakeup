@@ -5,6 +5,8 @@ import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
+import org.koitharu.kotatsu.discover.data.DiscoverDismissals
+import org.koitharu.kotatsu.discover.data.DismissedIndex
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.SortOrder
@@ -28,13 +30,16 @@ class RelatedMangaUseCase @Inject constructor(
 	private val dataRepository: MangaDataRepository,
 	private val tagStatistics: TagStatistics,
 	private val settings: AppSettings,
+	private val dismissals: DiscoverDismissals,
 ) {
 
 	suspend operator fun invoke(seed: Manga): List<Manga>? {
 		val excludeNsfw = settings.isNsfwContentDisabled
+		// What the reader passed on is not offered here either
+		val dismissed = runCatchingCancellable { dismissals.get() }.getOrDefault(DismissedIndex.EMPTY)
 		val picked = LinkedHashMap<Long, Manga>()
 		fun add(list: List<Manga>) = list.forEach {
-			if (it.id != seed.id && !(excludeNsfw && it.isNsfw())) {
+			if (it.id != seed.id && !(excludeNsfw && it.isNsfw()) && !dismissed.matches(it)) {
 				picked.putIfAbsent(it.id, it)
 			}
 		}

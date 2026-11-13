@@ -22,7 +22,7 @@ import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
 import org.koitharu.kotatsu.history.data.HistoryEntity
 import org.koitharu.kotatsu.list.domain.ListSortOrder
 import org.koitharu.kotatsu.parsers.model.Manga
-import org.koitharu.kotatsu.parsers.model.MangaParserSource
+import org.koitharu.kotatsu.parsers.model.ParserMangaSource
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.mangaTitleMatchDistance
 import org.koitharu.kotatsu.parsers.util.normalizeSearchQuery
@@ -273,7 +273,7 @@ class AniListImportUseCase @Inject constructor(
 			.asSequence()
 			.filter { source ->
 				val raw = source.unwrap()
-				raw is MangaParserSource && !raw.isBroken && (!skipNsfw || !source.isNsfw())
+				raw is ParserMangaSource && !raw.isBroken && (!skipNsfw || !source.isNsfw())
 			}
 			.distinctBy(MangaSource::name)
 			.toList()

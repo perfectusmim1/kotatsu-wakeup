@@ -363,12 +363,20 @@ class PaddleOcrEngine @Inject constructor(
 		return multiLineStrong || singleClearBubble
 	}
 
-	private fun isAcceptableAutoMatch(result: AutoProbeResult): Boolean =
-		result.usableLines >= 1 &&
+	private fun isAcceptableAutoMatch(result: AutoProbeResult): Boolean {
+		val standardMatch = result.usableLines >= 1 &&
 			result.avgConfidence >= 68f &&
 			result.validCharRatio >= 0.65f &&
 			result.scriptPurity >= 0.50f &&
 			result.totalScriptLetters >= 2
+		// Accept clear multi-line text with strong valid-char ratio and script purity even if confidence sits slightly under 68.
+		val highPurityTextRichMatch = result.usableLines >= 2 &&
+			result.avgConfidence >= 55f &&
+			result.validCharRatio >= 0.85f &&
+			result.scriptPurity >= 0.85f &&
+			result.totalScriptLetters >= 6
+		return standardMatch || highPurityTextRichMatch
+	}
 
 	private fun countScriptLetters(text: String, modelGroup: String): Int {
 		var count = 0
