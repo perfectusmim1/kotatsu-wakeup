@@ -405,7 +405,7 @@ class OcrModelManager @Inject constructor(
 		val AUTO_DOWNLOAD_FALLBACK_GROUPS = listOf("cjk", "korean")
 
 		private const val MODELS_DIR_NAME = "ocr_models"
-		private const val DET_FILE_NAME = "det_v3.onnx"
+		private const val DET_FILE_NAME = "det_v4.onnx"
 		private const val REC_FILE_NAME = "rec.onnx"
 		private const val DICT_FILE_NAME = "dict.txt"
 		private const val STREAM_BUFFER_BYTES = 16 * 1024
@@ -413,8 +413,8 @@ class OcrModelManager @Inject constructor(
 		private const val MIN_DICT_BYTES = 32L
 
 		private val DET_MODEL_URLS = listOf(
-			"https://huggingface.co/monkt/paddleocr-onnx/resolve/main/detection/v3/det.onnx",
 			"https://huggingface.co/SWHL/RapidOCR/resolve/main/PP-OCRv4/ch_PP-OCRv4_det_infer.onnx",
+			"https://huggingface.co/monkt/paddleocr-onnx/resolve/main/detection/v3/det.onnx",
 		)
 
 		private val NO_STORE_CACHE = CacheControl.Builder().noStore().build()

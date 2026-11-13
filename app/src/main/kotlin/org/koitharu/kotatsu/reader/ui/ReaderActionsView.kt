@@ -2,7 +2,6 @@ package org.koitharu.kotatsu.reader.ui
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.content.res.ColorStateList
 import android.database.ContentObserver
 import android.provider.Settings
 import android.util.AttributeSet
@@ -21,7 +20,6 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderControl
-import org.koitharu.kotatsu.core.util.ext.getThemeColor
 import org.koitharu.kotatsu.core.util.ext.hasVisibleChildren
 import org.koitharu.kotatsu.core.util.ext.isRtl
 import org.koitharu.kotatsu.core.util.ext.setContentDescriptionAndTooltip
@@ -59,8 +57,6 @@ class ReaderActionsView @JvmOverloads constructor(
 	}
 	private var isSliderChanged = false
 	private var isSliderTracking = false
-	private val defaultTranslateIconTint: ColorStateList? = binding.buttonTranslate.iconTint
-	private val defaultTranslateBgTint: ColorStateList? = binding.buttonTranslate.backgroundTintList
 
 	var isSliderEnabled: Boolean
 		get() = binding.slider.isEnabled
@@ -89,14 +85,6 @@ class ReaderActionsView @JvmOverloads constructor(
 			}
 		}
 
-	var isTranslationActive: Boolean = false
-		set(value) {
-			if (field != value) {
-				field = value
-				updateTranslateButton()
-			}
-		}
-
 	var isCommentsAvailable: Boolean = false
 		set(value) {
 			if (field != value) {
@@ -115,7 +103,6 @@ class ReaderActionsView @JvmOverloads constructor(
 		binding.buttonPrev.initAction()
 		binding.buttonSave.initAction()
 		binding.buttonOptions.initAction()
-		binding.buttonTranslate.initAction()
 		binding.buttonScreenRotation.initAction()
 		binding.buttonPagesThumbs.initAction()
 		binding.buttonComments.initAction()
@@ -127,7 +114,6 @@ class ReaderActionsView @JvmOverloads constructor(
 		updateControlsVisibility()
 		updatePagesSheetButton()
 		updateRotationButton()
-		updateTranslateButton()
 	}
 
 	override fun onAttachedToWindow() {
@@ -157,7 +143,6 @@ class ReaderActionsView @JvmOverloads constructor(
 			R.id.button_comments -> listener?.onCommentsClick()
 			R.id.button_screen_rotation -> listener?.toggleScreenOrientation()
 			R.id.button_options -> listener?.openMenu()
-			R.id.button_translate -> listener?.onTranslateClick()
 			R.id.button_bookmark -> listener?.onBookmarkClick()
 		}
 	}
@@ -174,7 +159,6 @@ class ReaderActionsView @JvmOverloads constructor(
 		R.id.button_bookmark -> AppRouter.from(this)
 			?.showChapterPagesSheet(ChaptersPagesSheet.TAB_BOOKMARKS) != null
 
-		R.id.button_translate -> listener?.onTranslateLongClick() == true
 		R.id.button_timer -> {
 			listener?.onScrollTimerClick(isLongClick = true)
 			true
@@ -263,23 +247,6 @@ class ReaderActionsView @JvmOverloads constructor(
 		)
 		button.setContentDescriptionAndTooltip(
 			if (isBookmarkAdded) R.string.bookmark_remove else R.string.bookmark_add,
-		)
-	}
-
-	private fun updateTranslateButton() {
-		val button = binding.buttonTranslate
-		button.isSelected = isTranslationActive
-		if (isTranslationActive) {
-			val activeBg = context.getThemeColor(materialR.attr.colorPrimaryContainer)
-			val activeFg = context.getThemeColor(materialR.attr.colorOnPrimaryContainer)
-			button.backgroundTintList = ColorStateList.valueOf(activeBg)
-			button.iconTint = ColorStateList.valueOf(activeFg)
-		} else {
-			button.backgroundTintList = defaultTranslateBgTint
-			button.iconTint = defaultTranslateIconTint
-		}
-		button.setContentDescriptionAndTooltip(
-			if (isTranslationActive) R.string.translation_disable else R.string.translation_enable,
 		)
 	}
 

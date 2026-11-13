@@ -185,6 +185,21 @@ interface LocalOcrEngine {
 		filterPromoAndCredits: Boolean = true,
 		onModelDownloadProgress: (suspend (percent: Int) -> Unit)? = null,
 	): List<OcrBubbleGroup>
+
+	suspend fun recognizePage(
+		bitmap: Bitmap,
+		sourceLang: OcrSourceLanguage,
+		skipPureSfx: Boolean = true,
+		filterPromoAndCredits: Boolean = true,
+		onModelDownloadProgress: (suspend (percent: Int) -> Unit)? = null,
+		sourceHintLocale: String? = null,
+	): List<OcrBubbleGroup> = recognizePage(
+		bitmap = bitmap,
+		sourceLang = sourceLang,
+		skipPureSfx = skipPureSfx,
+		filterPromoAndCredits = filterPromoAndCredits,
+		onModelDownloadProgress = onModelDownloadProgress,
+	)
 }
 
 interface ComicTextTranslator {

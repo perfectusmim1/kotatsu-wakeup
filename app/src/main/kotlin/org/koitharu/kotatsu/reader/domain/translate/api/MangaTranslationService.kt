@@ -1165,6 +1165,23 @@ class MangaTranslationService @Inject constructor(
 		private val LEADING_ELLIPSIS_CAPITALIZE_REGEX = Regex("^(\\.\\.\\.|…)\\s*([a-z])")
 		private val LONE_I_REGEX = Regex("\\bi\\b")
 		private val I_CONTRACTION_REGEX = Regex("\\bi(?=['’](?:m|ll|ve|d)\\b)")
+		private val BRACKET_TAG_REGEX = Regex("\\[([^\\[\\]\n]{1,48})\\]")
+		private val SHORT_GLUED_UPPER_MAP = mapOf(
+			"IDO" to "I do",
+			"IDONT" to "I don't",
+			"ICANT" to "I can't",
+			"IMNOT" to "I'm not",
+			"IWONT" to "I won't",
+			"IDIDNT" to "I didn't",
+			"IAM" to "I am",
+			"IWILL" to "I will",
+			"ITWAS" to "it was",
+			"ITIS" to "it is",
+			"HEIS" to "he is",
+			"SHEIS" to "she is",
+			"WEARE" to "we are",
+		)
+		private val SHORT_GLUED_UPPER_REGEX = Regex("\\b(${SHORT_GLUED_UPPER_MAP.keys.joinToString("|")})\\b")
 
 		private val TR_MY_DOT_REGEX = Regex("^([.…]*)my\\.\\s+(?=\\p{L})", RegexOption.IGNORE_CASE)
 		private val TR_HEY_LOOK_REGEX = Regex("\\bhey[.,]\\s*look\\s*([.,!…]*)$", RegexOption.IGNORE_CASE)
@@ -1412,7 +1429,10 @@ class MangaTranslationService @Inject constructor(
 			}
 			s = QUITE_THE_DISGUISE_REGEX.replace(s, "What a disguise")
 
-			// 6. Contraction repair ("DONT" -> "don't", "CANT" -> "can't", "IM" -> "I'm", "YOURE" -> "you're", "ITS" -> "it's")
+			// 6. Short glued ALL-CAPS pronoun/auxiliary tokens & contractions ("IDO" -> "I do", "DONT" -> "don't")
+			if (shouldSentenceCase) {
+				s = SHORT_GLUED_UPPER_REGEX.replace(s) { m -> SHORT_GLUED_UPPER_MAP[m.value] ?: m.value }
+			}
 			s = repairMissingApostropheContractions(s, forceAllCapsContext = shouldSentenceCase)
 
 			// 7. Split glued English tokens via DP vocabulary segmentation
@@ -1546,8 +1566,21 @@ class MangaTranslationService @Inject constructor(
 			}
 		}
 
+		private fun titleCaseWords(input: String): String =
+			input.trim().split(MULTILINE_SPACE_REGEX).joinToString(" ") { word ->
+				val lower = word.lowercase(Locale.US)
+				lower.replaceFirstChar { ch -> ch.uppercaseChar() }
+			}
+
 		private fun applySentenceCasePreservingPronounI(input: String): String {
-			var s = input.lowercase(Locale.US)
+			val bracketPlaceholders = ArrayList<String>()
+			val work = BRACKET_TAG_REGEX.replace(input) { m ->
+				val titled = titleCaseWords(m.groupValues[1])
+				val idx = bracketPlaceholders.size
+				bracketPlaceholders.add("[$titled]")
+				"__kotatsu_br_${idx}__"
+			}
+			var s = work.lowercase(Locale.US)
 			s = SENTENCE_START_CAPITALIZE_REGEX.replace(s) { m ->
 				"${m.groupValues[1]}${m.groupValues[2]}${m.groupValues[3].uppercase(Locale.US)}"
 			}
@@ -1556,6 +1589,9 @@ class MangaTranslationService @Inject constructor(
 			}
 			s = LONE_I_REGEX.replace(s, "I")
 			s = I_CONTRACTION_REGEX.replace(s, "I")
+			for (idx in bracketPlaceholders.indices) {
+				s = s.replace("__kotatsu_br_${idx}__", bracketPlaceholders[idx])
+			}
 			return s
 		}
 

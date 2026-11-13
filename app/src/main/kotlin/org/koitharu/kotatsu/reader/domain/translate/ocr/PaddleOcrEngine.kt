@@ -26,12 +26,15 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -71,6 +74,22 @@ class PaddleOcrEngine @Inject constructor(
 		skipPureSfx: Boolean,
 		filterPromoAndCredits: Boolean,
 		onModelDownloadProgress: (suspend (percent: Int) -> Unit)?,
+	): List<OcrBubbleGroup> = recognizePage(
+		bitmap = bitmap,
+		sourceLang = sourceLang,
+		skipPureSfx = skipPureSfx,
+		filterPromoAndCredits = filterPromoAndCredits,
+		onModelDownloadProgress = onModelDownloadProgress,
+		sourceHintLocale = null,
+	)
+
+	override suspend fun recognizePage(
+		bitmap: Bitmap,
+		sourceLang: OcrSourceLanguage,
+		skipPureSfx: Boolean,
+		filterPromoAndCredits: Boolean,
+		onModelDownloadProgress: (suspend (percent: Int) -> Unit)?,
+		sourceHintLocale: String?,
 	): List<OcrBubbleGroup> {
 		val width = bitmap.width
 		val height = bitmap.height
@@ -102,7 +121,7 @@ class PaddleOcrEngine @Inject constructor(
 				}
 				Log.d(
 					LOG_TAG,
-					"recognizePage($sourceLang): det regions=${detRegions.size} on ${width}x${height}",
+					"recognizePage($sourceLang, hint=$sourceHintLocale): det regions=${detRegions.size} on ${width}x${height}",
 				)
 				if (detRegions.isEmpty()) {
 					return@withLock emptyList()
@@ -115,6 +134,7 @@ class PaddleOcrEngine @Inject constructor(
 						height = height,
 						detRegions = detRegions,
 						onModelDownloadProgress = onModelDownloadProgress,
+						sourceHintLocale = sourceHintLocale,
 					)
 				} else {
 					sourceLang.modelGroup
@@ -178,16 +198,29 @@ class PaddleOcrEngine @Inject constructor(
 		height: Int,
 		detRegions: List<DetRegion>,
 		onModelDownloadProgress: (suspend (percent: Int) -> Unit)?,
+		sourceHintLocale: String? = null,
 	): String {
+		val hintGroup = resolveHintGroup(sourceHintLocale)
 		val probeRegions = selectAutoProbeRegions(detRegions)
 		if (probeRegions.isEmpty()) {
-			return lastAutoGroup.get() ?: OcrModelManager.DEFAULT_AUTO_GROUP
+			return hintGroup ?: lastAutoGroup.get() ?: OcrModelManager.DEFAULT_AUTO_GROUP
+		}
+
+		if (hintGroup != null) {
+			try {
+				modelManager.ensureGroupModels(hintGroup, onModelDownloadProgress)
+			} catch (e: kotlinx.coroutines.CancellationException) {
+				throw e
+			} catch (t: Throwable) {
+				Log.w(LOG_TAG, "AUTO hint group '$hintGroup' download failed: ${t.message}")
+			}
 		}
 
 		val readyGroups = withContext(Dispatchers.IO) {
-			modelManager.readyGroupsInPriority(preferredFirst = lastAutoGroup.get())
+			modelManager.readyGroupsInPriority(preferredFirst = hintGroup ?: lastAutoGroup.get())
 		}
 		var bestResult: AutoProbeResult? = null
+		var hintResult: AutoProbeResult? = null
 		val probedGroups = HashSet<String>()
 
 		for (group in readyGroups) {
@@ -201,12 +234,28 @@ class PaddleOcrEngine @Inject constructor(
 					"purity=${"%.2f".format(result.scriptPurity)}, scriptLetters=${result.totalScriptLetters}, " +
 					"score=${"%.1f".format(result.combinedScore)}, sample='${result.sampleText}'",
 			)
+			if (group == hintGroup) {
+				hintResult = result
+			}
 			if (bestResult == null || result.combinedScore > bestResult.combinedScore) {
 				bestResult = result
 			}
 			if (isStrongAutoMatch(result, probeRegions.size)) {
 				lastAutoGroup.set(group)
 				Log.i(LOG_TAG, "AUTO fast-accepted '$group' (no extra downloads)")
+				return group
+			}
+			// Source-locale hint match: don't trigger cross-script probes on SFX-heavy pages when hint is clearly legible
+			if (
+				group == hintGroup &&
+				result.usableLines >= 1 &&
+				result.avgConfidence >= 56f &&
+				result.validCharRatio >= 0.72f &&
+				result.scriptPurity >= 0.70f &&
+				result.totalScriptLetters >= 4
+			) {
+				lastAutoGroup.set(group)
+				Log.i(LOG_TAG, "AUTO accepted source-hint '$group' (score=${"%.1f".format(result.combinedScore)})")
 				return group
 			}
 		}
@@ -217,6 +266,10 @@ class PaddleOcrEngine @Inject constructor(
 			Log.i(LOG_TAG, "AUTO selected already-ready '${currentBest.group}' (score=${"%.1f".format(currentBest.combinedScore)})")
 			return currentBest.group
 		}
+
+		// If source hint is Latin/English and we haven't found strong evidence of another script yet,
+		// avoid letting 1-2 stylized SFX detections hijack the whole page into korean/cjk unless strong match occurs.
+		val isLatinHint = hintGroup == "en" || hintGroup == "latin"
 
 		for (candidateGroup in OcrModelManager.AUTO_DOWNLOAD_FALLBACK_GROUPS) {
 			if (candidateGroup in probedGroups) continue
@@ -246,12 +299,27 @@ class PaddleOcrEngine @Inject constructor(
 			if (bestResult == null || result.combinedScore > bestResult.combinedScore) {
 				bestResult = result
 			}
-			if (isStrongAutoMatch(result, probeRegions.size) || isAcceptableAutoMatch(result)) {
+			if (isStrongAutoMatch(result, probeRegions.size) || (!isLatinHint && isAcceptableAutoMatch(result))) {
 				break
 			}
 		}
 
-		val winner = bestResult?.group ?: OcrModelManager.DEFAULT_AUTO_GROUP
+		val winner = when {
+			isLatinHint && bestResult != null && bestResult.group != hintGroup -> {
+				val strongCrossScript = bestResult.usableLines >= 2 &&
+					bestResult.avgConfidence >= 72f &&
+					bestResult.scriptPurity >= 0.85f &&
+					bestResult.totalScriptLetters >= 8
+				if (strongCrossScript || (hintResult?.usableLines ?: 0) == 0 && isAcceptableAutoMatch(bestResult)) {
+					bestResult.group
+				} else {
+					hintGroup ?: bestResult.group
+				}
+			}
+
+			bestResult != null -> bestResult.group
+			else -> hintGroup ?: OcrModelManager.DEFAULT_AUTO_GROUP
+		}
 		lastAutoGroup.set(winner)
 		Log.i(
 			LOG_TAG,
@@ -283,29 +351,8 @@ class PaddleOcrEngine @Inject constructor(
 		}
 	}
 
-	private fun selectAutoProbeRegions(detRegions: List<DetRegion>): List<DetRegion> {
-		val candidates = detRegions.filter { r ->
-			val w = r.width
-			val h = r.height
-			w >= 12f && h >= 10f && h <= w * 20f
-		}.ifEmpty { detRegions }
-		val ranked = candidates.sortedByDescending { r ->
-			val minDim = min(r.width, r.height)
-			minDim * sqrt((r.width * r.height).coerceAtLeast(1f))
-		}
-		val horizontal = ranked.filter { it.height < it.width * 1.55f }
-		val vertical = ranked.filter { it.height >= it.width * 1.55f }
-		val selected = ArrayList<DetRegion>(AUTO_PROBE_MAX_BOXES)
-		for (r in horizontal.take(4)) selected.add(r)
-		for (r in vertical.take(2)) {
-			if (selected.size < AUTO_PROBE_MAX_BOXES && r !in selected) selected.add(r)
-		}
-		for (r in ranked) {
-			if (selected.size >= AUTO_PROBE_MAX_BOXES) break
-			if (r !in selected) selected.add(r)
-		}
-		return selected
-	}
+	private fun selectAutoProbeRegions(detRegions: List<DetRegion>): List<DetRegion> =
+		selectAutoProbeRegionsStatic(detRegions)
 
 	private fun scoreProbeLines(modelGroup: String, lines: List<RawOcrLine>): AutoProbeResult {
 		var confSum = 0f
@@ -476,14 +523,20 @@ class PaddleOcrEngine @Inject constructor(
 		setCPUArenaAllocator(true)
 	}
 
-	private data class DetRegion(
+	internal data class DetRegion(
 		val x0: Float,
 		val y0: Float,
 		val x1: Float,
 		val y1: Float,
+		val cx: Float = (x0 + x1) * 0.5f,
+		val cy: Float = (y0 + y1) * 0.5f,
+		val obbW: Float = 0f,
+		val obbH: Float = 0f,
+		val angleDeg: Float = 0f,
 	) {
 		val width: Float get() = x1 - x0
 		val height: Float get() = y1 - y0
+		val area: Float get() = max(0f, width) * max(0f, height)
 	}
 
 	private suspend fun detectAllRegions(
@@ -586,8 +639,8 @@ class PaddleOcrEngine @Inject constructor(
 			val fy = srcH.toFloat() / mapH
 
 			for (b in detBoxes) {
-				if (!isFirst && b.y0 <= 2f) continue
-				if (!isLast && b.y1 >= mapH - 2f) continue
+				if (!isFirst && b.y0 <= 6f && b.y1 < mapH * 0.55f) continue
+				if (!isLast && b.y1 >= mapH - 6f && b.y0 > mapH * 0.45f) continue
 
 				val pageX0 = (b.x0 * fx).coerceIn(0f, width.toFloat())
 				val pageY0 = (b.y0 * fy + sy).coerceIn(0f, height.toFloat())
@@ -596,9 +649,45 @@ class PaddleOcrEngine @Inject constructor(
 				val cw = pageX1 - pageX0
 				val ch = pageY1 - pageY0
 				if (cw < 10f || ch < 8f || ch > cw * 20f) continue
-				val cand = DetRegion(pageX0, pageY0, pageX1, pageY1)
-				if (detected.any { existing -> iouRect(existing, cand) > 0.55f }) continue
-				detected.add(cand)
+
+				val hasTiltedObb = abs(b.angleDeg) >= 6f && b.obbW > 1f && b.obbH > 1f
+				val cand = if (hasTiltedObb) {
+					val rad = Math.toRadians(b.angleDeg.toDouble())
+					val ux = cos(rad).toFloat() * fx
+					val uy = sin(rad).toFloat() * fy
+					val uScale = sqrt(ux * ux + uy * uy).coerceAtLeast(1e-4f)
+					val vx = -sin(rad).toFloat() * fx
+					val vy = cos(rad).toFloat() * fy
+					val vScale = sqrt(vx * vx + vy * vy).coerceAtLeast(1e-4f)
+					DetRegion(
+						x0 = pageX0,
+						y0 = pageY0,
+						x1 = pageX1,
+						y1 = pageY1,
+						cx = (b.cx * fx).coerceIn(0f, width.toFloat()),
+						cy = (b.cy * fy + sy).coerceIn(0f, height.toFloat()),
+						obbW = b.obbW * uScale,
+						obbH = b.obbH * vScale,
+						angleDeg = Math.toDegrees(atan2((uy / uScale).toDouble(), (ux / uScale).toDouble())).toFloat(),
+					)
+				} else {
+					DetRegion(pageX0, pageY0, pageX1, pageY1)
+				}
+
+				var replacedOrDuplicate = false
+				for (idx in detected.indices) {
+					val existing = detected[idx]
+					if (iouRect(existing, cand) > 0.50f || ioMinRect(existing, cand) > 0.65f) {
+						if (cand.area > existing.area * 1.15f) {
+							detected[idx] = cand
+						}
+						replacedOrDuplicate = true
+						break
+					}
+				}
+				if (!replacedOrDuplicate) {
+					detected.add(cand)
+				}
 			}
 
 			if (isLast) break
@@ -632,16 +721,24 @@ class PaddleOcrEngine @Inject constructor(
 			val cw = region.width
 			val ch = region.height
 			if (cw < 10f || ch < 8f) continue
-			if (!allowVerticalRotation && ch > cw * 6f) {
+			val useTiltedUnwarp = abs(region.angleDeg) >= 6f && region.obbW >= 12f && region.obbH >= 8f
+			val effW = if (useTiltedUnwarp) region.obbW else cw
+			val effH = if (useTiltedUnwarp) region.obbH else ch
+			if (!useTiltedUnwarp && !allowVerticalRotation && ch > cw * 6f) {
 				aspectSkipped++
 				continue
 			}
 
-			val rotateVertical = allowVerticalRotation && ch >= cw * 1.6f
+			val rotateVertical = !useTiltedUnwarp && allowVerticalRotation && ch >= cw * 1.6f
+			val padAlongW = if (rotateVertical) (cw * 0.08f).coerceIn(1.5f, 4f) else (effH * 0.14f).coerceIn(2f, 5f)
+			val padAlongH = if (rotateVertical) (ch * 0.05f).coerceIn(2f, 5f) else (effH * 0.08f).coerceIn(1.5f, 4f)
+			val sampleW = effW + padAlongW * 2f
+			val sampleH = effH + padAlongH * 2f
+
 			val rawTw = if (rotateVertical) {
-				((REC_H * ch) / cw).roundToInt()
+				((REC_H * sampleH) / sampleW).roundToInt()
 			} else {
-				((REC_H * cw) / ch).roundToInt()
+				((REC_H * sampleW) / sampleH).roundToInt()
 			}
 			val tw = rawTw.coerceIn(16, REC_MAX_W)
 			val outW = ((tw + 7) / 8) * 8
@@ -653,10 +750,15 @@ class PaddleOcrEngine @Inject constructor(
 			recFloatArray.fill(0f, 0, recTotal)
 			val recBuf = checkNotNull(recDirectBuf)
 
-			val cropX0 = floor(region.x0).toInt().coerceIn(0, width - 1)
-			val cropY0 = floor(region.y0).toInt().coerceIn(0, height - 1)
-			val cropX1 = ceil(region.x1).toInt().coerceIn(cropX0 + 1, width)
-			val cropY1 = ceil(region.y1).toInt().coerceIn(cropY0 + 1, height)
+			val sampleX0 = (region.x0 - padAlongW).coerceIn(0f, (width - 1).toFloat())
+			val sampleY0 = (region.y0 - padAlongH).coerceIn(0f, (height - 1).toFloat())
+			val sampleX1 = (region.x1 + padAlongW).coerceIn(sampleX0 + 1f, width.toFloat())
+			val sampleY1 = (region.y1 + padAlongH).coerceIn(sampleY0 + 1f, height.toFloat())
+
+			val cropX0 = floor(sampleX0).toInt().coerceIn(0, width - 1)
+			val cropY0 = floor(sampleY0).toInt().coerceIn(0, height - 1)
+			val cropX1 = ceil(sampleX1).toInt().coerceIn(cropX0 + 1, width)
+			val cropY1 = ceil(sampleY1).toInt().coerceIn(cropY0 + 1, height)
 			val cropW = cropX1 - cropX0
 			val cropH = cropY1 - cropY0
 			val neededPixels = cropW * cropH
@@ -665,15 +767,32 @@ class PaddleOcrEngine @Inject constructor(
 			}
 			bitmap.getPixels(cropPixels, 0, cropW, cropX0, cropY0, cropW, cropH)
 
-			if (rotateVertical) {
+			if (useTiltedUnwarp) {
+				sampleRotatedAngleToBgrTensor(
+					pixels = cropPixels,
+					imgW = cropW,
+					imgH = cropH,
+					cx = region.cx - cropX0,
+					cy = region.cy - cropY0,
+					boxW = sampleW,
+					boxH = sampleH,
+					angleDeg = region.angleDeg,
+					tw = tw,
+					th = REC_H,
+					outW = outW,
+					mean = REC_MEAN,
+					std = REC_STD,
+					out = recFloatArray,
+				)
+			} else if (rotateVertical) {
 				sampleRotated90CcwToBgrTensor(
 					pixels = cropPixels,
 					imgW = cropW,
 					imgH = cropH,
-					sx0 = region.x0 - cropX0,
-					sy0 = region.y0 - cropY0,
-					sw = cw,
-					sh = ch,
+					sx0 = sampleX0 - cropX0,
+					sy0 = sampleY0 - cropY0,
+					sw = sampleX1 - sampleX0,
+					sh = sampleY1 - sampleY0,
 					tw = tw,
 					th = REC_H,
 					outW = outW,
@@ -686,10 +805,10 @@ class PaddleOcrEngine @Inject constructor(
 					pixels = cropPixels,
 					imgW = cropW,
 					imgH = cropH,
-					sx0 = region.x0 - cropX0,
-					sy0 = region.y0 - cropY0,
-					sw = cw,
-					sh = ch,
+					sx0 = sampleX0 - cropX0,
+					sy0 = sampleY0 - cropY0,
+					sw = sampleX1 - sampleX0,
+					sh = sampleY1 - sampleY0,
 					tw = tw,
 					th = REC_H,
 					outW = outW,
@@ -754,11 +873,11 @@ class PaddleOcrEngine @Inject constructor(
 			)
 		}
 
-		// Dilim örtüşmelerinden gelen çift kutuları IoU ile tekilleştir
-		val sorted = collectedLines.sortedByDescending { it.confidence }
+		// Dilim örtüşmelerinden gelen çift kutuları IoU ve içerme (IoMin) ile tekilleştir
+		val sorted = collectedLines.sortedByDescending { it.confidence * sqrt(it.text.length.coerceAtLeast(1).toFloat()) }
 		val kept = ArrayList<RawOcrLine>(sorted.size)
 		for (line in sorted) {
-			if (kept.any { existing -> iou(existing, line) > 0.45f }) continue
+			if (kept.any { existing -> iou(existing, line) > 0.45f || ioMin(existing, line) > 0.68f }) continue
 			kept.add(line)
 		}
 		return kept
@@ -772,6 +891,69 @@ class PaddleOcrEngine @Inject constructor(
 		val areaA = a.width * a.height
 		val areaB = b.width * b.height
 		return inter / max(1f, areaA + areaB - inter)
+	}
+
+	private fun ioMinRect(a: DetRegion, b: DetRegion): Float {
+		val ix = min(a.x1, b.x1) - max(a.x0, b.x0)
+		val iy = min(a.y1, b.y1) - max(a.y0, b.y0)
+		if (ix <= 0f || iy <= 0f) return 0f
+		val inter = ix * iy
+		return inter / max(1f, min(a.area, b.area))
+	}
+
+	private fun sampleRotatedAngleToBgrTensor(
+		pixels: IntArray,
+		imgW: Int,
+		imgH: Int,
+		cx: Float,
+		cy: Float,
+		boxW: Float,
+		boxH: Float,
+		angleDeg: Float,
+		tw: Int,
+		th: Int,
+		outW: Int,
+		mean: FloatArray,
+		std: FloatArray,
+		out: FloatArray,
+	) {
+		val plane = outW * th
+		val rad = Math.toRadians(angleDeg.toDouble())
+		val ux = cos(rad).toFloat()
+		val uy = sin(rad).toFloat()
+		val vx = -uy
+		val vy = ux
+		val maxImgX = (imgW - 1).toFloat()
+		val maxImgY = (imgH - 1).toFloat()
+
+		for (y in 0 until th) {
+			val v = ((y + 0.5f) / th - 0.5f) * boxH
+			val outRow = y * outW
+			for (x in 0 until tw) {
+				val u = ((x + 0.5f) / tw - 0.5f) * boxW
+				val fx = (cx + u * ux + v * vx).coerceIn(0f, maxImgX)
+				val fy = (cy + u * uy + v * vy).coerceIn(0f, maxImgY)
+				val x0 = floor(fx).toInt()
+				val x1 = min(imgW - 1, x0 + 1)
+				val y0 = floor(fy).toInt()
+				val y1 = min(imgH - 1, y0 + 1)
+				val wy = fy - y0
+				writeBilinearBgrPixel(
+					p00 = pixels[y0 * imgW + x0],
+					p01 = pixels[y0 * imgW + x1],
+					p10 = pixels[y1 * imgW + x0],
+					p11 = pixels[y1 * imgW + x1],
+					wx = fx - x0,
+					invWy = 1f - wy,
+					wy = wy,
+					outOffset = outRow + x,
+					plane = plane,
+					mean = mean,
+					std = std,
+					out = out,
+				)
+			}
+		}
 	}
 
 	private fun allocateDirectFloatBuffer(floatCount: Int): FloatBuffer =
@@ -923,6 +1105,11 @@ class PaddleOcrEngine @Inject constructor(
 		val y0: Float,
 		val x1: Float,
 		val y1: Float,
+		val cx: Float = (x0 + x1) * 0.5f,
+		val cy: Float = (y0 + y1) * 0.5f,
+		val obbW: Float = 0f,
+		val obbH: Float = 0f,
+		val angleDeg: Float = 0f,
 	)
 
 	private fun ctcDecode(
@@ -985,9 +1172,19 @@ class PaddleOcrEngine @Inject constructor(
 		return inter / max(1f, areaA + areaB - inter)
 	}
 
+	private fun ioMin(a: RawOcrLine, b: RawOcrLine): Float {
+		val ix = min(a.x1, b.x1) - max(a.x0, b.x0)
+		val iy = min(a.y1, b.y1) - max(a.y0, b.y0)
+		if (ix <= 0f || iy <= 0f) return 0f
+		val inter = ix * iy
+		val areaA = (a.x1 - a.x0) * (a.y1 - a.y0)
+		val areaB = (b.x1 - b.x0) * (b.y1 - b.y0)
+		return inter / max(1f, min(areaA, areaB))
+	}
+
 	internal companion object {
 		const val LOG_TAG = OcrModelManager.LOG_TAG
-		private const val AUTO_PROBE_MAX_BOXES = 6
+		private const val AUTO_PROBE_MAX_BOXES = 12
 		private const val DET_MAX_WIDTH = 960
 		private const val DET_SLICE_H = 1536
 		private const val DET_SLICE_OVERLAP = 192
@@ -1019,10 +1216,70 @@ class PaddleOcrEngine @Inject constructor(
 			return standardMatch || highPurityTextRichMatch
 		}
 
-		private val DET_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
-		private val DET_STD = floatArrayOf(0.229f, 0.224f, 0.225f)
+		internal val DET_MEAN = floatArrayOf(0.406f, 0.456f, 0.485f)
+		internal val DET_STD = floatArrayOf(0.225f, 0.224f, 0.229f)
 		private val REC_MEAN = floatArrayOf(0.5f, 0.5f, 0.5f)
 		private val REC_STD = floatArrayOf(0.5f, 0.5f, 0.5f)
+
+		internal fun resolveHintGroup(sourceHintLocale: String?): String? {
+			val lang = sourceHintLocale?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
+			return when (lang) {
+				"en" -> "en"
+				"ko" -> "korean"
+				"ja", "zh" -> "cjk"
+				"ru", "uk", "be", "bg", "sr" -> "eslav"
+				"ar", "fa", "ur" -> "arabic"
+				"tr", "es", "pt", "fr", "de", "it", "id", "vi", "pl" -> "latin"
+				else -> null
+			}
+		}
+
+		internal fun selectAutoProbeRegionsStatic(detRegions: List<DetRegion>): List<DetRegion> {
+			val candidates = detRegions.filter { r ->
+				val w = r.width
+				val h = r.height
+				w >= 12f && h >= 10f && h <= w * 20f
+			}.ifEmpty { detRegions }
+			if (candidates.size <= AUTO_PROBE_MAX_BOXES) return candidates
+
+			val horizHeights = candidates
+				.filter { it.width >= it.height * 1.15f && it.width >= 24f && it.height >= 10f }
+				.map { it.height }
+				.sorted()
+			val medianHorizH = if (horizHeights.isNotEmpty()) {
+				horizHeights[horizHeights.size / 2]
+			} else {
+				40f
+			}
+			val giantHorizCeiling = max(90f, medianHorizH * 2.5f)
+
+			val scored = candidates.sortedByDescending { r ->
+				val w = r.width
+				val h = r.height
+				if (h < w * 1.55f) {
+					val aspectBonus = min(w / max(1f, h), 14f)
+					val sfxPenalty = if (h > giantHorizCeiling) 0.12f else 1f
+					w * aspectBonus * sfxPenalty
+				} else {
+					val minDim = min(w, h)
+					minDim * sqrt((w * h).coerceAtLeast(1f)) * 0.25f
+				}
+			}
+
+			val horizontal = scored.filter { it.height < it.width * 1.55f }
+			val vertical = scored.filter { it.height >= it.width * 1.55f }
+			val selected = ArrayList<DetRegion>(AUTO_PROBE_MAX_BOXES)
+			val maxHoriz = if (vertical.isEmpty()) AUTO_PROBE_MAX_BOXES else AUTO_PROBE_MAX_BOXES - 2
+			for (r in horizontal.take(maxHoriz)) selected.add(r)
+			for (r in vertical.take(2)) {
+				if (selected.size < AUTO_PROBE_MAX_BOXES && r !in selected) selected.add(r)
+			}
+			for (r in scored) {
+				if (selected.size >= AUTO_PROBE_MAX_BOXES) break
+				if (r !in selected) selected.add(r)
+			}
+			return selected
+		}
 
 		private val WHITESPACE_REGEX = Regex("""\s+""")
 		private val ENDS_WITH_ASCII_ALPHA_REGEX = Regex("""[a-zA-Z]$""")
@@ -1052,6 +1309,11 @@ class PaddleOcrEngine @Inject constructor(
 				var maxY = minY
 				var sum = 0f
 				var count = 0
+				var sumX = 0f
+				var sumY = 0f
+				var sumXX = 0f
+				var sumYY = 0f
+				var sumXY = 0f
 
 				while (head < tail) {
 					val p = queue[head++]
@@ -1059,6 +1321,13 @@ class PaddleOcrEngine @Inject constructor(
 					val px = p - py * w
 					sum += prob[p]
 					count += 1
+					val fxP = px.toFloat()
+					val fyP = py.toFloat()
+					sumX += fxP
+					sumY += fyP
+					sumXX += fxP * fxP
+					sumYY += fyP * fyP
+					sumXY += fxP * fyP
 					if (px < minX) minX = px
 					if (px > maxX) maxX = px
 					if (py < minY) minY = py
@@ -1089,12 +1358,74 @@ class PaddleOcrEngine @Inject constructor(
 				val d = (bw * bh * DET_UNCLIP_RATIO) / (2f * (bw + bh))
 				val dx = max(d * 1.42f, bh * 0.54f)
 				val dy = max(d * 1.05f, bh * 0.22f)
+				val x0 = (minX - dx).coerceIn(0f, w.toFloat())
+				val y0 = (minY - dy).coerceIn(0f, h.toFloat())
+				val x1 = (maxX + 1f + dx).coerceIn(0f, w.toFloat())
+				val y1 = (maxY + 1f + dy).coerceIn(0f, h.toFloat())
+
+				var obbCx = (x0 + x1) * 0.5f
+				var obbCy = (y0 + y1) * 0.5f
+				var obbW = 0f
+				var obbH = 0f
+				var angleDeg = 0f
+
+				val fillRatio = count.toFloat() / max(1, bw * bh)
+				if (count >= 24 && fillRatio < 0.65f && bw >= 10 && bh >= 8) {
+					val mx = sumX / count
+					val my = sumY / count
+					val cxx = sumXX / count - mx * mx
+					val cyy = sumYY / count - my * my
+					val cxy = sumXY / count - mx * my
+					val theta = 0.5f * atan2(2f * cxy, cxx - cyy)
+					val deg = Math.toDegrees(theta.toDouble()).toFloat()
+					if (abs(deg) in 6f..68f) {
+						val ux = cos(theta.toDouble()).toFloat()
+						val uy = sin(theta.toDouble()).toFloat()
+						val vx = -uy
+						val vy = ux
+						var minU = Float.POSITIVE_INFINITY
+						var maxU = Float.NEGATIVE_INFINITY
+						var minV = Float.POSITIVE_INFINITY
+						var maxV = Float.NEGATIVE_INFINITY
+						for (qIdx in 0 until tail) {
+							val pt = queue[qIdx]
+							val py = (pt / w).toFloat()
+							val px = (pt - (pt / w) * w).toFloat()
+							val u = (px - mx) * ux + (py - my) * uy
+							val v = (px - mx) * vx + (py - my) * vy
+							if (u < minU) minU = u
+							if (u > maxU) maxU = u
+							if (v < minV) minV = v
+							if (v > maxV) maxV = v
+						}
+						val uSpan = (maxU - minU + 1f).coerceAtLeast(1f)
+						val vSpan = (maxV - minV + 1f).coerceAtLeast(1f)
+						if (uSpan / vSpan >= 2.0f && (uSpan * vSpan) < (bw * bh) * 0.80f) {
+							val midU = (minU + maxU + 1f) * 0.5f
+							val midV = (minV + maxV + 1f) * 0.5f
+							val obbD = (uSpan * vSpan * DET_UNCLIP_RATIO) / (2f * (uSpan + vSpan))
+							val du = max(obbD * 1.42f, vSpan * 0.54f)
+							val dv = max(obbD * 1.05f, vSpan * 0.22f)
+							obbCx = mx + midU * ux + midV * vx
+							obbCy = my + midU * uy + midV * vy
+							obbW = uSpan + 2f * du
+							obbH = vSpan + 2f * dv
+							angleDeg = deg
+						}
+					}
+				}
+
 				boxes.add(
 					DetBox(
-						x0 = (minX - dx).coerceIn(0f, w.toFloat()),
-						y0 = (minY - dy).coerceIn(0f, h.toFloat()),
-						x1 = (maxX + 1f + dx).coerceIn(0f, w.toFloat()),
-						y1 = (maxY + 1f + dy).coerceIn(0f, h.toFloat()),
+						x0 = x0,
+						y0 = y0,
+						x1 = x1,
+						y1 = y1,
+						cx = obbCx,
+						cy = obbCy,
+						obbW = obbW,
+						obbH = obbH,
+						angleDeg = angleDeg,
 					),
 				)
 			}
@@ -1316,14 +1647,17 @@ class PaddleOcrEngine @Inject constructor(
 			for (y in gapY0..gapY1) {
 				var darkCount = 0
 				var brightCount = 0
+				var contrastWallCount = 0
 				val rowOff = y * width
 				for (x in ovX0..ovX1) {
 					val lum = argbLum(pixels[rowOff + x])
 					if (lum <= 145f) darkCount += 1
 					if (lum >= 180f) brightCount += 1
+					if (abs(lum - bgT) >= 42f && abs(lum - bgB) >= 42f) contrastWallCount += 1
 				}
 				if (bothLight && darkCount.toFloat() / spanX >= 0.45f) return true
 				if (bothDark && brightCount.toFloat() / spanX >= 0.45f) return true
+				if (!fakeOutlineCollar && contrastWallCount.toFloat() / spanX >= 0.55f) return true
 			}
 			return false
 		}
@@ -1485,8 +1819,9 @@ class PaddleOcrEngine @Inject constructor(
 
 					val vOverlap = min(a.y1, b.y1) - max(a.y0, b.y0)
 					val hGap = max(a.x0, b.x0) - min(a.x1, b.x1)
-					val vertA = ha > wa * 1.4f
-					val vertB = hb > wb * 1.4f
+					val vertA = ha > wa * 1.4f && (TextBlockFilters.hasCjkOrHangulOrArabic(textA) || textA.length >= 2)
+					val textB = b.text.trim()
+					val vertB = hb > wb * 1.4f && (TextBlockFilters.hasCjkOrHangulOrArabic(textB) || textB.length >= 2)
 					if (vertA && vertB) {
 						val minW = min(wa, wb)
 						val maxW = max(wa, wb)
@@ -1513,7 +1848,7 @@ class PaddleOcrEngine @Inject constructor(
 						continue
 					}
 
-					if (b.y0 - a.y1 > maxH * 1.55f) {
+					if (b.y0 - a.y1 > maxH * 2.15f) {
 						if (b.y0 - a.y1 > maxH * 4f) break
 						continue
 					}
@@ -1533,7 +1868,7 @@ class PaddleOcrEngine @Inject constructor(
 
 					val vGap = max(a.y0, b.y0) - min(a.y1, b.y1)
 					val centerYDist = abs(centerYb - centerYa)
-					if (vGap > maxH * 1.5f || vGap < -minH * 0.62f || centerYDist < minH * 0.45f) continue
+					if (vGap > maxH * 2.15f || vGap < -minH * 0.62f || centerYDist < minH * 0.45f) continue
 
 					var hasIntermediateRow = false
 					for (m in i + 1 until j) {
@@ -1562,6 +1897,18 @@ class PaddleOcrEngine @Inject constructor(
 					val narrow = min(wa, wb)
 					val centerDist = abs(centerXa - centerXb)
 					val heightRatio = maxH / max(1f, minH)
+
+					val uniformCollarForWideNarration = collarLums == null || abs(collarLums[i] - collarLums[j]) < 28f
+					if (heightRatio <= 1.35f && vGap > maxH * 1.5f) {
+						if (
+							uniformCollarForWideNarration &&
+							overlap > narrow * 0.60f &&
+							centerDist < max(maxH * 1.8f, max(wa, wb) * 0.30f)
+						) {
+							parent[find(j)] = find(i)
+						}
+						continue
+					}
 
 					if (heightRatio <= 1.65f) {
 						val aligned =
@@ -1594,19 +1941,33 @@ class PaddleOcrEngine @Inject constructor(
 			for (group in groups.values) {
 				val isVerticalCjkGroup = group.all { it.height > it.width * 1.4f } &&
 					group.any { TextBlockFilters.hasCjkOrHangulOrArabic(it.text) }
-				group.sortWith { a, b ->
-					if (isVerticalCjkGroup) {
-						b.x0.compareTo(a.x0)
-					} else {
-						val ha = a.height
-						val hb = b.height
-						val vOv = min(a.y1, b.y1) - max(a.y0, b.y0)
-						if (vOv >= min(ha, hb) * 0.5f) {
-							a.x0.compareTo(b.x0)
+				if (isVerticalCjkGroup) {
+					group.sortWith(compareByDescending<RawOcrLine> { it.x0 }.thenBy { it.y0 })
+				} else if (group.size > 1) {
+					val byY = group.sortedWith(compareBy<RawOcrLine> { it.y0 }.thenBy { it.x0 })
+					val orderedRows = ArrayList<MutableList<RawOcrLine>>()
+					var bandCenterY = byY[0].centerY
+					var bandHeight = byY[0].height
+					var curRow = ArrayList<RawOcrLine>().apply { add(byY[0]) }
+					for (idx in 1 until byY.size) {
+						val item = byY[idx]
+						val minH = min(item.height, bandHeight)
+						if (abs(item.centerY - bandCenterY) <= minH * 0.55f) {
+							curRow.add(item)
+							bandCenterY = (bandCenterY * (curRow.size - 1) + item.centerY) / curRow.size
+							bandHeight = (bandHeight * (curRow.size - 1) + item.height) / curRow.size
 						} else {
-							val yCmp = a.y0.compareTo(b.y0)
-							if (yCmp != 0) yCmp else a.x0.compareTo(b.x0)
+							orderedRows.add(curRow)
+							curRow = ArrayList<RawOcrLine>().apply { add(item) }
+							bandCenterY = item.centerY
+							bandHeight = item.height
 						}
+					}
+					orderedRows.add(curRow)
+					group.clear()
+					for (row in orderedRows) {
+						row.sortBy { it.x0 }
+						group.addAll(row)
 					}
 				}
 
@@ -1627,7 +1988,7 @@ class PaddleOcrEngine @Inject constructor(
 							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, prev, item))
 						) {
 							val joiner = if (
-								hGap < minH * 0.28f &&
+								hGap <= max(1.5f, minH * 0.12f) &&
 								ENDS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(prev.text) &&
 								STARTS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(item.text)
 							) {

@@ -46,12 +46,12 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 		val userAgent = intent?.getStringExtra(AppRouter.KEY_USER_AGENT)?.nullIfEmpty()
 			?: repository?.getRequestHeaders()?.get(CommonHeaders.USER_AGENT)
 		viewBinding.webView.configureForParser(userAgent)
-		alignUserAgentWithEngineIfNeeded()
+		alignUserAgentWithEngineIfNeeded(repository)
 
 		onCreate2(savedInstanceState, mangaSource, repository)
 	}
 
-	private fun alignUserAgentWithEngineIfNeeded() {
+	private fun alignUserAgentWithEngineIfNeeded(repository: ParserMangaRepository?) {
 		val engineUserAgent = runCatching { WebSettings.getDefaultUserAgent(this) }.getOrNull()
 		val currentUserAgent = viewBinding.webView.settings.userAgentString
 		val aligned = org.koitharu.kotatsu.core.network.webview.alignUserAgentWithEngine(
@@ -60,6 +60,10 @@ abstract class BaseBrowserActivity : BaseActivity<ActivityBrowserBinding>(), Bro
 		)
 		if (aligned != null && aligned != currentUserAgent) {
 			viewBinding.webView.settings.userAgentString = aligned
+			repository ?: return
+			runCatching {
+				repository.getConfig().cloudFlareUserAgent = aligned
+			}
 		}
 	}
 

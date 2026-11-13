@@ -230,8 +230,7 @@ class ReaderActivity :
         viewModel.isZoomControlsEnabled.observe(this) {
             viewBinding.zoomControl.isVisible = it
         }
-        viewModel.isTranslationEnabled.observe(this) { isEnabled ->
-            viewBinding.actionsView.isTranslationActive = isEnabled
+        viewModel.isTranslationEnabled.observe(this) {
             invalidateOptionsMenu()
         }
         viewModel.translationBannerState.observe(this) { banner ->

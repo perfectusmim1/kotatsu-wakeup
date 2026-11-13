@@ -19,6 +19,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.Blocking
 import org.koitharu.kotatsu.core.image.BitmapDecoderCompat
+import org.koitharu.kotatsu.core.model.getLocale
 import org.koitharu.kotatsu.core.util.MimeTypes
 import org.koitharu.kotatsu.core.util.ext.ensureRamAtLeast
 import org.koitharu.kotatsu.core.util.ext.isAnimatedImage
@@ -245,6 +246,7 @@ class TranslatePageUseCase private constructor(
 							onProgress(TranslationStage.DOWNLOADING_MODELS, percent)
 						}
 					},
+					sourceHintLocale = page.source.getLocale()?.language,
 				)
 				val ocrEndNs = System.nanoTime()
 				ocrMs = (ocrEndNs - ocrStartNs) / 1_000_000L
@@ -461,7 +463,7 @@ class TranslatePageUseCase private constructor(
 
 	private fun effectiveMaxBitmapBytes(): Long {
 		val appContext = checkNotNull(context) { "Context is required to compute RAM budget" }
-		val ramBudget = (appContext.ramAvailable / 4L).coerceAtLeast(MIN_RAM_BUDGET_BYTES)
+		val ramBudget = (appContext.ramAvailable / 3L).coerceAtLeast(MIN_RAM_BUDGET_BYTES)
 		return min(MAX_BITMAP_BYTES, ramBudget)
 	}
 
@@ -524,7 +526,7 @@ class TranslatePageUseCase private constructor(
 		const val FORMAT_AVIF = "avif"
 		const val FORMAT_JXL = "jxl"
 		const val MAX_BITMAP_WIDTH = 2400
-		const val MAX_BITMAP_BYTES = 64L * 1024L * 1024L
-		const val MIN_RAM_BUDGET_BYTES = 16L * 1024L * 1024L
+		const val MAX_BITMAP_BYTES = 96L * 1024L * 1024L
+		const val MIN_RAM_BUDGET_BYTES = 48L * 1024L * 1024L
 	}
 }

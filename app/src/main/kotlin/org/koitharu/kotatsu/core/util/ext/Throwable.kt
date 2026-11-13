@@ -113,7 +113,7 @@ private fun Throwable.getDisplayMessageOrNull(resources: Resources): String? = w
     is SyncApiException,
     is ContentUnavailableException -> message
 
-    is ParseException -> shortMessage
+    is ParseException -> shortMessage ?: message
     is ConnectException,
     is UnknownHostException,
     is NoRouteToHostException,
@@ -141,7 +141,7 @@ private fun Throwable.getDisplayMessageOrNull(resources: Resources): String? = w
     is UnsupportedSourceException -> resources.getString(R.string.unsupported_source)
 
     is HttpException -> getHttpDisplayMessage(response.code, resources)
-    is HttpStatusException -> getHttpDisplayMessage(statusCode, resources)
+    is HttpStatusException -> getHttpDisplayMessage(statusCode, resources) ?: message?.takeIf { it.isNotBlank() }
 
     else -> mapDisplayMessage(message, resources) ?: message
 }.takeUnless { it.isNullOrBlank() }
@@ -206,9 +206,13 @@ fun Throwable.getCauseUrl(): String? = when (this) {
 }
 
 private fun getHttpDisplayMessage(statusCode: Int, resources: Resources): String? = when (statusCode) {
+    HttpURLConnection.HTTP_UNAUTHORIZED -> resources.getString(R.string.auth_required)
     HttpURLConnection.HTTP_NOT_FOUND -> resources.getString(R.string.not_found_404)
     HttpURLConnection.HTTP_FORBIDDEN -> resources.getString(R.string.access_denied_403)
+    HttpURLConnection.HTTP_CLIENT_TIMEOUT,
     HttpURLConnection.HTTP_GATEWAY_TIMEOUT -> resources.getString(R.string.network_unavailable)
+    429 -> resources.getString(R.string.too_many_requests_message)
+    in 400..499,
     in 500..599 -> resources.getString(R.string.server_error, statusCode)
     else -> null
 }

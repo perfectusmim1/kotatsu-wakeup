@@ -320,6 +320,113 @@ class OcrBubbleGroupingAndFiltersTest {
 		)
 	}
 
+	@Test
+	fun `det normalization uses BGR ordering and extractDetBoxes detects tilted strip angle`() {
+		assertEquals(0.406f, PaddleOcrEngine.DET_MEAN[0], 0.001f)
+		assertEquals(0.456f, PaddleOcrEngine.DET_MEAN[1], 0.001f)
+		assertEquals(0.485f, PaddleOcrEngine.DET_MEAN[2], 0.001f)
+		assertEquals(0.225f, PaddleOcrEngine.DET_STD[0], 0.001f)
+
+		val w = 80
+		val h = 60
+		val prob = FloatArray(w * h)
+		// Draw a slanted strip going up-right (~ -22 degrees in image coordinates)
+		for (x in 12..64) {
+			val cy = (42f - (x - 12) * 0.40f).toInt()
+			for (dy in -2..2) {
+				val y = cy + dy
+				if (y in 0 until h) {
+					prob[y * w + x] = 0.92f
+				}
+			}
+		}
+		val boxes = PaddleOcrEngine.extractDetBoxes(prob, w, h)
+		assertEquals(1, boxes.size)
+		val box = boxes.single()
+		assertTrue("Expected negative tilt around -22 deg, was ${box.angleDeg}", box.angleDeg in -32f..-12f)
+		assertTrue("Expected OBB width > height, got ${box.obbW}x${box.obbH}", box.obbW > box.obbH * 2f)
+	}
+
+	@Test
+	fun `selectAutoProbeRegionsStatic prefers dialogue lines over giant SFX and maps source hints`() {
+		assertEquals("en", PaddleOcrEngine.resolveHintGroup("en"))
+		assertEquals("korean", PaddleOcrEngine.resolveHintGroup("ko"))
+		assertEquals("cjk", PaddleOcrEngine.resolveHintGroup("ja"))
+		assertEquals("eslav", PaddleOcrEngine.resolveHintGroup("ru"))
+		assertEquals("arabic", PaddleOcrEngine.resolveHintGroup("ar"))
+		assertEquals("latin", PaddleOcrEngine.resolveHintGroup("tr"))
+
+		val giantSfx = PaddleOcrEngine.DetRegion(0f, 0f, 300f, 240f)
+		val regions = listOf(giantSfx) + (1..14).map { idx ->
+			PaddleOcrEngine.DetRegion(40f, idx * 40f, 260f, idx * 40f + 22f)
+		}
+		val picked = PaddleOcrEngine.selectAutoProbeRegionsStatic(regions)
+		assertEquals(12, picked.size)
+		assertFalse("Giant artwork SFX should not outrank 14 clean speech lines", giantSfx in picked)
+	}
+
+	@Test
+	fun `groupLinesIntoBubbles separates midtone UI pills preserves reading order and joins spaced words properly`() {
+		val w = 320
+		val h = 260
+		val pixels = IntArray(w * h) { argb(255, 255, 255) }
+		// Pill 1 (mid-tone slate 70) at y=20..70, bright border 165 at y=71..84, Pill 2 (mid-tone 70) at y=85..135
+		fillRect(pixels, w, h, 30, 20, 260, 70, argb(70, 70, 70))
+		fillRect(pixels, w, h, 30, 71, 260, 84, argb(165, 165, 165))
+		fillRect(pixels, w, h, 30, 85, 260, 135, argb(70, 70, 70))
+
+		val pillLines = listOf(
+			RawOcrLine("SKILL BLINK", 95f, 45f, 32f, 220f, 56f),
+			RawOcrLine("TRAIT MANA LEAKAGE", 95f, 45f, 97f, 240f, 121f),
+		)
+		val pillBubbles = PaddleOcrEngine.groupLinesIntoBubbles(pillLines, w, h, pixels)
+		assertEquals(2, pillBubbles.size)
+
+		// Uniform wide-spaced narration lines should stay together
+		val wideNarration = listOf(
+			RawOcrLine("BECAUSE OF THIS,", 96f, 40f, 150f, 250f, 170f),
+			RawOcrLine("EVEN THE MOST", 95f, 45f, 204f, 245f, 224f),
+		)
+		val narrationBubbles = PaddleOcrEngine.groupLinesIntoBubbles(wideNarration, w, h, null)
+		assertEquals(1, narrationBubbles.size)
+		assertEquals("BECAUSE OF THIS, EVEN THE MOST", narrationBubbles.single().text)
+
+		// Spaced words on same line must keep space instead of gluing ("I DO" not "IDO")
+		val spacedWords = listOf(
+			RawOcrLine("I", 95f, 20f, 10f, 30f, 30f),
+			RawOcrLine("DO", 95f, 35f, 10f, 65f, 30f),
+		)
+		val spacedBubble = PaddleOcrEngine.groupLinesIntoBubbles(spacedWords, 200, 100, null)
+		assertEquals(1, spacedBubble.size)
+		assertEquals("I DO", spacedBubble.single().text)
+	}
+
+	@Test
+	fun `TextBlockFilters drops giant low-conf artwork noise and Asura credits page banners`() {
+		assertFalse(
+			TextBlockFilters.isUsableOcrLine(
+				RawOcrLine("aday", 60f, 10f, 10f, 180f, 240f),
+			),
+		)
+		assertFalse(
+			TextBlockFilters.isUsableOcrLine(
+				RawOcrLine("WOy", 72f, 10f, 10f, 60f, 40f),
+			),
+		)
+
+		val creditsBanner = listOf(
+			bubble("c0", "PR"),
+			bubble("c1", "LEAFSKY"),
+			bubble("c2", "DOTORI"),
+			bubble("c3", "AsuraS cans"),
+			bubble("c4", "RD"),
+			bubble("c5", "RUE"),
+			bubble("c6", "asurascans.com"),
+		)
+		assertTrue(TextBlockFilters.isCreditsOrPromoPage(creditsBanner))
+		assertTrue(TextBlockFilters.filterBubbles(creditsBanner).isEmpty())
+	}
+
 	private fun line(text: String, conf: Float = 90f) = RawOcrLine(
 		text = text,
 		confidence = conf,

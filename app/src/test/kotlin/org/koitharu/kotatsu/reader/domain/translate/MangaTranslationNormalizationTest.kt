@@ -496,4 +496,16 @@ class MangaTranslationNormalizationTest {
 		assertFalse(capitalizedProperNoun.isTrash)
 		assertEquals("Sangah.", capitalizedProperNoun.text)
 	}
+
+	@Test
+	fun normalizeEnglishForGoogleTranslate_preservesBracketedTagsAndSplitsShortGluedPronouns() {
+		val skillResult = MangaTranslationService.normalizeEnglishForGoogleTranslate("[BLINK] IS AMAZING!")
+		assertTrue("Expected Title-Cased [Blink], got: $skillResult", skillResult.startsWith("[Blink]"))
+
+		val traitResult = MangaTranslationService.normalizeEnglishForGoogleTranslate("OBTAINED [MANA LEAKAGE SYNDROME].")
+		assertTrue("Expected [Mana Leakage Syndrome], got: $traitResult", "[Mana Leakage Syndrome]" in traitResult)
+
+		val gluedDo = MangaTranslationService.normalizeEnglishForGoogleTranslate("IDO- I REALLY DO!")
+		assertTrue("Expected 'I do-' instead of 'Ido-', got: $gluedDo", gluedDo.startsWith("I do-"))
+	}
 }

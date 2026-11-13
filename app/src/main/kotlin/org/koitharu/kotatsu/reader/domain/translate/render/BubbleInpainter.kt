@@ -36,14 +36,14 @@ class BubbleInpainter @Inject constructor(
 	private val smartTextLayout: SmartTextLayout,
 ) {
 
-	private data class LineCoreRect(
+	internal data class LineCoreRect(
 		val x0: Int,
 		val x1: Int,
 		val y0: Int,
 		val y1: Int,
 	)
 
-	private data class AbsSiblingBox(
+	internal data class AbsSiblingBox(
 		val x0: Int,
 		val y0: Int,
 		val x1: Int,
@@ -189,22 +189,20 @@ class BubbleInpainter @Inject constructor(
 			)
 		}
 
-		fun overlapsAnySiblingAbs(ax0: Int, ay0: Int, ax1: Int, ay1: Int): Boolean {
-			if (absSiblings.isEmpty()) return false
-			val cx = (ax0 + ax1) * 0.5f
-			val cy = (ay0 + ay1) * 0.5f
-			for (i in absSiblings.indices) {
-				val s = absSiblings[i]
-				if (cx >= s.x0 - 2f && cx <= s.x1 + 2f && cy >= s.y0 - 2f && cy <= s.y1 + 2f) return true
-				val ox = min(ax1, s.x1) - max(ax0, s.x0)
-				val oy = min(ay1, s.y1) - max(ay0, s.y0)
-				if (ox > 0 && oy > 0) {
-					val compArea = max(1, (ax1 - ax0) * (ay1 - ay0))
-					if ((ox * oy).toFloat() / compArea >= 0.32f) return true
-				}
-			}
-			return false
-		}
+		fun overlapsAnySiblingAbs(
+			ax0: Int,
+			ay0: Int,
+			ax1: Int,
+			ay1: Int,
+			requireHeavyAreaOverlap: Boolean = false,
+		): Boolean = shouldSuppressComponentForSibling(
+			ax0 = ax0,
+			ay0 = ay0,
+			ax1 = ax1,
+			ay1 = ay1,
+			absSiblings = absSiblings,
+			requireHeavyAreaOverlap = requireHeavyAreaOverlap,
+		)
 
 		val nearTopSeam = boxY0 <= 90
 		val nearBottomSeam = fullHeight - boxY1 <= 90
@@ -696,14 +694,19 @@ class BubbleInpainter @Inject constructor(
 					coreWhiteRatio < 0.45f &&
 					flankWhiteRatio <= 0.25f &&
 					flankMeanLum <= 205f
-			val hasWhiteFillDarkOutlineOnMidScene =
-				bgLumInit < 178f &&
-					flankWhiteRatio <= 0.25f &&
-					coreWhiteRatio in 0.06f..0.48f &&
-					whiteCoreCount >= 24 &&
-					whiteTouchesDarkOutline >= 20
+			val hasWhiteFillDarkOutlineOnMidScene = isWhiteFillDarkOutlineMidScene(
+				bgLumInit = bgLumInit,
+				flankMeanLum = flankMeanLum,
+				flankWhiteRatio = flankWhiteRatio,
+				coreWhiteRatio = coreWhiteRatio,
+				whiteCoreCount = whiteCoreCount,
+				whiteTouchesDarkOutline = whiteTouchesDarkOutline,
+				brighterCount = brighterCount,
+			)
 
-			if (isWhiteFillDarkOutlineOnScene && flankArrLen >= 12) {
+			if ((isWhiteFillDarkOutlineOnScene || (hasWhiteFillDarkOutlineOnMidScene && flankMeanLum < bgLumInit - 12f)) &&
+				flankArrLen >= 12
+			) {
 				bgR = PixelColorMath.medianInt(flankRs, flankArrLen)
 				bgG = PixelColorMath.medianInt(flankGs, flankArrLen)
 				bgB = PixelColorMath.medianInt(flankBs, flankArrLen)
@@ -788,7 +791,15 @@ class BubbleInpainter @Inject constructor(
 			fun isValidGlyphComponent(c: ComponentInfo): Boolean {
 				if (c.area < 2) return false
 				if (isStructuralFrameOrDivider(c)) return false
-				if (overlapsAnySiblingAbs(curWx0 + c.minx, curWy0 + c.miny, curWx0 + c.maxx + 1, curWy0 + c.maxy + 1)) {
+				val isStrongOwnCoreGlyph = c.overlapsCore && c.corePixels * 2 >= c.area
+				if (overlapsAnySiblingAbs(
+						curWx0 + c.minx,
+						curWy0 + c.miny,
+						curWx0 + c.maxx + 1,
+						curWy0 + c.maxy + 1,
+						requireHeavyAreaOverlap = isStrongOwnCoreGlyph,
+					)
+				) {
 					return false
 				}
 				val coreRatio = c.corePixels.toFloat() / max(1, c.area)
@@ -896,6 +907,34 @@ class BubbleInpainter @Inject constructor(
 						}
 						if (stripped > 0) {
 							res = extractComponents(splitMask)
+						}
+						if (shouldSplitLight) {
+							val stillHugeIds = HashSet<Int>()
+							for (c in res.second) {
+								val stillOversized =
+									c.touchesBorder ||
+										(!isSingleOrDarkSfx && (c.h > maxGlyphBlobH || c.w > maxGlyphBlobW))
+								if (stillOversized && c.overlapsCore && c.area >= blobAreaThresh) {
+									stillHugeIds.add(c.id)
+								}
+							}
+							if (stillHugeIds.isNotEmpty()) {
+								val clippedMask = splitMask.copyOf()
+								val splitLabels = res.first
+								var clipped = 0
+								for (i in 0 until numPixels) {
+									if (splitLabels[i] !in stillHugeIds) continue
+									val py = i / ww
+									val px = i - py * ww
+									if (!isNearAnyCore(px, py, 4)) {
+										clippedMask[i] = 0
+										clipped++
+									}
+								}
+								if (clipped > 0) {
+									res = extractComponents(clippedMask)
+								}
+							}
 						}
 					}
 				}
@@ -1262,7 +1301,7 @@ class BubbleInpainter @Inject constructor(
 					val diff = PixelColorMath.maxChannelDiff(pr, pg, pb, bgR, bgG, bgB)
 					val ly = i / ww
 					val lx = i - ly * ww
-					val outsideCore = lx < cx0 - 2 || lx > cx1 + 2 || ly < cy0 - 2 || ly > cy1 + 2
+					val outsideCore = lx < cx0 - 6 || lx > cx1 + 6 || ly < cy0 - 6 || ly > cy1 + 6
 					if (lum >= 185f && diff >= 110 && outsideCore) {
 						borderMask[i] = 1
 					}
@@ -1272,7 +1311,7 @@ class BubbleInpainter @Inject constructor(
 			if (bgLumInit >= 195f || (preferLightFirst && bgLumInit <= 75f)) {
 				val ly = i / ww
 				val lx = i - ly * ww
-				if (lx < cx0 - 2 || lx > cx1 + 2 || ly < cy0 - 2 || ly > cy1 + 2) {
+				if (lx < cx0 - 6 || lx > cx1 + 6 || ly < cy0 - 6 || ly > cy1 + 6) {
 					val p = pixels[i]
 					val pr = PixelColorMath.red(p)
 					val pg = PixelColorMath.green(p)
@@ -2796,135 +2835,6 @@ class BubbleInpainter @Inject constructor(
 		)
 	}
 
-	private fun findDominantBackgroundRgb(
-		pixels: IntArray,
-		ww: Int,
-		wh: Int,
-		cx0: Int,
-		cy0: Int,
-		cx1: Int,
-		cy1: Int,
-		lineCores: List<LineCoreRect>,
-	): IntArray {
-		val flatBinCounts = IntArray(4096)
-		val allBinCounts = IntArray(4096)
-		val sx0 = max(0, cx0 - 6)
-		val sx1 = min(ww, cx1 + 6)
-		val sy0 = max(0, cy0 - 6)
-		val sy1 = min(wh, cy1 + 6)
-
-		var brightFlatCount = 0
-		var nonCoreFlatTotal = 0
-		var nonCoreBrightFlat = 0
-		var midToneInBoxCount = 0
-		var whiteInBoxCount = 0
-		var totalFlatCount = 0
-
-		for (y in sy0 until sy1) {
-			val yNext = if (y + 1 < wh) y + 1 else y
-			val rowOff = y * ww
-			val nextRowOff = yNext * ww
-			for (x in sx0 until sx1) {
-				val p = pixels[rowOff + x]
-				val r = PixelColorMath.red(p)
-				val g = PixelColorMath.green(p)
-				val b = PixelColorMath.blue(p)
-				val lum = PixelColorMath.luminance(r, g, b)
-
-				val xNext = if (x + 1 < ww) x + 1 else x
-				val prx = pixels[rowOff + xNext]
-				val pby = pixels[nextRowOff + x]
-				val gx = abs(PixelColorMath.red(prx) - r) +
-					abs(PixelColorMath.green(prx) - g) +
-					abs(PixelColorMath.blue(prx) - b)
-				val gy = abs(PixelColorMath.red(pby) - r) +
-					abs(PixelColorMath.green(pby) - g) +
-					abs(PixelColorMath.blue(pby) - b)
-				val isFlat = gx + gy <= 66
-
-				var inLineCore = false
-				for (li in lineCores.indices) {
-					val lc = lineCores[li]
-					if (x >= lc.x0 && x < lc.x1 && y >= lc.y0 && y < lc.y1) {
-						inLineCore = true
-						break
-					}
-				}
-				val insideBlockBox = x in cx0 until cx1 && y in cy0 until cy1
-				val weight = if (inLineCore) 3 else if (insideBlockBox) 2 else 1
-				if (insideBlockBox) {
-					if (lum >= 105f && lum < 228f) midToneInBoxCount++
-					else if (lum >= 232f) whiteInBoxCount++
-				}
-
-				val bin = ((r ushr 4) shl 8) or ((g ushr 4) shl 4) or (b ushr 4)
-				allBinCounts[bin] += weight
-				if (isFlat) {
-					flatBinCounts[bin] += weight
-					totalFlatCount += weight
-					if (lum >= 195f) brightFlatCount += weight
-					if (!inLineCore) {
-						nonCoreFlatTotal++
-						if (lum >= 195f) nonCoreBrightFlat++
-					}
-				}
-			}
-		}
-
-		val brightFlatRatio = if (totalFlatCount > 0) brightFlatCount.toFloat() / totalFlatCount else 0f
-		val nonCoreBrightOk = nonCoreFlatTotal < 16 || nonCoreBrightFlat.toFloat() / nonCoreFlatTotal >= 0.32f
-		val suppressDarkInk = totalFlatCount > 24 && brightFlatRatio >= 0.24f && nonCoreBrightOk
-		val suppressWhiteHalo = midToneInBoxCount >= 120 && midToneInBoxCount > whiteInBoxCount * 1.35f
-		val targetBins = if (totalFlatCount >= 24) flatBinCounts else allBinCounts
-
-		var bestBin = -1
-		var bestCount = -1
-		for (bin in 0 until 4096) {
-			val cnt = targetBins[bin]
-			if (cnt <= bestCount) continue
-			val br = (((bin ushr 8) and 15) shl 4) + 8
-			val bg = (((bin ushr 4) and 15) shl 4) + 8
-			val bb = ((bin and 15) shl 4) + 8
-			val binLum = PixelColorMath.luminance(br, bg, bb)
-			if (suppressDarkInk && binLum < 105f) continue
-			if (suppressWhiteHalo && binLum >= 228f) continue
-			bestCount = cnt
-			bestBin = bin
-		}
-
-		if (bestBin < 0) {
-			for (bin in 0 until 4096) {
-				if (allBinCounts[bin] > bestCount) {
-					bestCount = allBinCounts[bin]
-					bestBin = bin
-				}
-			}
-		}
-
-		if (bestCount <= 0 || bestBin < 0) return intArrayOf(255, 255, 255)
-
-		val collected = IntArray(max(16, (sx1 - sx0) * (sy1 - sy0)))
-		var collectedCount = 0
-		for (y in sy0 until sy1) {
-			val rowOff = y * ww
-			for (x in sx0 until sx1) {
-				val p = pixels[rowOff + x]
-				val r = PixelColorMath.red(p)
-				val g = PixelColorMath.green(p)
-				val b = PixelColorMath.blue(p)
-				val bin = ((r ushr 4) shl 8) or ((g ushr 4) shl 4) or (b ushr 4)
-				if (bin == bestBin) {
-					collected[collectedCount++] = rowOff + x
-				}
-			}
-		}
-		return if (collectedCount > 0) {
-			PixelColorMath.medianRgbFromIndices(pixels, collected, collectedCount)
-		} else {
-			intArrayOf(255, 255, 255)
-		}
-	}
-
 	private fun dilate3x3(src: ByteArray, dst: ByteArray, ww: Int, wh: Int) {
 		for (y in 0 until wh) {
 			val yMin = if (y > 0) y - 1 else 0
@@ -2953,12 +2863,217 @@ class BubbleInpainter @Inject constructor(
 		}
 	}
 
-	private companion object {
+	internal companion object {
 		val HTML_TAG_REGEX = Regex("<[^>]{1,32}>")
 		val ANGLE_BRACKET_REGEX = Regex("[<>]+")
 		val MULTI_SPACE_REGEX = Regex("\\s+")
 		val TR_EN_NON_ALPHA_REGEX = Regex("[^a-zA-ZçğıöşüÇĞİÖŞÜ]")
 		val HAS_PUNCT_SFX_EXC_REGEX = Regex("[?!/\\\\]")
 		val DIGITS_ONLY_REGEX = Regex("^\\d+$")
+
+		internal fun findDominantBackgroundRgb(
+			pixels: IntArray,
+			ww: Int,
+			wh: Int,
+			cx0: Int,
+			cy0: Int,
+			cx1: Int,
+			cy1: Int,
+			lineCores: List<LineCoreRect>,
+		): IntArray {
+			val flatBinCounts = IntArray(4096)
+			val allBinCounts = IntArray(4096)
+			val sx0 = max(0, cx0 - 6)
+			val sx1 = min(ww, cx1 + 6)
+			val sy0 = max(0, cy0 - 6)
+			val sy1 = min(wh, cy1 + 6)
+
+			var brightFlatCount = 0
+			var nonCoreFlatTotal = 0
+			var nonCoreBrightFlat = 0
+			var nonCoreDarkFlat = 0
+			var midToneInBoxCount = 0
+			var whiteInBoxCount = 0
+			var totalFlatCount = 0
+
+			for (y in sy0 until sy1) {
+				val yNext = if (y + 1 < wh) y + 1 else y
+				val rowOff = y * ww
+				val nextRowOff = yNext * ww
+				for (x in sx0 until sx1) {
+					val p = pixels[rowOff + x]
+					val r = PixelColorMath.red(p)
+					val g = PixelColorMath.green(p)
+					val b = PixelColorMath.blue(p)
+					val lum = PixelColorMath.luminance(r, g, b)
+
+					val xNext = if (x + 1 < ww) x + 1 else x
+					val prx = pixels[rowOff + xNext]
+					val pby = pixels[nextRowOff + x]
+					val gx = abs(PixelColorMath.red(prx) - r) +
+						abs(PixelColorMath.green(prx) - g) +
+						abs(PixelColorMath.blue(prx) - b)
+					val gy = abs(PixelColorMath.red(pby) - r) +
+						abs(PixelColorMath.green(pby) - g) +
+						abs(PixelColorMath.blue(pby) - b)
+					val isFlat = gx + gy <= 66
+
+					var inLineCore = false
+					for (li in lineCores.indices) {
+						val lc = lineCores[li]
+						if (x >= lc.x0 && x < lc.x1 && y >= lc.y0 && y < lc.y1) {
+							inLineCore = true
+							break
+						}
+					}
+					val insideBlockBox = x in cx0 until cx1 && y in cy0 until cy1
+					// Collar & inter-line pixels describe the true background without letting bold white/black glyph bodies outvote it.
+					val weight = if (inLineCore) 1 else if (insideBlockBox) 2 else 3
+					if (insideBlockBox) {
+						if (lum >= 105f && lum < 228f) midToneInBoxCount++
+						else if (lum >= 232f) whiteInBoxCount++
+					}
+
+					val bin = ((r ushr 4) shl 8) or ((g ushr 4) shl 4) or (b ushr 4)
+					allBinCounts[bin] += weight
+					if (isFlat) {
+						flatBinCounts[bin] += weight
+						totalFlatCount += weight
+						if (lum >= 195f) brightFlatCount += weight
+						if (!inLineCore) {
+							nonCoreFlatTotal++
+							if (lum >= 195f) nonCoreBrightFlat++
+							if (lum < 105f) nonCoreDarkFlat++
+						}
+					}
+				}
+			}
+
+			val brightFlatRatio = if (totalFlatCount > 0) brightFlatCount.toFloat() / totalFlatCount else 0f
+			val nonCoreBrightRatio = if (nonCoreFlatTotal > 0) nonCoreBrightFlat.toFloat() / nonCoreFlatTotal else 0f
+			val nonCoreDarkRatio = if (nonCoreFlatTotal > 0) nonCoreDarkFlat.toFloat() / nonCoreFlatTotal else 0f
+			val suppressDarkInk = if (nonCoreFlatTotal >= 16) {
+				nonCoreBrightRatio >= 0.50f && nonCoreDarkFlat <= nonCoreBrightFlat * 0.45f
+			} else {
+				totalFlatCount > 24 && brightFlatRatio >= 0.55f
+			}
+			val suppressWhiteInk = nonCoreFlatTotal >= 16 &&
+				nonCoreDarkRatio >= 0.45f &&
+				nonCoreBrightFlat <= nonCoreDarkFlat * 0.65f
+			val suppressWhiteHalo = midToneInBoxCount >= 120 && midToneInBoxCount > whiteInBoxCount * 1.35f
+
+			fun selectBestBin(bins: IntArray, applySuppression: Boolean): Pair<Int, Int> {
+				var best = -1
+				var bestCnt = -1
+				for (bin in 0 until 4096) {
+					val cnt = bins[bin]
+					if (cnt <= bestCnt) continue
+					if (applySuppression) {
+						val br = (((bin ushr 8) and 15) shl 4) + 8
+						val bg = (((bin ushr 4) and 15) shl 4) + 8
+						val bb = ((bin and 15) shl 4) + 8
+						val binLum = PixelColorMath.luminance(br, bg, bb)
+						if (suppressDarkInk && binLum < 105f) continue
+						if (suppressWhiteInk && binLum >= 200f) continue
+						if (suppressWhiteHalo && binLum >= 228f) continue
+					}
+					bestCnt = cnt
+					best = bin
+				}
+				return best to bestCnt
+			}
+
+			val targetBins = if (totalFlatCount >= 24) flatBinCounts else allBinCounts
+			var (bestBin, bestCount) = selectBestBin(targetBins, applySuppression = true)
+			if (bestBin < 0 && totalFlatCount >= 24) {
+				val (altBin, altCnt) = selectBestBin(allBinCounts, applySuppression = true)
+				bestBin = altBin
+				bestCount = altCnt
+			}
+			if (bestBin < 0) {
+				val (rawBin, rawCnt) = selectBestBin(allBinCounts, applySuppression = false)
+				bestBin = rawBin
+				bestCount = rawCnt
+			}
+
+			if (bestCount <= 0 || bestBin < 0) return intArrayOf(255, 255, 255)
+
+			val collected = IntArray(max(16, (sx1 - sx0) * (sy1 - sy0)))
+			var collectedCount = 0
+			for (y in sy0 until sy1) {
+				val rowOff = y * ww
+				for (x in sx0 until sx1) {
+					val p = pixels[rowOff + x]
+					val r = PixelColorMath.red(p)
+					val g = PixelColorMath.green(p)
+					val b = PixelColorMath.blue(p)
+					val bin = ((r ushr 4) shl 8) or ((g ushr 4) shl 4) or (b ushr 4)
+					if (bin == bestBin) {
+						collected[collectedCount++] = rowOff + x
+					}
+				}
+			}
+			return if (collectedCount > 0) {
+				PixelColorMath.medianRgbFromIndices(pixels, collected, collectedCount)
+			} else {
+				intArrayOf(255, 255, 255)
+			}
+		}
+
+		internal fun isWhiteFillDarkOutlineMidScene(
+			bgLumInit: Float,
+			flankMeanLum: Float,
+			flankWhiteRatio: Float,
+			coreWhiteRatio: Float,
+			whiteCoreCount: Int,
+			whiteTouchesDarkOutline: Int,
+			brighterCount: Int,
+		): Boolean =
+			(bgLumInit < 215f || flankMeanLum <= 198f) &&
+				flankWhiteRatio <= 0.48f &&
+				flankMeanLum <= 212f &&
+				coreWhiteRatio in 0.05f..0.46f &&
+				whiteCoreCount >= 24 &&
+				whiteTouchesDarkOutline >= 24 &&
+				(bgLumInit < 178f || brighterCount >= 24 || flankMeanLum <= 198f)
+
+		internal fun shouldSuppressComponentForSibling(
+			ax0: Int,
+			ay0: Int,
+			ax1: Int,
+			ay1: Int,
+			absSiblings: List<AbsSiblingBox>,
+			requireHeavyAreaOverlap: Boolean,
+		): Boolean {
+			if (absSiblings.isEmpty()) return false
+			val cx = (ax0 + ax1) * 0.5f
+			val cy = (ay0 + ay1) * 0.5f
+			val cH = (ay1 - ay0).coerceAtLeast(1)
+			val compArea = max(1, (ax1 - ax0) * cH)
+			for (i in absSiblings.indices) {
+				val s = absSiblings[i]
+				if (!requireHeavyAreaOverlap && cx >= s.x0 - 2f && cx <= s.x1 + 2f && cy >= s.y0 - 2f && cy <= s.y1 + 2f) {
+					return true
+				}
+				val ox = min(ax1, s.x1) - max(ax0, s.x0)
+				val oy = min(ay1, s.y1) - max(ay0, s.y0)
+				if (ox > 0 && oy > 0) {
+					val ratio = (ox * oy).toFloat() / compArea
+					if (!requireHeavyAreaOverlap) {
+						if (ratio >= 0.32f) return true
+					} else {
+						val sH = (s.y1 - s.y0).coerceAtLeast(1)
+						val sCy = (s.y0 + s.y1) * 0.5f
+						// Ignore oversized/tilted diagonal sibling bounds whose center sits far away from this glyph.
+						val isDistantOversizedSibling = sH > max(cH * 2.5f, 96f) &&
+							abs(sCy - cy) > max(cH * 1.5f, sH * 0.25f)
+						if (isDistantOversizedSibling && ratio < 0.90f) continue
+						val verticallyContained = ay0 >= s.y0 - 2 && ay1 <= s.y1 + 2
+						if (ratio >= 0.85f || (verticallyContained && ratio >= 0.55f)) return true
+					}
+				}
+			}
+			return false
+		}
 	}
 }

@@ -142,12 +142,19 @@ object TextBlockFilters {
 	)
 
 	private val CREDIT_LINE_REGEX = Regex(
-		"""(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|scanlation|fansub|fansube|kurohana|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|tapas|lezhin|recruiting|discord|patreon|paypal|ko-?fi|buymeacoffee|join\s+(?:our|us)|support\s+us|read\s+(?:it\s+)?(?:at|on|first)|chapter\s*\d+|çevirmen|çeviri|editör|dizgi|temizleme)(?![\p{L}\p{N}_])|^dsns$|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)(?:\s*[:\-]\s*|\s+)[a-z0-9_]{2,14}$""",
+		"""(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|scanlation|fansub|fansube|kurohana|asurascans|asuras?\s*scans?|asuragd\w*|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|webtoon\s+ip\s+holder|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|tapas|lezhin|recruiting|discord|patreon|paypal|ko-?fi|buymeacoffee|join\s+(?:our|us)|support\s+us|read\s+(?:it\s+)?(?:at|on|first)|chapter\s*\d+|çevirmen|çeviri|editör|dizgi|temizleme)(?![\p{L}\p{N}_])|^dsns$|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)(?:\s*[:\-]\s*|\s+)[a-z0-9_]{2,14}$""",
 		RegexOption.IGNORE_CASE,
 	)
 
+	private val STANDALONE_SCANLATION_ROLE_REGEX = Regex(
+		"""^(?:tl|pr|cl|rd|ts|qc|ktl|tlc|tl/pr|cl/rd|ts/qc)\s*[:\-]?$""",
+		RegexOption.IGNORE_CASE,
+	)
+
+	private val CREDIT_HANDLE_TOKEN_REGEX = Regex("""^[A-Z0-9_]{2,16}$""")
+
 	private val INDIVIDUAL_PROMO_CREDIT_REGEX = Regex(
-		"""(?:https?://|www\.|discord\.gg|(?<![\p{L}\p{N}_])(?:discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|scanlation|fansub|fansube|kurohana|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|lezhin)(?![\p{L}\p{N}_])|^dsns$|(?<![\p{L}\p{N}_])(?:join\s+(?:our|us)|support\s+us|follow\s+us|read\s+(?:it\s+)?(?:at|on|first))(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|çevirmen|çeviri|editör|dizgi|temizleme)\s*[:\-]|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)\s*[:\-]\s*\S)""",
+		"""(?:https?://|www\.|discord\.gg|(?<![\p{L}\p{N}_])(?:discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|scanlation|fansub|fansube|kurohana|asurascans|asuras?\s*scans?|asuragd\w*|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|webtoon\s+ip\s+holder|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|lezhin)(?![\p{L}\p{N}_])|^dsns$|^rgb$|(?<![\p{L}\p{N}_])(?:join\s+(?:our|us)|support\s+us|follow\s+us|read\s+(?:it\s+)?(?:at|on|first))(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|çevirmen|çeviri|editör|dizgi|temizleme)\s*[:\-]|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)\s*[:\-]\s*\S)""",
 		RegexOption.IGNORE_CASE,
 	)
 
@@ -157,7 +164,7 @@ object TextBlockFilters {
 	)
 
 	private val STRONG_PROMO_REGEX = Regex(
-		"""(?:https?://|www\.|discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|join\s+(?:our|us)|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|disaster\s*scans|surya\s*scans|\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|me|to|xyz|club|online|site)\b)""",
+		"""(?:https?://|www\.|discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|join\s+(?:our|us)|asurascans|asuras?\s*scans?|asuragd\w*|reaperscans|reaper\s*scans|flamescans|flame\s*scans|disaster\s*scans|surya\s*scans|\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|me|to|xyz|club|online|site)\b)""",
 		RegexOption.IGNORE_CASE,
 	)
 
@@ -260,8 +267,24 @@ object TextBlockFilters {
 			!TRIPLE_SAME_CHAR_REGEX.matches(cleanTarget) &&
 			CLEAN_MULTI_TOKEN_REGEX.matches(cleanTarget)
 		val hasLatinVowel = LATIN_VOWEL_REGEX.containsMatchIn(stripped)
+		val alphaOnly = NON_ASCII_ALPHA_REGEX.replace(stripped, "")
+		val isMixedWeirdCasing = alphaOnly.length in 2..4 &&
+			alphaOnly.first().isUpperCase() &&
+			alphaOnly.last().isLowerCase() &&
+			alphaOnly.drop(1).dropLast(1).any { it.isUpperCase() }
+		val isGiantArtworkShortWord = line.height >= 110f &&
+			letters <= 4 &&
+			!stripped.contains(' ')
+		val isTinyLowerJunk = !multiScript &&
+			alphaOnly.length <= 2 &&
+			alphaOnly.isNotEmpty() &&
+			alphaOnly.all { it.isLowerCase() } &&
+			!isShortMeaningful
 
 		val effectiveMinConf = when {
+			isMixedWeirdCasing -> maxOf(minConfidence, 85f)
+			isGiantArtworkShortWord -> maxOf(minConfidence, 82f)
+			isTinyLowerJunk -> maxOf(minConfidence, 76f)
 			isShortMeaningful -> minOf(minConfidence, 40f)
 			isCleanText && letters >= 3 && hasLatinVowel -> minOf(minConfidence, 48f)
 			isCleanText -> minOf(minConfidence, 56f)
@@ -430,13 +453,29 @@ object TextBlockFilters {
 		if (promo == 0) return false
 		if (promo == bubbles.size) return true
 
-		val creditRolesCount = bubbles.count { CREDIT_LINE_REGEX.containsMatchIn(it.text) }
-		if (
-			creditRolesCount >= 2 &&
-			bubbles.any { STRONG_PROMO_REGEX.containsMatchIn(it.text) } &&
-			creditRolesCount.toFloat() / bubbles.size >= 0.45f
-		) {
+		val hasStrongPromo = bubbles.any { STRONG_PROMO_REGEX.containsMatchIn(it.text) }
+		val creditRolesCount = bubbles.count {
+			val trimmed = it.text.trim()
+			CREDIT_LINE_REGEX.containsMatchIn(trimmed) || STANDALONE_SCANLATION_ROLE_REGEX.matches(trimmed)
+		}
+		if (hasStrongPromo && creditRolesCount >= 2 && creditRolesCount.toFloat() / bubbles.size >= 0.45f) {
 			return true
+		}
+
+		if (hasStrongPromo && creditRolesCount >= 2) {
+			val creditLikeCount = bubbles.count { b ->
+				val trimmed = b.text.trim()
+				isCreditOrPromoText(trimmed) ||
+					STANDALONE_SCANLATION_ROLE_REGEX.matches(trimmed) ||
+					CREDIT_HANDLE_TOKEN_REGEX.matches(trimmed)
+			}
+			val hasDialogueSentence = bubbles.any { b ->
+				!isCreditOrPromoText(b.text) &&
+					b.text.trim().split(WHITESPACE_REGEX).size >= 4
+			}
+			if (!hasDialogueSentence && creditLikeCount.toFloat() / bubbles.size >= 0.65f) {
+				return true
+			}
 		}
 		return false
 	}

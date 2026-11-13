@@ -201,7 +201,7 @@
 				</com.google.android.material.chip.ChipGroup>
 			</HorizontalScrollView>
 
-			<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+			<org.koitharu.kotatsu.core.ui.widgets.SheetSwipeRefreshLayout
 				android:id="@+id/swipeRefreshLayout"
 				android:layout_width="0dp"
 				android:layout_height="0dp"
@@ -222,7 +222,7 @@
 					app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
 					tools:itemCount="4"
 					tools:listitem="@layout/item_source_comment" />
-			</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+			</org.koitharu.kotatsu.core.ui.widgets.SheetSwipeRefreshLayout>
 
 			<com.google.android.material.loadingindicator.LoadingIndicator
 				android:id="@+id/progressIndicator_native"

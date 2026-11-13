@@ -298,6 +298,9 @@ class SourceCommentsSheet :
 			if (tab == CommentsTab.WIDGET) {
 				binding.editTextComment.hideKeyboard()
 			}
+			binding.root.post {
+				org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.invalidateScrollTarget(binding.root)
+			}
 		}
 
 		viewModel.nativeState.observe(viewLifecycleOwner) { state ->
@@ -476,7 +479,7 @@ class SourceCommentsSheet :
 		widgetWebView?.let { return it }
 		val ctx = context ?: return null
 		return try {
-			val wv = WebView(ctx).apply {
+			val wv = org.koitharu.kotatsu.core.ui.widgets.NestedScrollWebView(ctx).apply {
 				layoutParams = ViewGroup.LayoutParams(
 					ViewGroup.LayoutParams.MATCH_PARENT,
 					ViewGroup.LayoutParams.MATCH_PARENT,

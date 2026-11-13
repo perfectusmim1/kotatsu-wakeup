@@ -28,11 +28,14 @@ import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
+import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.core.util.ext.sanitizeHeaderValue
 import org.koitharu.kotatsu.core.util.ext.toUriOrNull
 import org.koitharu.kotatsu.parsers.MangaLoaderContext
 import org.koitharu.kotatsu.parsers.MangaParserAuthProvider
 import org.koitharu.kotatsu.parsers.model.MangaSource
+import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import javax.inject.Inject
 
@@ -163,8 +166,17 @@ class SourceAuthActivity : BaseBrowserActivity(), BrowserCallback {
 					pendingCallbackUrl = null
 				}
 			}
+			val webViewUserAgent = viewBinding.webView.settings.userAgentString
+				?.sanitizeHeaderValue()
+				?.trim()
+				?.nullIfEmpty()
 			withContext(Dispatchers.IO) {
 				CookieManager.getInstance().flush()
+			}
+			if (!webViewUserAgent.isNullOrEmpty() && targetSource != UnknownMangaSource) {
+				runCatching {
+					SourceSettings(this@SourceAuthActivity, targetSource).cloudFlareUserAgent = webViewUserAgent
+				}
 			}
 			val isAuthorized = runCatchingCancellable {
 				authProvider.isAuthorized()

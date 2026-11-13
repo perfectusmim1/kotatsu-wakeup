@@ -138,5 +138,25 @@ sealed class AdaptiveSheetBehavior {
 			val lp = ((parent as? View)?.layoutParams as? CoordinatorLayout.LayoutParams) ?: return null
 			return from(lp)
 		}
+
+		/**
+		 * Requests layout on the enclosing [CoordinatorLayout] so [BottomSheetBehavior] refreshes
+		 * its cached nested-scrolling child reference after visibility or page changes.
+		 */
+		fun invalidateScrollTarget(view: View) {
+			var foundSheet = false
+			var parent: ViewParent? = view.parent
+			while (parent != null) {
+				if (foundSheet && parent is CoordinatorLayout) {
+					parent.requestLayout()
+					break
+				}
+				val lp = (parent as? View)?.layoutParams
+				if (lp is CoordinatorLayout.LayoutParams && lp.behavior is BottomSheetBehavior<*>) {
+					foundSheet = true
+				}
+				parent = parent.parent
+			}
+		}
 	}
 }

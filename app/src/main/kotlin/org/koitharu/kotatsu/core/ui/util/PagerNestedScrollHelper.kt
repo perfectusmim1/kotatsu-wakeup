@@ -35,16 +35,6 @@ class PagerNestedScrollHelper(
 	 * Here we need to invalidate the `nestedScrollingChildRef` of the [BottomSheetBehavior]
 	 */
 	private fun invalidateBottomSheetScrollTarget() {
-		var handleCoordinator = false
-		for (parent in recyclerView.ancestors) {
-			if (handleCoordinator && parent is CoordinatorLayout) {
-				parent.requestLayout()
-				break
-			}
-			val lp = (parent as? View)?.layoutParams ?: continue
-			if (lp is CoordinatorLayout.LayoutParams && lp.behavior is BottomSheetBehavior<*>) {
-				handleCoordinator = true
-			}
-		}
+		org.koitharu.kotatsu.core.ui.sheet.AdaptiveSheetBehavior.invalidateScrollTarget(recyclerView)
 	}
 }

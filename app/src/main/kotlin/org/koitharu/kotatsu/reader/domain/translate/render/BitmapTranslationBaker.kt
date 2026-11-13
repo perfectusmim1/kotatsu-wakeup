@@ -42,14 +42,6 @@ class BitmapTranslationBaker @Inject constructor(
 		val workBitmap = createMutableArgbCopy(sourceBitmap)
 		try {
 			val translationById = translations.associateBy { it.id }
-			val validBoxByIndex = HashMap<Int, NormalizedBox>(bubbles.size)
-			for (i in bubbles.indices) {
-				val b = bubbles[i]
-				if (b.box.isValid()) {
-					validBoxByIndex[i] = b.box
-				}
-			}
-
 			val activeBlocks = bubbles
 				.mapIndexedNotNull { idx, bubble ->
 					if (!bubble.box.isValid()) return@mapIndexedNotNull null
@@ -63,14 +55,20 @@ class BitmapTranslationBaker @Inject constructor(
 				}
 				.sortedWith(compareBy({ it.second.box.yMin }, { it.second.box.xMin }))
 
+			val activeSiblingBoxesByIdx = HashMap<Int, List<NormalizedBox>>(activeBlocks.size)
+			for ((idx, bubble, _) in activeBlocks) {
+				val lineBoxes = bubble.lines.mapNotNull { line -> line.box.takeIf { it.isValid() } }
+				activeSiblingBoxesByIdx[idx] = lineBoxes.ifEmpty { listOf(bubble.box) }
+			}
+
 			val refinedLayouts = ArrayList<RefinedBlockLayout>(activeBlocks.size)
 			for ((bubbleIdx, bubble, itemPair) in activeBlocks) {
 				coroutineContext.ensureActive()
 				val (item, isSeamErase) = itemPair
-				val siblingBoxes = ArrayList<NormalizedBox>(validBoxByIndex.size)
-				for ((otherIdx, otherBox) in validBoxByIndex) {
+				val siblingBoxes = ArrayList<NormalizedBox>(activeBlocks.size * 2)
+				for ((otherIdx, otherBoxes) in activeSiblingBoxesByIdx) {
 					if (otherIdx != bubbleIdx) {
-						siblingBoxes.add(otherBox)
+						siblingBoxes.addAll(otherBoxes)
 					}
 				}
 				val layout = bubbleInpainter.inpaintAndRefineBlock(
