@@ -36,4 +36,16 @@
         <item quantity="one">%1$d dakika</item>
         <item quantity="other">%1$d dakika</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d sonuç</item>
+        <item quantity="other">%1$d sonuç</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d sayfa</item>
+        <item quantity="other">%1$d sayfa</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d kaynak</item>
+        <item quantity="other">%1$d kaynak</item>
+    </plurals>
 </resources>

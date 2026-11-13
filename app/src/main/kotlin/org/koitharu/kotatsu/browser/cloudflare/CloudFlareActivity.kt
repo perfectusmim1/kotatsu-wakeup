@@ -209,6 +209,13 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			}
 			processLifecycleScope.launch {
 				persistCookiesAndUserAgent(urls, webViewUserAgent)
+				if (targetSource != null) {
+					runCatchingCancellable {
+						captchaHandler.discard(targetSource)
+					}.onFailure {
+						it.printStackTraceDebug()
+					}
+				}
 			}
 		}
 		super.onPause()

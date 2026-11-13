@@ -120,6 +120,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 	private var activeScreenFilter: String = ""
 	private var floatingNavInset = 0
 	private var captchaAlertSnackbar: Snackbar? = null
+	private var shownCaptchaAlertKey: Pair<MangaSource, String>? = null
 	private var pendingSolveSource: MangaSource? = null
 	private val captchaAlertLauncher = registerForActivityResult(CloudFlareActivity.Contract()) { solved ->
 		val source = pendingSolveSource
@@ -226,6 +227,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		if (latest == null) {
 			captchaAlertSnackbar?.dismiss()
 			captchaAlertSnackbar = null
+			shownCaptchaAlertKey = null
 			return
 		}
 		val sourceTitle = latest.source.getTitle(this)
@@ -234,8 +236,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 		} else {
 			getString(R.string.cf_banner_required, sourceTitle)
 		}
+		val alertKey = latest.source to message
+		if (captchaAlertSnackbar?.isShownOrQueued == true && shownCaptchaAlertKey == alertKey) {
+			return
+		}
 		val oldSnackbar = captchaAlertSnackbar
 		captchaAlertSnackbar = null
+		shownCaptchaAlertKey = null
 		oldSnackbar?.dismiss()
 		val snackbar = Snackbar.make(viewBinding.container, message, Snackbar.LENGTH_INDEFINITE).apply {
 			val anchor = (bottomNav as? View)?.takeIf { it.isShown } ?: viewBinding.fab?.takeIf { it.isShown }
@@ -244,6 +251,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			}
 			setAction(R.string.cf_banner_solve) {
 				pendingSolveSource = latest.source
+				captchaHandler.dismissInAppAlert(latest.source, fromUser = false)
 				captchaAlertLauncher.launch(latest.exception)
 			}
 			addCallback(
@@ -251,8 +259,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 					override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
 						if (captchaAlertSnackbar === transientBottomBar) {
 							captchaAlertSnackbar = null
+							shownCaptchaAlertKey = null
 							if (event == DISMISS_EVENT_SWIPE || event == DISMISS_EVENT_MANUAL) {
-								captchaHandler.dismissInAppAlert(latest.source)
+								captchaHandler.dismissInAppAlert(latest.source, fromUser = true)
 							}
 						}
 					}
@@ -260,6 +269,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AppBarOwner, BottomNav
 			)
 		}
 		captchaAlertSnackbar = snackbar
+		shownCaptchaAlertKey = alertKey
 		snackbar.show()
 	}
 

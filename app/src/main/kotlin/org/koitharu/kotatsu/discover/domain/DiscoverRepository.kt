@@ -103,7 +103,7 @@ class DiscoverRepository @Inject constructor(
 	 * so this goes further down it until there is enough left.
 	 */
 	fun observeCategory(category: ReaderCategory, type: ContentType?, force: Boolean): Flow<DiscoverSection> =
-		cachedSection("category:${category.key}:$type", CATEGORY_MAX_AGE_MS, force) { emit ->
+		cachedSection("category:${category.key}:$type:${settings.isNsfwContentDisabled}", CATEGORY_MAX_AGE_MS, force) { emit ->
 			val taste = currentTaste()
 			val known = knownTitles()
 			val lists = ArrayList<RankedList>()
@@ -132,7 +132,7 @@ class DiscoverRepository @Inject constructor(
 
 	fun observeTop(window: DiscoverWindow, filter: DiscoverFilter, force: Boolean): Flow<DiscoverSection> =
 		// The name changes with the size of the list, so a shorter one cached earlier is not shown for the rest of its day
-		cachedSection("top$MAX_TOP:${window.wireName}:${filter.type}:${filter.genre}", TOP_MAX_AGE_MS, force) { emit ->
+		cachedSection("top$MAX_TOP:${window.wireName}:${filter.type}:${filter.genre}:${settings.isNsfwContentDisabled}", TOP_MAX_AGE_MS, force) { emit ->
 			val lists = ArrayList<RankedList>()
 			val sourceCharts = ArrayList<SourceChart>()
 			val mutex = Mutex()
@@ -179,7 +179,7 @@ class DiscoverRepository @Inject constructor(
 		}
 
 	fun observeNewFinds(filter: DiscoverFilter, force: Boolean): Flow<DiscoverSection> =
-		cachedSection("new:${filter.type}:${filter.genre}", NEW_MAX_AGE_MS, force) { emit ->
+		cachedSection("new:${filter.type}:${filter.genre}:${settings.isNsfwContentDisabled}", NEW_MAX_AGE_MS, force) { emit ->
 			val taste = currentTaste()
 			val known = knownTitles()
 			val lists = ArrayList<List<Manga>>()
@@ -269,8 +269,9 @@ class DiscoverRepository @Inject constructor(
 	/** Applied on the way out, not when saved: changing these settings takes effect without a refetch. */
 	private fun List<Manga>.applyReaderFilters(): List<Manga> {
 		val tagsBlacklist = blacklist
+		val nsfwDisabled = settings.isNsfwContentDisabled
 		return filter { manga ->
-			!DiscoverRanking.isAdult(manga) && !manga.source.isNsfw() && manga !in tagsBlacklist
+			(!nsfwDisabled || (!DiscoverRanking.isAdult(manga) && !manga.source.isNsfw())) && manga !in tagsBlacklist
 		}
 	}
 
@@ -425,13 +426,16 @@ class DiscoverRepository @Inject constructor(
 
 	/** The sources the reader actually reads on first: what is there is what they would open anyway. */
 	private suspend fun chartSources(): List<MangaSource> = sourcesLock.withLock {
-		sources?.takeIf { it.isYoungerThan(SOURCES_MAX_AGE_MS) }?.value?.let { return it }
-		val enabled = sourcesRepository.getEnabledSources().filterNot { it.isNsfw() }
+		val nsfwDisabled = settings.isNsfwContentDisabled
+		sources?.takeIf { it.isYoungerThan(SOURCES_MAX_AGE_MS) && it.nsfwDisabled == nsfwDisabled }?.value?.let { return it }
+		val enabled = sourcesRepository.getEnabledSources().let { list ->
+			if (nsfwDisabled) list.filterNot { it.isNsfw() } else list
+		}
 		val used = runCatchingCancellable { history.getPopularSources(MAX_SOURCES) }.getOrDefault(emptyList())
 		// By name: enabled sources come wrapped with their settings, so they never equal the plain ones from history
 		val enabledByName = enabled.associateBy { it.name }
 		(used.mapNotNull { enabledByName[it.name] } + enabled).distinctBy { it.name }.take(MAX_SOURCES)
-			.also { sources = if (it.isEmpty()) null else Timed(it) }
+			.also { sources = if (it.isEmpty()) null else Timed(it, nsfwDisabled) }
 	}
 
 	/**
@@ -447,7 +451,7 @@ class DiscoverRepository @Inject constructor(
 	private suspend fun knownTitles(): Set<String> =
 		runCatchingCancellable { profiles.get().knownTitles }.getOrDefault(emptySet())
 
-	private class Timed<T>(val value: T) {
+	private class Timed<T>(val value: T, val nsfwDisabled: Boolean) {
 		private val takenAt = System.currentTimeMillis()
 
 		fun isYoungerThan(ms: Long) = System.currentTimeMillis() - takenAt < ms

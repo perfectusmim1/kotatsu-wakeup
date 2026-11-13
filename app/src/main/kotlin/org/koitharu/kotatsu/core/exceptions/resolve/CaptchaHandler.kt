@@ -90,6 +90,8 @@ class CaptchaHandler @Inject constructor(
 	val pendingAlerts: StateFlow<List<PendingCaptchaAlert>> = _pendingAlerts.asStateFlow()
 	private val browserCompletionCounter = AtomicLong(0L)
 	private val browserCompletions = ConcurrentHashMap<MangaSource, Long>()
+	private val dismissedAtMs = ConcurrentHashMap<MangaSource, Long>()
+	private val solvedAtMs = ConcurrentHashMap<MangaSource, Long>()
 
 	@CheckResult
 	suspend fun handle(exception: CloudFlareException, tryAutoResolve: Boolean = true): Boolean =
@@ -102,6 +104,8 @@ class CaptchaHandler @Inject constructor(
 	fun markBrowserSessionCompleted(source: MangaSource) {
 		if (source != UnknownMangaSource) {
 			browserCompletions[source] = browserCompletionCounter.incrementAndGet()
+			solvedAtMs[source] = System.currentTimeMillis()
+			dismissedAtMs.remove(source)
 		}
 	}
 
@@ -109,9 +113,16 @@ class CaptchaHandler @Inject constructor(
 
 	fun latestBrowserCompletionVersion(source: MangaSource): Long = browserCompletions[source] ?: 0L
 
-	fun dismissInAppAlert(source: MangaSource) {
+	fun dismissInAppAlert(source: MangaSource, fromUser: Boolean = true) {
+		if (fromUser && source != UnknownMangaSource) {
+			dismissedAtMs[source] = System.currentTimeMillis()
+		}
 		_pendingAlerts.update { current ->
-			current.filterNot { it.source == source }
+			if (current.none { it.source == source }) {
+				current
+			} else {
+				current.filterNot { it.source == source }
+			}
 		}
 	}
 
@@ -152,19 +163,28 @@ class CaptchaHandler @Inject constructor(
 		) {
 			return@withContext true
 		}
+		if (exception !is CloudFlareProtectedException) {
+			dismissInAppAlert(source, fromUser = false)
+			dismissedAtMs.remove(source)
+		}
 		mutex.withLock {
 			var removedException: CloudFlareProtectedException? = null
 			if (exception is CloudFlareProtectedException) {
 				exceptionMap[source] = exception
 			} else {
 				removedException = exceptionMap.remove(source)
-				dismissInAppAlert(source)
 			}
 			val dao = databaseProvider.get().getSourcesDao()
 			dao.setCfState(source.name, exception?.state ?: CloudFlareHelper.PROTECTION_NOT_DETECTED)
 
 			if (notify && exception is CloudFlareProtectedException && !SourceSettings(context, source).isCaptchaNotificationsDisabled) {
-				upsertInAppAlert(source, exception)
+				val now = System.currentTimeMillis()
+				val recentlyDismissed = dismissedAtMs[source]?.let { now - it < DISMISS_COOLDOWN_MS } == true
+				val recentlySolvedBackground = !tryAutoResolve &&
+					solvedAtMs[source]?.let { now - it < POST_SOLVE_COIL_GRACE_MS } == true
+				if (!recentlyDismissed && !recentlySolvedBackground) {
+					upsertInAppAlert(source, exception)
+				}
 			}
 
 			if (notify && context.checkNotificationPermission(CHANNEL_ID)) {
@@ -185,13 +205,16 @@ class CaptchaHandler @Inject constructor(
 	}
 
 	private fun upsertInAppAlert(source: MangaSource, exception: CloudFlareProtectedException) {
-		val alert = PendingCaptchaAlert(
-			source = source,
-			exception = exception,
-			timestampMs = System.currentTimeMillis(),
-		)
 		_pendingAlerts.update { current ->
-			current.filterNot { it.source == source } + alert
+			if (current.any { it.source == source }) {
+				current
+			} else {
+				current + PendingCaptchaAlert(
+					source = source,
+					exception = exception,
+					timestampMs = System.currentTimeMillis(),
+				)
+			}
 		}
 	}
 
@@ -352,5 +375,7 @@ class CaptchaHandler @Inject constructor(
 		private const val GROUP_NOTIFICATION_ID = 34
 		private const val SETTINGS_ACTION_CODE = 3
 		private const val ACTION_DISCARD = "org.koitharu.kotatsu.CAPTCHA_DISCARD"
+		private const val DISMISS_COOLDOWN_MS = 120_000L
+		private const val POST_SOLVE_COIL_GRACE_MS = 10_000L
 	}
 }
