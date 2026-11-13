@@ -11,7 +11,11 @@ import android.util.Log
 import androidx.core.net.toFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.Blocking
 import org.koitharu.kotatsu.core.image.BitmapDecoderCompat
@@ -43,130 +47,318 @@ sealed interface PageTranslationResult {
 	data object NoText : PageTranslationResult
 }
 
+interface PipelinePermit {
+	suspend fun <T> withPermit(block: suspend () -> T): T
+}
+
+internal fun Semaphore.asPipelinePermit(): PipelinePermit = object : PipelinePermit {
+	override suspend fun <T> withPermit(block: suspend () -> T): T =
+		this@asPipelinePermit.withPermit { block() }
+}
+
+internal object TranslatePipelineLog {
+	private val isAndroidLogAvailable: Boolean = try {
+		Log.isLoggable("KotatsuTranslate", Log.INFO)
+		true
+	} catch (_: LinkageError) {
+		false
+	} catch (_: RuntimeException) {
+		false
+	}
+
+	fun d(tag: String, msg: String) {
+		if (isAndroidLogAvailable) {
+			Log.d(tag, msg)
+		}
+	}
+
+	fun i(tag: String, msg: String) {
+		if (isAndroidLogAvailable) {
+			Log.i(tag, msg)
+		}
+	}
+
+	fun w(tag: String, msg: String) {
+		if (isAndroidLogAvailable) {
+			Log.w(tag, msg)
+		}
+	}
+
+	fun e(tag: String, msg: String, throwable: Throwable? = null) {
+		if (isAndroidLogAvailable) {
+			if (throwable != null) {
+				Log.e(tag, msg, throwable)
+			} else {
+				Log.e(tag, msg)
+			}
+		}
+	}
+}
+
 @Singleton
-class TranslatePageUseCase @Inject constructor(
-	@ApplicationContext private val context: Context,
+class TranslatePageUseCase private constructor(
+	private val context: Context?,
 	private val ocrEngine: LocalOcrEngine,
 	private val textTranslator: ComicTextTranslator,
 	private val pageRenderer: TranslatedPageRenderer,
 	private val cacheStore: TranslationCacheStore,
+	private val isTestBitmapMode: Boolean,
 ) {
+
+	@Inject
+	constructor(
+		@ApplicationContext context: Context,
+		ocrEngine: LocalOcrEngine,
+		textTranslator: ComicTextTranslator,
+		pageRenderer: TranslatedPageRenderer,
+		cacheStore: TranslationCacheStore,
+	) : this(
+		context = context,
+		ocrEngine = ocrEngine,
+		textTranslator = textTranslator,
+		pageRenderer = pageRenderer,
+		cacheStore = cacheStore,
+		isTestBitmapMode = false,
+	)
+
+	internal constructor(
+		ocrEngine: LocalOcrEngine,
+		textTranslator: ComicTextTranslator,
+		pageRenderer: TranslatedPageRenderer,
+		cacheStore: TranslationCacheStore,
+	) : this(
+		context = null,
+		ocrEngine = ocrEngine,
+		textTranslator = textTranslator,
+		pageRenderer = pageRenderer,
+		cacheStore = cacheStore,
+		isTestBitmapMode = true,
+	)
 
 	suspend operator fun invoke(
 		page: MangaPage,
 		settings: TranslationSettingsSnapshot,
 		loadSourceUri: suspend () -> Uri,
 		onProgress: suspend (stage: TranslationStage, progressPercent: Int) -> Unit,
+		ocrPermit: PipelinePermit? = null,
+		translatePermit: PipelinePermit? = null,
+	): PageTranslationResult = executePipeline(
+		page = page,
+		settings = settings,
+		prepareSource = loadSourceUri,
+		decodeBitmap = { uri -> decodeSoftwareBitmap(uri) },
+		sourceLabel = { uri -> uri.toString() },
+		onProgress = onProgress,
+		ocrPermit = ocrPermit,
+		translatePermit = translatePermit,
+	)
+
+	internal suspend fun invokeWithBitmap(
+		page: MangaPage,
+		settings: TranslationSettingsSnapshot,
+		loadSourceBitmap: suspend () -> Bitmap,
+		onProgress: suspend (stage: TranslationStage, progressPercent: Int) -> Unit,
+		ocrPermit: PipelinePermit? = null,
+		translatePermit: PipelinePermit? = null,
+	): PageTranslationResult = executePipeline(
+		page = page,
+		settings = settings,
+		prepareSource = {},
+		decodeBitmap = { loadSourceBitmap() },
+		sourceLabel = { "bitmap://test/${page.id}" },
+		onProgress = onProgress,
+		ocrPermit = ocrPermit,
+		translatePermit = translatePermit,
+	)
+
+	private suspend fun <S> executePipeline(
+		page: MangaPage,
+		settings: TranslationSettingsSnapshot,
+		prepareSource: suspend () -> S,
+		decodeBitmap: suspend (S) -> Bitmap,
+		sourceLabel: (S) -> String,
+		onProgress: suspend (stage: TranslationStage, progressPercent: Int) -> Unit,
+		ocrPermit: PipelinePermit?,
+		translatePermit: PipelinePermit?,
 	): PageTranslationResult {
+		val totalStartNs = System.nanoTime()
 		if (page.url.isAnimatedImage()) {
-			Log.d(LOG_TAG, "Skipping animated page id=${page.id} url=${page.url}")
+			TranslatePipelineLog.d(LOG_TAG, "Skipping animated page id=${page.id} url=${page.url}")
 			return PageTranslationResult.NoText
 		}
 
 		val pageIdentity = "${page.source.name}:${page.id}:${page.url}"
 		val cacheKey = cacheStore.buildCacheKey(pageIdentity, settings)
 		cacheStore.getCachedFile(cacheKey)?.takeIf { it.isFile && it.length() > 0L }?.let { cached ->
-			Log.d(LOG_TAG, "Cache hit page=${page.id} file=${cached.name} (${cached.length()} bytes)")
+			TranslatePipelineLog.d(LOG_TAG, "Cache hit page=${page.id} file=${cached.name} (${cached.length()} bytes)")
 			onProgress(TranslationStage.DONE, 100)
 			return PageTranslationResult.Translated(cached)
 		}
 
 		if (settings.provider == TranslationProvider.GEMINI && settings.apiKeys.isEmpty()) {
-			Log.w(LOG_TAG, "Missing Gemini API key for page=${page.id}")
+			TranslatePipelineLog.w(LOG_TAG, "Missing Gemini API key for page=${page.id}")
 			throw MissingGeminiApiKeyException()
 		}
 
-		val sourceUri = loadSourceUri()
-		Log.d(
+		val source = prepareSource()
+		TranslatePipelineLog.d(
 			LOG_TAG,
 			"Translating page=${page.id} source=${settings.sourceLang} -> ${settings.targetLang} " +
-				"provider=${settings.provider} uri=$sourceUri",
+				"provider=${settings.provider} uri=${sourceLabel(source)}",
 		)
-		val sourceBitmap = decodeSoftwareBitmap(sourceUri)
-		Log.d(
-			LOG_TAG,
-			"Decoded page=${page.id} bitmap=${sourceBitmap.width}x${sourceBitmap.height} config=${sourceBitmap.config}",
-		)
-		try {
-			if (!ocrEngine.isModelReady(settings.sourceLang)) {
-				Log.i(LOG_TAG, "OCR models missing for ${settings.sourceLang}, downloading...")
-				onProgress(TranslationStage.DOWNLOADING_MODELS, 0)
-				ocrEngine.ensureModels(settings.sourceLang) { percent ->
-					onProgress(TranslationStage.DOWNLOADING_MODELS, percent)
-				}
-			}
 
-			onProgress(TranslationStage.RUNNING_OCR, -1)
-			val bubbles = ocrEngine.recognizePage(
-				bitmap = sourceBitmap,
-				sourceLang = settings.sourceLang,
-				skipPureSfx = settings.skipPureSfx,
-				filterPromoAndCredits = settings.filterPromoAndCredits,
-				onModelDownloadProgress = { percent ->
-					if (percent >= 100) {
-						onProgress(TranslationStage.RUNNING_OCR, -1)
-					} else {
+		var sourceBitmap: Bitmap? = null
+		try {
+			var ocrMs = 0L
+			val bubbles = ocrPermit.runWithPermit {
+				currentCoroutineContext().ensureActive()
+				if (!ocrEngine.isModelReady(settings.sourceLang)) {
+					TranslatePipelineLog.i(LOG_TAG, "OCR models missing for ${settings.sourceLang}, downloading...")
+					onProgress(TranslationStage.DOWNLOADING_MODELS, 0)
+					ocrEngine.ensureModels(settings.sourceLang) { percent ->
 						onProgress(TranslationStage.DOWNLOADING_MODELS, percent)
 					}
-				},
-			)
-			Log.d(LOG_TAG, "OCR finished page=${page.id}: bubbles=${bubbles.size}")
+				}
+
+				onProgress(TranslationStage.RUNNING_OCR, -1)
+				val ocrStartNs = System.nanoTime()
+				val decoded = decodeBitmap(source)
+				sourceBitmap = decoded
+				val decodeDoneNs = System.nanoTime()
+				val decodeMs = (decodeDoneNs - ocrStartNs) / 1_000_000L
+				if (!isTestBitmapMode) {
+					TranslatePipelineLog.d(
+						LOG_TAG,
+						"Decoded page=${page.id} bitmap=${decoded.width}x${decoded.height} config=${decoded.config} (${decodeMs}ms)",
+					)
+				}
+
+				val recognized = ocrEngine.recognizePage(
+					bitmap = decoded,
+					sourceLang = settings.sourceLang,
+					skipPureSfx = settings.skipPureSfx,
+					filterPromoAndCredits = settings.filterPromoAndCredits,
+					onModelDownloadProgress = { percent ->
+						if (percent >= 100) {
+							onProgress(TranslationStage.RUNNING_OCR, -1)
+						} else {
+							onProgress(TranslationStage.DOWNLOADING_MODELS, percent)
+						}
+					},
+				)
+				val ocrEndNs = System.nanoTime()
+				ocrMs = (ocrEndNs - ocrStartNs) / 1_000_000L
+				val recMs = (ocrEndNs - decodeDoneNs) / 1_000_000L
+				TranslatePipelineLog.d(
+					LOG_TAG,
+					"OCR finished page=${page.id}: bubbles=${recognized.size} ocrMs=${ocrMs}ms " +
+						"(decode=${decodeMs}ms, rec=${recMs}ms)",
+				)
+				recognized
+			}
+
 			if (bubbles.isEmpty()) {
-				Log.i(LOG_TAG, "No translatable bubbles detected on page=${page.id}")
+				val totalMs = (System.nanoTime() - totalStartNs) / 1_000_000L
+				TranslatePipelineLog.i(
+					LOG_TAG,
+					"No translatable bubbles detected on page=${page.id} (ocrMs=${ocrMs}ms, totalMs=${totalMs}ms)",
+				)
+				recycleSourceBitmap(sourceBitmap)
+				sourceBitmap = null
 				onProgress(TranslationStage.DONE, 100)
 				return PageTranslationResult.NoText
 			}
 
 			onProgress(TranslationStage.TRANSLATING_TEXT, -1)
-			val translations = textTranslator.translateBubbles(bubbles, settings)
+			val transStartNs = System.nanoTime()
+			val translations = translatePermit.runWithPermit {
+				currentCoroutineContext().ensureActive()
+				textTranslator.translateBubbles(bubbles, settings)
+			}
+			val transMs = (System.nanoTime() - transStartNs) / 1_000_000L
 			val validTranslations = translations.count { !it.isTrash && it.text.isNotBlank() }
-			Log.d(
+			TranslatePipelineLog.d(
 				LOG_TAG,
 				"Translation finished page=${page.id}: valid=$validTranslations/${translations.size} " +
-					"provider=${settings.provider}",
+					"provider=${settings.provider} transMs=${transMs}ms",
 			)
 			if (validTranslations == 0) {
-				Log.i(LOG_TAG, "All bubbles filtered/empty after translation on page=${page.id}")
+				val totalMs = (System.nanoTime() - totalStartNs) / 1_000_000L
+				TranslatePipelineLog.i(
+					LOG_TAG,
+					"All bubbles filtered/empty after translation on page=${page.id} " +
+						"(ocrMs=${ocrMs}ms, transMs=${transMs}ms, totalMs=${totalMs}ms)",
+				)
+				recycleSourceBitmap(sourceBitmap)
+				sourceBitmap = null
 				onProgress(TranslationStage.DONE, 100)
 				return PageTranslationResult.NoText
 			}
 
 			onProgress(TranslationStage.RENDERING_PAGE, -1)
 			val targetFile = cacheStore.getOrCreateTargetFile(cacheKey)
+			val renderStartNs = System.nanoTime()
 			return try {
-				val rendered = pageRenderer.renderTranslatedPage(
-					sourceBitmap = sourceBitmap,
-					bubbles = bubbles,
-					translations = translations,
-					outputFile = targetFile,
-					targetLang = settings.targetLang,
-				)
+				val bitmapToRender = checkNotNull(sourceBitmap)
+				val rendered = withContext(Dispatchers.Default) {
+					pageRenderer.renderTranslatedPage(
+						sourceBitmap = bitmapToRender,
+						bubbles = bubbles,
+						translations = translations,
+						outputFile = targetFile,
+						targetLang = settings.targetLang,
+					)
+				}
+				val renderMs = (System.nanoTime() - renderStartNs) / 1_000_000L
+				val totalMs = (System.nanoTime() - totalStartNs) / 1_000_000L
 				if (!rendered.isFile || rendered.length() <= 0L) {
-					Log.w(LOG_TAG, "Rendered output missing/empty for page=${page.id}: ${rendered.absolutePath}")
+					TranslatePipelineLog.w(
+						LOG_TAG,
+						"Rendered output missing/empty for page=${page.id}: ${rendered.absolutePath} " +
+							"(ocrMs=${ocrMs}ms, transMs=${transMs}ms, renderMs=${renderMs}ms, totalMs=${totalMs}ms)",
+					)
 					if (targetFile.exists()) {
 						targetFile.delete()
 					}
+					recycleSourceBitmap(sourceBitmap)
+					sourceBitmap = null
 					onProgress(TranslationStage.DONE, 100)
 					PageTranslationResult.NoText
 				} else {
-					Log.i(
+					TranslatePipelineLog.i(
 						LOG_TAG,
-						"Page=${page.id} translated & baked: ${rendered.name} (${rendered.length()} bytes)",
+						"Page=${page.id} translated & baked: ${rendered.name} (${rendered.length()} bytes) " +
+							"ocrMs=${ocrMs}ms transMs=${transMs}ms renderMs=${renderMs}ms totalMs=${totalMs}ms",
 					)
+					recycleSourceBitmap(sourceBitmap)
+					sourceBitmap = null
 					onProgress(TranslationStage.DONE, 100)
 					PageTranslationResult.Translated(rendered)
 				}
 			} catch (t: Throwable) {
-				Log.e(LOG_TAG, "Rendering failed for page=${page.id}", t)
+				TranslatePipelineLog.e(LOG_TAG, "Rendering failed for page=${page.id}", t)
 				if (targetFile.exists()) {
 					targetFile.delete()
 				}
 				throw t
 			}
 		} finally {
-			if (!sourceBitmap.isRecycled) {
-				sourceBitmap.recycle()
-			}
+			recycleSourceBitmap(sourceBitmap)
+		}
+	}
+
+	private suspend inline fun <T> PipelinePermit?.runWithPermit(
+		crossinline block: suspend () -> T,
+	): T = if (this != null) {
+		withPermit { block() }
+	} else {
+		block()
+	}
+
+	private fun recycleSourceBitmap(bitmap: Bitmap?) {
+		if (bitmap == null || isTestBitmapMode) return
+		if (!bitmap.isRecycled) {
+			bitmap.recycle()
 		}
 	}
 
@@ -184,9 +376,10 @@ class TranslatePageUseCase @Inject constructor(
 
 	@Blocking
 	private fun decodeContentSoftwareBitmap(uri: Uri): Bitmap {
+		val appContext = checkNotNull(context) { "Context is required to decode content URIs" }
 		val maxBytes = effectiveMaxBitmapBytes()
-		val mime = context.contentResolver.getType(uri)?.toMimeTypeOrNull()
-		val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+		val mime = appContext.contentResolver.getType(uri)?.toMimeTypeOrNull()
+		val bytes = appContext.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 			?: error("Unable to open content URI: $uri")
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
 			mime?.subtype != FORMAT_AVIF &&
@@ -211,9 +404,10 @@ class TranslatePageUseCase @Inject constructor(
 
 	@Blocking
 	private fun decodeFileSoftwareBitmap(file: File): Bitmap {
+		val appContext = checkNotNull(context) { "Context is required to decode image files" }
 		val maxBytes = effectiveMaxBitmapBytes()
 		if (BitmapDecoderCompat.isJxl(file) || BitmapDecoderCompat.isAvif(file)) {
-			context.ensureRamAtLeast(BitmapDecoderCompat.estimateDecodedSize(file))
+			appContext.ensureRamAtLeast(BitmapDecoderCompat.estimateDecodedSize(file))
 			return BitmapDecoderCompat.decode(file)
 		}
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -235,6 +429,7 @@ class TranslatePageUseCase @Inject constructor(
 
 	@Blocking
 	private fun decodeZipSoftwareBitmap(uri: Uri): Bitmap {
+		val appContext = checkNotNull(context) { "Context is required to decode zip entries" }
 		val maxBytes = effectiveMaxBitmapBytes()
 		val archivePath = requireNotNull(uri.schemeSpecificPart)
 		val entryName = requireNotNull(uri.fragment)
@@ -242,7 +437,7 @@ class TranslatePageUseCase @Inject constructor(
 			val entry = checkNotNull(zip.getEntry(entryName)) {
 				"Zip entry not found: $entryName"
 			}
-			context.ensureRamAtLeast((entry.size * 2L).coerceAtMost(maxBytes))
+			appContext.ensureRamAtLeast((entry.size * 2L).coerceAtMost(maxBytes))
 			val mime = MimeTypes.getMimeTypeFromExtension(entry.name)
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
 				mime?.subtype != FORMAT_AVIF &&
@@ -265,7 +460,8 @@ class TranslatePageUseCase @Inject constructor(
 	}
 
 	private fun effectiveMaxBitmapBytes(): Long {
-		val ramBudget = (context.ramAvailable / 3L).coerceAtLeast(MIN_RAM_BUDGET_BYTES)
+		val appContext = checkNotNull(context) { "Context is required to compute RAM budget" }
+		val ramBudget = (appContext.ramAvailable / 4L).coerceAtLeast(MIN_RAM_BUDGET_BYTES)
 		return min(MAX_BITMAP_BYTES, ramBudget)
 	}
 

@@ -19,6 +19,15 @@ class WebtoonImageView @JvmOverloads constructor(
 
 	private var scrollPos = 0
 	private var debugPaint: Paint? = null
+	private var frozenSwapHeight = 0
+
+	fun freezeHeightDuringSwap(heightPx: Int) {
+		frozenSwapHeight = heightPx.coerceAtLeast(0)
+	}
+
+	fun clearFrozenSwapHeight() {
+		frozenSwapHeight = 0
+	}
 
 	override fun onDraw(canvas: Canvas) {
 		super.onDraw(canvas)
@@ -59,6 +68,7 @@ class WebtoonImageView @JvmOverloads constructor(
 
 	override fun recycle() {
 		scrollPos = 0
+		frozenSwapHeight = 0
 		super.recycle()
 	}
 
@@ -91,6 +101,8 @@ class WebtoonImageView @JvmOverloads constructor(
 			} else if (resizeWidth) {
 				desiredWidth = (sWidth.toDouble() / sHeight.toDouble() * desiredHeight).toInt()
 			}
+		} else if (resizeHeight && frozenSwapHeight > 0) {
+			desiredHeight = frozenSwapHeight
 		}
 		desiredWidth = desiredWidth.coerceAtLeast(suggestedMinimumWidth)
 		desiredHeight = desiredHeight.coerceAtLeast(suggestedMinimumHeight)
@@ -115,6 +127,7 @@ class WebtoonImageView @JvmOverloads constructor(
 	}
 
 	override fun onReady() {
+		frozenSwapHeight = 0
 		super.onReady()
 		adjustScale()
 		applyScroll()

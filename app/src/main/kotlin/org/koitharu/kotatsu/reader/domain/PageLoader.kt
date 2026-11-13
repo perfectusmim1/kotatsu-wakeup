@@ -109,7 +109,9 @@ class PageLoader @Inject constructor(
 	val loaderScope = lifecycle.lifecycleScope + InternalErrorHandler() + Dispatchers.Default
 
 	init {
-		translationCoordinator.attachPageUriProvider { page -> loadPage(page, force = false) }
+		translationCoordinator.attachPrefetchAwarePageUriProvider { page, isPrefetch ->
+			loadPageForTranslation(page, isPrefetch = isPrefetch)
+		}
 	}
 
 	private val tasks = LongSparseArray<ProgressDeferred<Uri, Float>>()
@@ -124,6 +126,9 @@ class PageLoader @Inject constructor(
 	private val oniSagaPrefetchSemaphore = Semaphore(ONISAGA_PREFETCH_LIMIT)
 	private val convertLock = Mutex()
 	private val prefetchLock = Mutex()
+
+	@Volatile
+	private var latestPrefetchWantedIds: Set<Long> = emptySet()
 
 	@Volatile
 	private var repository: MangaRepository? = null
@@ -177,9 +182,11 @@ class PageLoader @Inject constructor(
 
 	@AnyThread
 	fun prefetch(pages: List<ReaderPage>) = loaderScope.launch {
+		val wanted = pages.mapTo(HashSet(pages.size)) { it.id }
+		latestPrefetchWantedIds = wanted
+		val alreadyCompletedPages = ArrayList<MangaPage>()
 		prefetchLock.withLock {
 			// Only what is ahead from here: whoever jumps somewhere else has no use for what was ahead of where they were
-			val wanted = pages.mapTo(HashSet()) { it.id }
 			prefetchQueue.removeAll { it.id !in wanted }
 			synchronized(tasks) {
 				val iterator = prefetching.iterator()
@@ -195,10 +202,16 @@ class PageLoader @Inject constructor(
 				}
 			}
 			for (page in pages.asReversed()) {
-				val isLoading = synchronized(tasks) {
-					tasks[page.id]?.takeIf { it.isValid() }?.isCancelled == false
+				val existingTask = synchronized(tasks) {
+					tasks[page.id]?.takeIf { it.isValid() && !it.isCancelled }
 				}
-				if (isLoading || prefetchQueue.any { it.id == page.id }) {
+				if (existingTask != null) {
+					if (existingTask.isCompleted) {
+						alreadyCompletedPages.add(page.toMangaPage())
+					}
+					continue
+				}
+				if (prefetchQueue.any { it.id == page.id }) {
 					continue
 				}
 				prefetchQueue.offerFirst(page.toMangaPage())
@@ -210,6 +223,11 @@ class PageLoader @Inject constructor(
 				while (prefetchQueue.size > queueLimit) {
 					prefetchQueue.pollLast()
 				}
+			}
+		}
+		if (alreadyCompletedPages.isNotEmpty() && translationCoordinator.isPrefetchTranslationEligible()) {
+			for (preloaded in alreadyCompletedPages.asReversed()) {
+				translationCoordinator.onPagePreloaded(preloaded)
 			}
 		}
 		if (counter.get() == 0) {
@@ -277,6 +295,35 @@ class PageLoader @Inject constructor(
 		}
 	}
 
+	private suspend fun loadPageForTranslation(page: MangaPage, isPrefetch: Boolean): Uri {
+		if (!isPrefetch) {
+			return loadPage(page, force = false)
+		}
+		var allowRetry = true
+		while (true) {
+			val task = synchronized(tasks) {
+				val existing = tasks[page.id]?.takeIf { it.isValid() && !it.isCancelled }
+				if (existing != null) {
+					existing
+				} else {
+					loadPageAsyncImpl(page, skipCache = false, isPrefetch = true).also {
+						tasks[page.id] = it
+						prefetching += page.id
+					}
+				}
+			}
+			try {
+				return task.await()
+			} catch (e: CancellationException) {
+				currentCoroutineContext().ensureActive()
+				if (!allowRetry || page.id !in latestPrefetchWantedIds) {
+					throw e
+				}
+				allowRetry = false
+			}
+		}
+	}
+
 	@CheckResult
 	suspend fun convertBimap(uri: Uri): Uri = convertLock.withLock {
 		if (uri.isZipUri()) {
@@ -337,6 +384,7 @@ class PageLoader @Inject constructor(
 	}
 
 	suspend fun invalidate(clearCache: Boolean) {
+		latestPrefetchWantedIds = emptySet()
 		synchronized(tasks) {
 			tasks.clear()
 		}
@@ -412,9 +460,20 @@ class PageLoader @Inject constructor(
 			// Not part of this task: the reader waits on this task when it reaches the page, and looking pages over
 			// ahead of time goes one at a time. A page already downloaded would sit blank behind all of the others.
 			loaderScope.launch { imageHider.checkAhead(page, uri) }
+			notifyPreloadedIfEligible(page)
 			return uri
 		}
-		return loadPageWithPermit(page, progress, isPrefetch = false, skipCache)
+		return loadPageWithPermit(page, progress, isPrefetch = false, skipCache).also {
+			notifyPreloadedIfEligible(page)
+		}
+	}
+
+	private fun notifyPreloadedIfEligible(page: MangaPage) {
+		if (page.id in latestPrefetchWantedIds && translationCoordinator.isPrefetchTranslationEligible()) {
+			loaderScope.launch {
+				translationCoordinator.onPagePreloaded(page)
+			}
+		}
 	}
 
 	private suspend fun loadPageWithPermit(

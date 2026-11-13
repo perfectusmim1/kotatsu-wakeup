@@ -5,8 +5,13 @@ import android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE
 import android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Build
 import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
 import androidx.annotation.CallSuper
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -38,6 +43,7 @@ import org.koitharu.kotatsu.reader.ui.erase.MaskedRegionDecoder
 import org.koitharu.kotatsu.reader.ui.pager.vm.PageState
 import org.koitharu.kotatsu.reader.ui.pager.vm.PageViewModel
 import org.koitharu.kotatsu.reader.ui.pager.webtoon.WebtoonHolder
+import org.koitharu.kotatsu.reader.ui.pager.webtoon.WebtoonImageView
 
 abstract class BasePageHolder<B : ViewBinding>(
 	protected val binding: B,
@@ -86,6 +92,12 @@ abstract class BasePageHolder<B : ViewBinding>(
 
 	private var pendingSwapScale: Float? = null
 	private var pendingSwapCenter: android.graphics.PointF? = null
+	private var swapSnapshotOverlay: ImageView? = null
+	private var swapSnapshotBitmap: Bitmap? = null
+	private var awaitingSwapImageLoad = false
+	private val swapOverlayTimeoutRunnable = Runnable {
+		clearSwapSnapshotOverlay()
+	}
 
 	init {
 		lifecycleScope.launch(Dispatchers.Main) {
@@ -107,6 +119,23 @@ abstract class BasePageHolder<B : ViewBinding>(
 							ssiv.isReady
 						) {
 							ssiv.setScaleAndCenter(scale, center)
+						}
+					}
+
+					override fun onImageLoaded() {
+						if (!awaitingSwapImageLoad) return
+						awaitingSwapImageLoad = false
+						// Post twice so WebtoonHolder's putRowAtTop / layout pass and SSIV's tile draw hit the frame before removing the snapshot.
+						ssiv.post {
+							ssiv.postOnAnimation {
+								clearSwapSnapshotOverlay()
+							}
+						}
+					}
+
+					override fun onImageLoadError(e: Throwable) {
+						if (awaitingSwapImageLoad) {
+							clearSwapSnapshotOverlay()
 						}
 					}
 				},
@@ -146,6 +175,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 	fun bind(data: ReaderPage) {
 		boundData?.let { pageLoader.onPageUnbound(it.id) }
 		pageLoader.onPageBound(data.id)
+		clearSwapSnapshotOverlay()
 		pendingSwapScale = null
 		pendingSwapCenter = null
 		boundData = data
@@ -197,6 +227,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 	}
 
 	override fun onDestroy() {
+		clearSwapSnapshotOverlay()
 		context.unregisterComponentCallbacks(this)
 		super.onDestroy()
 	}
@@ -208,6 +239,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 	@CallSuper
 	open fun onRecycled() {
 		setPageOnScreen(null)
+		clearSwapSnapshotOverlay()
 		pendingSwapScale = null
 		pendingSwapCenter = null
 		viewModel.onRecycle()
@@ -253,6 +285,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 			is PageState.Empty -> Unit
 
 			is PageState.Error -> {
+				clearSwapSnapshotOverlay()
 				val e = state.error
 				bindingInfo.textViewError.text = e.getDisplayMessage(context.resources)
 				bindingInfo.buttonRetry.setText(
@@ -269,8 +302,12 @@ abstract class BasePageHolder<B : ViewBinding>(
 				pendingSwapScale = if (preserveView && ssiv.isReady) ssiv.scale else null
 				pendingSwapCenter = if (preserveView && ssiv.isReady) ssiv.getCenter() else null
 				if (preserveView) {
+					captureAndShowSwapSnapshot()
+					(ssiv as? WebtoonImageView)?.freezeHeightDuringSwap(ssiv.height)
 					bindingInfo.layoutProgress.isGone = true
 				} else {
+					clearSwapSnapshotOverlay()
+					(ssiv as? WebtoonImageView)?.clearFrozenSwapHeight()
 					bindingInfo.textViewStatus.setText(R.string.preparing_)
 				}
 				applyMask(state.mask)
@@ -283,9 +320,21 @@ abstract class BasePageHolder<B : ViewBinding>(
 				}
 			}
 
-			is PageState.Shown -> Unit
+			is PageState.Shown -> {
+				if (awaitingSwapImageLoad) {
+					awaitingSwapImageLoad = false
+					ssiv.post {
+						ssiv.postOnAnimation {
+							clearSwapSnapshotOverlay()
+						}
+					}
+				}
+			}
 
-			is PageState.Hidden -> ssiv.recycle()
+			is PageState.Hidden -> {
+				clearSwapSnapshotOverlay()
+				ssiv.recycle()
+			}
 		}
 		updateAnimation()
 	}
@@ -333,5 +382,66 @@ abstract class BasePageHolder<B : ViewBinding>(
 			context.isLowRamDevice() -> 8
 			else -> 4
 		}
+	}
+
+	private fun captureAndShowSwapSnapshot() {
+		if (!ssiv.isReady || ssiv.width <= 0 || ssiv.height <= 0) {
+			return
+		}
+		val parent = ssiv.parent as? ViewGroup ?: return
+		val w = ssiv.width
+		val h = ssiv.height
+		val snapshot = runCatching {
+			val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+			val canvas = Canvas(bmp)
+			ssiv.draw(canvas)
+			bmp
+		}.getOrNull() ?: return
+
+		ssiv.removeCallbacks(swapOverlayTimeoutRunnable)
+		val prevBitmap = swapSnapshotBitmap
+		swapSnapshotBitmap = snapshot
+
+		val overlay = swapSnapshotOverlay ?: ImageView(context).also { iv ->
+			iv.scaleType = ImageView.ScaleType.FIT_XY
+			iv.isClickable = false
+			iv.isFocusable = false
+			iv.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+			val insertIndex = (parent.indexOfChild(ssiv) + 1).coerceIn(0, parent.childCount)
+			parent.addView(iv, insertIndex, FrameLayout.LayoutParams(w, h))
+			swapSnapshotOverlay = iv
+		}
+		overlay.layoutParams = (overlay.layoutParams as? ViewGroup.MarginLayoutParams ?: FrameLayout.LayoutParams(w, h)).apply {
+			width = w
+			height = h
+			leftMargin = ssiv.left
+			topMargin = ssiv.top
+		}
+		overlay.scaleX = ssiv.scaleX
+		overlay.scaleY = ssiv.scaleY
+		overlay.translationX = ssiv.translationX
+		overlay.translationY = ssiv.translationY
+		overlay.setImageBitmap(snapshot)
+		overlay.isVisible = true
+		awaitingSwapImageLoad = true
+		if (prevBitmap != null && prevBitmap !== snapshot && !prevBitmap.isRecycled) {
+			prevBitmap.recycle()
+		}
+		ssiv.postDelayed(swapOverlayTimeoutRunnable, 1500L)
+	}
+
+	private fun clearSwapSnapshotOverlay() {
+		awaitingSwapImageLoad = false
+		ssiv.removeCallbacks(swapOverlayTimeoutRunnable)
+		swapSnapshotOverlay?.let { overlay ->
+			overlay.setImageDrawable(null)
+			overlay.isVisible = false
+		}
+		swapSnapshotBitmap?.let { bmp ->
+			if (!bmp.isRecycled) {
+				bmp.recycle()
+			}
+		}
+		swapSnapshotBitmap = null
 	}
 }

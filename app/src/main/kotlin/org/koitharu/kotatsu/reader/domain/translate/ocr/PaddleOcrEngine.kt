@@ -131,7 +131,15 @@ class PaddleOcrEngine @Inject constructor(
 						dictionary = dictionary,
 						modelGroup = resolvedGroup,
 					)
-					val bubbles = groupLinesIntoBubbles(rawLines, width, height)
+					val totalPixels = width.toLong() * height.toLong()
+					val argbPixels = if (rawLines.isNotEmpty() && totalPixels in 1L..MAX_GROUPING_PIXELS) {
+						IntArray(totalPixels.toInt()).also { pixels ->
+							readableBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+						}
+					} else {
+						null
+					}
+					val bubbles = groupLinesIntoBubbles(rawLines, width, height, argbPixels)
 					val filtered = TextBlockFilters.filterBubbles(
 						bubbles = bubbles,
 						skipPureSfx = skipPureSfx,
@@ -363,20 +371,14 @@ class PaddleOcrEngine @Inject constructor(
 		return multiLineStrong || singleClearBubble
 	}
 
-	private fun isAcceptableAutoMatch(result: AutoProbeResult): Boolean {
-		val standardMatch = result.usableLines >= 1 &&
-			result.avgConfidence >= 68f &&
-			result.validCharRatio >= 0.65f &&
-			result.scriptPurity >= 0.50f &&
-			result.totalScriptLetters >= 2
-		// Accept clear multi-line text with strong valid-char ratio and script purity even if confidence sits slightly under 68.
-		val highPurityTextRichMatch = result.usableLines >= 2 &&
-			result.avgConfidence >= 55f &&
-			result.validCharRatio >= 0.85f &&
-			result.scriptPurity >= 0.85f &&
-			result.totalScriptLetters >= 6
-		return standardMatch || highPurityTextRichMatch
-	}
+	private fun isAcceptableAutoMatch(result: AutoProbeResult): Boolean =
+		isAcceptableAutoMatch(
+			usableLines = result.usableLines,
+			avgConfidence = result.avgConfidence,
+			validCharRatio = result.validCharRatio,
+			scriptPurity = result.scriptPurity,
+			totalScriptLetters = result.totalScriptLetters,
+		)
 
 	private fun countScriptLetters(text: String, modelGroup: String): Int {
 		var count = 0
@@ -916,85 +918,12 @@ class PaddleOcrEngine @Inject constructor(
 		out[2 * plane + outOffset] = (r - mean[2]) / std[2]
 	}
 
-	private data class DetBox(
+	internal data class DetBox(
 		val x0: Float,
 		val y0: Float,
 		val x1: Float,
 		val y1: Float,
 	)
-
-	private fun extractDetBoxes(
-		prob: FloatArray,
-		w: Int,
-		h: Int,
-		labels: IntArray,
-		queue: IntArray,
-	): List<DetBox> {
-		val boxes = ArrayList<DetBox>()
-		var label = 0
-		val total = w * h
-
-		for (i in 0 until total) {
-			if (prob[i] <= DET_BIN_THRESH || labels[i] != 0) continue
-			label += 1
-			var head = 0
-			var tail = 0
-			queue[tail++] = i
-			labels[i] = label
-			var minX = i % w
-			var maxX = minX
-			var minY = i / w
-			var maxY = minY
-			var sum = 0f
-			var count = 0
-
-			while (head < tail) {
-				val p = queue[head++]
-				val py = p / w
-				val px = p - py * w
-				sum += prob[p]
-				count += 1
-				if (px < minX) minX = px
-				if (px > maxX) maxX = px
-				if (py < minY) minY = py
-				if (py > maxY) maxY = py
-
-				for (dy in -1..1) {
-					val ny = py + dy
-					if (ny < 0 || ny >= h) continue
-					val rowOff = ny * w
-					for (dx in -1..1) {
-						val nx = px + dx
-						if (nx < 0 || nx >= w) continue
-						val n = rowOff + nx
-						if (labels[n] == 0 && prob[n] > DET_BIN_THRESH) {
-							labels[n] = label
-							queue[tail++] = n
-						}
-					}
-				}
-			}
-
-			val bw = maxX - minX + 1
-			val bh = maxY - minY + 1
-			if (count < 8 || bw < 3 || bh < 3) continue
-			val score = sum / count
-			if (score < DET_BOX_THRESH) continue
-
-			val d = (bw * bh * DET_UNCLIP_RATIO) / (2f * (bw + bh))
-			val dx = max(d * 1.18f, bh * 0.28f)
-			val dy = max(d * 0.95f, bh * 0.18f)
-			boxes.add(
-				DetBox(
-					x0 = (minX - dx).coerceIn(0f, w.toFloat()),
-					y0 = (minY - dy).coerceIn(0f, h.toFloat()),
-					x1 = (maxX + 1f + dx).coerceIn(0f, w.toFloat()),
-					y1 = (maxY + 1f + dy).coerceIn(0f, h.toFloat()),
-				),
-			)
-		}
-		return boxes
-	}
 
 	private fun ctcDecode(
 		data: FloatArray,
@@ -1056,351 +985,746 @@ class PaddleOcrEngine @Inject constructor(
 		return inter / max(1f, areaA + areaB - inter)
 	}
 
-	private fun groupLinesIntoBubbles(
-		rawLines: List<RawOcrLine>,
-		imgWidth: Int,
-		imgHeight: Int,
-	): List<OcrBubbleGroup> {
-		val cleanedAll = rawLines.mapNotNull { raw ->
-			val cleaned = TextBlockFilters.cleanOcrText(raw.text)
-			if (cleaned.isEmpty()) null else raw.copy(text = cleaned)
+	internal companion object {
+		const val LOG_TAG = OcrModelManager.LOG_TAG
+		private const val AUTO_PROBE_MAX_BOXES = 6
+		private const val DET_MAX_WIDTH = 960
+		private const val DET_SLICE_H = 1536
+		private const val DET_SLICE_OVERLAP = 192
+		private const val DET_BIN_THRESH = 0.3f
+		internal const val DET_BOX_THRESH = 0.50f
+		private const val DET_UNCLIP_RATIO = 1.78f
+		private const val REC_H = 48
+		private const val REC_MAX_W = 1600
+		private const val INV_255 = 1f / 255f
+		private const val MAX_GROUPING_PIXELS = 32_000_000L
+
+		internal fun isAcceptableAutoMatch(
+			usableLines: Int,
+			avgConfidence: Float,
+			validCharRatio: Float,
+			scriptPurity: Float,
+			totalScriptLetters: Int,
+		): Boolean {
+			val standardMatch = usableLines >= 1 &&
+				avgConfidence >= 68f &&
+				validCharRatio >= 0.65f &&
+				scriptPurity >= 0.50f &&
+				totalScriptLetters >= 2
+			// Accept clear multi-line text with strong valid-char ratio and script purity even if confidence sits under 68.
+			val highPurityTextRichMatch = usableLines >= 2 &&
+				validCharRatio >= 0.85f &&
+				((avgConfidence >= 55f && scriptPurity >= 0.85f && totalScriptLetters >= 6) ||
+					(avgConfidence >= 38f && scriptPurity >= 0.90f && totalScriptLetters >= 10))
+			return standardMatch || highPurityTextRichMatch
 		}
-		if (cleanedAll.isEmpty()) return emptyList()
 
-		val strongLines = cleanedAll.filter { TextBlockFilters.isUsableOcrLine(it, TextBlockFilters.DEFAULT_MIN_LINE_CONFIDENCE) }
+		private val DET_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
+		private val DET_STD = floatArrayOf(0.229f, 0.224f, 0.225f)
+		private val REC_MEAN = floatArrayOf(0.5f, 0.5f, 0.5f)
+		private val REC_STD = floatArrayOf(0.5f, 0.5f, 0.5f)
 
-		val rescuedLines = cleanedAll.filter { cand ->
-			if (TextBlockFilters.isUsableOcrLine(cand, TextBlockFilters.DEFAULT_MIN_LINE_CONFIDENCE)) return@filter false
-			if (cand.confidence < 34f) return@filter false
-			val letters = TextBlockFilters.countLetters(cand.text)
-			val junk = TextBlockFilters.countJunk(cand.text)
-			if (letters < 1) return@filter false
-			val ch = cand.height
-			val cw = cand.width
-			val centerXc = cand.centerX
-			val centerYc = cand.centerY
+		private val WHITESPACE_REGEX = Regex("""\s+""")
+		private val ENDS_WITH_ASCII_ALPHA_REGEX = Regex("""[a-zA-Z]$""")
+		private val STARTS_WITH_ASCII_ALPHA_REGEX = Regex("""^[a-zA-Z]""")
 
-			strongLines.any { s ->
-				val sh = s.height
-				val sw = s.width
-				val minH = min(ch, sh)
-				val maxH = max(ch, sh)
-				if (maxH / max(1f, minH) > 2.85f) return@any false
+		internal fun extractDetBoxes(
+			prob: FloatArray,
+			w: Int,
+			h: Int,
+			labels: IntArray = IntArray(w * h),
+			queue: IntArray = IntArray(w * h),
+		): List<DetBox> {
+			val boxes = ArrayList<DetBox>()
+			var label = 0
+			val total = w * h
 
-				val vOverlap = min(cand.y1, s.y1) - max(cand.y0, s.y0)
-				val hGap = max(cand.x0, s.x0) - min(cand.x1, s.x1)
-				if (maxH / max(1f, minH) <= 1.85f && vOverlap >= minH * 0.5f && hGap >= -minH * 0.4f && hGap <= maxH * 1.65f) {
-					return@any true
-				}
+			for (i in 0 until total) {
+				if (prob[i] <= DET_BIN_THRESH || labels[i] != 0) continue
+				label += 1
+				var head = 0
+				var tail = 0
+				queue[tail++] = i
+				labels[i] = label
+				var minX = i % w
+				var maxX = minX
+				var minY = i / w
+				var maxY = minY
+				var sum = 0f
+				var count = 0
 
-				if (letters >= 2 && junk <= 1 && cand.confidence >= 36f) {
-					val vGap = max(cand.y0, s.y0) - min(cand.y1, s.y1)
-					val hOverlap = min(cand.x1, s.x1) - max(cand.x0, s.x0)
-					val narrow = min(cw, sw)
-					val centerDist = abs(centerXc - s.centerX)
-					val centerYDist = abs(centerYc - s.centerY)
-					if (
-						vGap >= -minH * 0.62f &&
-						centerYDist >= minH * 0.45f &&
-						vGap <= maxH * 1.55f &&
-						hOverlap > narrow * 0.32f &&
-						centerDist < maxH * 2.1f
-					) {
-						return@any true
+				while (head < tail) {
+					val p = queue[head++]
+					val py = p / w
+					val px = p - py * w
+					sum += prob[p]
+					count += 1
+					if (px < minX) minX = px
+					if (px > maxX) maxX = px
+					if (py < minY) minY = py
+					if (py > maxY) maxY = py
+
+					for (dy in -1..1) {
+						val ny = py + dy
+						if (ny < 0 || ny >= h) continue
+						val rowOff = ny * w
+						for (dx in -1..1) {
+							val nx = px + dx
+							if (nx < 0 || nx >= w) continue
+							val n = rowOff + nx
+							if (labels[n] == 0 && prob[n] > DET_BIN_THRESH) {
+								labels[n] = label
+								queue[tail++] = n
+							}
+						}
 					}
 				}
-				false
+
+				val bw = maxX - minX + 1
+				val bh = maxY - minY + 1
+				if (count < 8 || bw < 3 || bh < 3) continue
+				val score = sum / count
+				if (score < DET_BOX_THRESH) continue
+
+				val d = (bw * bh * DET_UNCLIP_RATIO) / (2f * (bw + bh))
+				val dx = max(d * 1.42f, bh * 0.54f)
+				val dy = max(d * 1.05f, bh * 0.22f)
+				boxes.add(
+					DetBox(
+						x0 = (minX - dx).coerceIn(0f, w.toFloat()),
+						y0 = (minY - dy).coerceIn(0f, h.toFloat()),
+						x1 = (maxX + 1f + dx).coerceIn(0f, w.toFloat()),
+						y1 = (maxY + 1f + dy).coerceIn(0f, h.toFloat()),
+					),
+				)
 			}
+			return boxes
 		}
 
-		val lines = (strongLines + rescuedLines).sortedWith(
-			compareBy<RawOcrLine> { it.y0 }.thenBy { it.x0 },
-		)
-		if (lines.isEmpty()) return emptyList()
+		private fun argbLum(pixel: Int): Float {
+			val r = (pixel ushr 16) and 0xFF
+			val g = (pixel ushr 8) and 0xFF
+			val b = pixel and 0xFF
+			return 0.299f * r + 0.587f * g + 0.114f * b
+		}
 
-		fun spansSeparateSideBySideColumns(wideIdx: Int, colIdx: Int): Boolean {
-			val wBox = lines[wideIdx]
-			val cBox = lines[colIdx]
-			val ch = cBox.height
-			for (k in lines.indices) {
-				if (k == wideIdx || k == colIdx) continue
-				val oBox = lines[k]
-				val oh = oBox.height
-				val vOv = min(cBox.y1, oBox.y1) - max(cBox.y0, oBox.y0)
-				val hGap = max(cBox.x0, oBox.x0) - min(cBox.x1, oBox.x1)
-				if (vOv >= min(ch, oh) * 0.4f && hGap > max(ch, oh) * 0.55f) {
-					val ov1 = min(wBox.x1, cBox.x1) - max(wBox.x0, cBox.x0)
-					val ov2 = min(wBox.x1, oBox.x1) - max(wBox.x0, oBox.x0)
-					if (ov1 > 0f && ov2 > 0f) return true
+		internal fun sampleLineCollarLum(
+			pixels: IntArray,
+			width: Int,
+			height: Int,
+			line: RawOcrLine,
+		): Float {
+			val xStart = max(0, floor(line.x0).toInt())
+			val xEnd = min(width - 1, ceil(line.x1).toInt())
+			if (xEnd < xStart) return 255f
+			val stepX = max(1, (xEnd - xStart) / 14)
+			val lums = ArrayList<Float>(64)
+			val sampleYs = intArrayOf(
+				max(0, floor(line.y0).toInt() - 3),
+				max(0, floor(line.y0).toInt() - 1),
+				min(height - 1, ceil(line.y1).toInt() + 1),
+				min(height - 1, ceil(line.y1).toInt() + 3),
+			)
+			for (y in sampleYs) {
+				val rowOff = y * width
+				var x = xStart
+				while (x <= xEnd) {
+					lums.add(argbLum(pixels[rowOff + x]))
+					x += stepX
+				}
+			}
+			if (lums.isEmpty()) return 255f
+			lums.sort()
+			val idx = (lums.size * 0.55f).toInt().coerceIn(0, lums.lastIndex)
+			return lums[idx]
+		}
+
+		private fun isFaintGrayWatermarkOnWhite(
+			pixels: IntArray,
+			width: Int,
+			height: Int,
+			line: RawOcrLine,
+		): Boolean {
+			val bgCollar = sampleLineCollarLum(pixels, width, height, line)
+			if (bgCollar < 238f) return false
+			val x0 = floor(line.x0).toInt().coerceIn(0, width - 1)
+			val x1 = ceil(line.x1).toInt().coerceIn(0, width - 1)
+			val y0 = floor(line.y0).toInt().coerceIn(0, height - 1)
+			val y1 = ceil(line.y1).toInt().coerceIn(0, height - 1)
+			val w = x1 - x0
+			val h = y1 - y0
+			if (w < 6 || h < 6) return false
+			val stepX = max(1, w / 24)
+			val stepY = max(1, h / 12)
+			var minLum = 255f
+			var y = y0
+			while (y <= y1) {
+				val rowOff = y * width
+				var x = x0
+				while (x <= x1) {
+					val lum = argbLum(pixels[rowOff + x])
+					if (lum < minLum) minLum = lum
+					x += stepX
+				}
+				y += stepY
+			}
+			return minLum >= 175f
+		}
+
+		internal fun hasHorizontalBubbleBarrier(
+			pixels: IntArray,
+			width: Int,
+			height: Int,
+			lineA: RawOcrLine,
+			lineB: RawOcrLine,
+			collarLumA: Float? = null,
+			collarLumB: Float? = null,
+		): Boolean {
+			val leftFirst = lineA.x0 <= lineB.x0
+			val left = if (leftFirst) lineA else lineB
+			val right = if (leftFirst) lineB else lineA
+			val bgL = (if (leftFirst) collarLumA else collarLumB) ?: sampleLineCollarLum(pixels, width, height, left)
+			val bgR = (if (leftFirst) collarLumB else collarLumA) ?: sampleLineCollarLum(pixels, width, height, right)
+			if (abs(bgL - bgR) >= 75f) return true
+
+			val hGapPx = right.x0 - left.x1
+			if (hGapPx <= 1.5f) return false
+			val gapX0 = max(0, floor(left.x1).toInt() + 1)
+			val gapX1 = min(width - 1, ceil(right.x0).toInt() - 1)
+			if (gapX1 < gapX0) return false
+
+			val ovY0 = max(0, floor(max(left.y0, right.y0)).toInt())
+			val ovY1 = min(height - 1, ceil(min(left.y1, right.y1)).toInt())
+			val spanY = ovY1 - ovY0 + 1
+			if (spanY < 4) return false
+
+			val bothLight = bgL >= 165f && bgR >= 165f
+			val bothDark = bgL <= 105f && bgR <= 105f
+			val padY = max(4, (spanY * 0.55f).roundToInt())
+			val cuspTopY = max(0, ovY0 - padY)
+			val cuspBotY = min(height - 1, ovY1 + padY)
+
+			for (x in gapX0..gapX1) {
+				var darkCount = 0
+				var brightCount = 0
+				for (y in ovY0..ovY1) {
+					val lum = argbLum(pixels[y * width + x])
+					if (lum <= 145f) darkCount += 1
+					if (lum >= 180f) brightCount += 1
+				}
+				if (bothLight && darkCount.toFloat() / spanY >= 0.4f) return true
+				if (bothDark && brightCount.toFloat() / spanY >= 0.4f) return true
+
+				// İkiz / fıstık (peanut) beyaz balonlar arasındaki üst-alt boğum/sınır daralması (cusp)
+				if (bothLight) {
+					var topDark = false
+					var botDark = false
+					val topEnd = min(height - 1, ovY0 + 2)
+					for (y in cuspTopY..topEnd) {
+						if (argbLum(pixels[y * width + x]) <= 135f) {
+							topDark = true
+							break
+						}
+					}
+					if (topDark) {
+						val botStart = max(0, ovY1 - 2)
+						for (y in botStart..cuspBotY) {
+							if (argbLum(pixels[y * width + x]) <= 135f) {
+								botDark = true
+								break
+							}
+						}
+					}
+					if (topDark && botDark) return true
+				}
+			}
+
+			// Konkav içbükey boğum kontrolü: iki teğet beyaz balonun birleşim noktasında boğum duvarı içeri çöker
+			if (bothLight && hGapPx >= 4f) {
+				val scanMax = min(110, (max(left.height, right.height) * 2.4f).roundToInt())
+				fun findWallAbove(px: Float, startY: Int): Int? {
+					val cx = px.roundToInt().coerceIn(0, width - 1)
+					val clampedStart = startY.coerceIn(0, height - 1)
+					val stopY = max(0, clampedStart - scanMax)
+					for (y in clampedStart downTo stopY) {
+						if (argbLum(pixels[y * width + cx]) <= 120f) return y
+					}
+					return null
+				}
+
+				fun findWallBelow(px: Float, startY: Int): Int? {
+					val cx = px.roundToInt().coerceIn(0, width - 1)
+					val clampedStart = startY.coerceIn(0, height - 1)
+					val stopY = min(height - 1, clampedStart + scanMax)
+					for (y in clampedStart..stopY) {
+						if (argbLum(pixels[y * width + cx]) <= 120f) return y
+					}
+					return null
+				}
+
+				val gapMidX = (gapX0 + gapX1) * 0.5f
+				val wTopGap = findWallAbove(gapMidX, ovY0)
+				val wTopL = findWallAbove(left.centerX, floor(left.y0).toInt())
+				val wTopR = findWallAbove(right.centerX, floor(right.y0).toInt())
+				if (wTopGap != null && ((wTopL != null && wTopGap > wTopL + 6) || (wTopR != null && wTopGap > wTopR + 6))) {
+					return true
+				}
+				val wBotGap = findWallBelow(gapMidX, ovY1)
+				val wBotL = findWallBelow(left.centerX, ceil(left.y1).toInt())
+				val wBotR = findWallBelow(right.centerX, ceil(right.y1).toInt())
+				if (wBotGap != null && ((wBotL != null && wBotGap < wBotL - 6) || (wBotR != null && wBotGap < wBotR - 6))) {
+					return true
 				}
 			}
 			return false
 		}
 
-		val parent = IntArray(lines.size) { it }
-		fun find(index: Int): Int {
-			var i = index
-			while (parent[i] != i) {
-				parent[i] = parent[parent[i]]
-				i = parent[i]
+		internal fun hasVerticalBubbleBarrier(
+			pixels: IntArray,
+			width: Int,
+			height: Int,
+			lineA: RawOcrLine,
+			lineB: RawOcrLine,
+			collarLumA: Float? = null,
+			collarLumB: Float? = null,
+		): Boolean {
+			val topFirst = lineA.y0 <= lineB.y0
+			val top = if (topFirst) lineA else lineB
+			val bot = if (topFirst) lineB else lineA
+			val vGapPx = bot.y0 - top.y1
+			val bgT = (if (topFirst) collarLumA else collarLumB) ?: sampleLineCollarLum(pixels, width, height, top)
+			val bgB = (if (topFirst) collarLumB else collarLumA) ?: sampleLineCollarLum(pixels, width, height, bot)
+			// Kalın siyah konturlu orta ton sahne/anlatım yazılarında sıkı dikey yaka pikselinin biri siyah kontura denk gelebilir
+			val fakeOutlineCollar = vGapPx <= 6f &&
+				min(bgT, bgB) <= 28f &&
+				max(bgT, bgB) >= 75f &&
+				max(bgT, bgB) < 220f
+			if (abs(bgT - bgB) >= 75f && !fakeOutlineCollar) return true
+
+			if (vGapPx <= 1.5f) return false
+			val gapY0 = max(0, floor(top.y1).toInt() + 1)
+			val gapY1 = min(height - 1, ceil(bot.y0).toInt() - 1)
+			if (gapY1 < gapY0) return false
+
+			val ovX0 = max(0, floor(max(top.x0, bot.x0)).toInt())
+			val ovX1 = min(width - 1, ceil(min(top.x1, bot.x1)).toInt())
+			val spanX = ovX1 - ovX0 + 1
+			if (spanX < 4) return false
+
+			val bothLight = bgT >= 165f && bgB >= 165f
+			val bothDark = bgT <= 105f && bgB <= 105f
+			for (y in gapY0..gapY1) {
+				var darkCount = 0
+				var brightCount = 0
+				val rowOff = y * width
+				for (x in ovX0..ovX1) {
+					val lum = argbLum(pixels[rowOff + x])
+					if (lum <= 145f) darkCount += 1
+					if (lum >= 180f) brightCount += 1
+				}
+				if (bothLight && darkCount.toFloat() / spanX >= 0.45f) return true
+				if (bothDark && brightCount.toFloat() / spanX >= 0.45f) return true
 			}
-			return i
+			return false
 		}
 
-		for (i in lines.indices) {
-			val a = lines[i]
-			val ha = a.height
-			val wa = a.width
-			val centerXa = a.centerX
-			val centerYa = a.centerY
-			val isStatA = KEY_VALUE_STAT_LINE_REGEX.containsMatchIn(a.text)
-			val wordsA = a.text.trim().split(WHITESPACE_REGEX).size
+		private fun toNormCoord(value: Float, total: Int): Float =
+			((value / max(1, total)) * 1000f).coerceIn(0f, 1000f)
 
-			for (j in i + 1 until lines.size) {
-				val b = lines[j]
-				val hb = b.height
-				val wb = b.width
-				val centerXb = b.centerX
-				val centerYb = b.centerY
-				val minH = min(ha, hb)
-				val maxH = max(ha, hb)
+		internal fun groupLinesIntoBubbles(
+			rawLines: List<RawOcrLine>,
+			imgWidth: Int,
+			imgHeight: Int,
+			argbPixels: IntArray? = null,
+		): List<OcrBubbleGroup> {
+			val validPixels = argbPixels?.takeIf {
+				imgWidth > 0 && imgHeight > 0 && it.size.toLong() >= imgWidth.toLong() * imgHeight.toLong()
+			}
+			val cleanedAll = rawLines.mapNotNull { raw ->
+				val cleaned = TextBlockFilters.cleanOcrText(raw.text)
+				if (cleaned.isEmpty()) null else raw.copy(text = cleaned)
+			}
+			if (cleanedAll.isEmpty()) return emptyList()
 
-				val vOverlap = min(a.y1, b.y1) - max(a.y0, b.y0)
-				val hGap = max(a.x0, b.x0) - min(a.x1, b.x1)
-				val vertA = ha > wa * 1.4f
-				val vertB = hb > wb * 1.4f
-				if (vertA && vertB) {
-					val minW = min(wa, wb)
-					val maxW = max(wa, wb)
+			val strongLines = cleanedAll.filter { line ->
+				TextBlockFilters.isUsableOcrLine(line, TextBlockFilters.DEFAULT_MIN_LINE_CONFIDENCE) &&
+					(validPixels == null || !isFaintGrayWatermarkOnWhite(validPixels, imgWidth, imgHeight, line))
+			}
+
+			val rescuedLines = cleanedAll.filter { cand ->
+				if (TextBlockFilters.isUsableOcrLine(cand, TextBlockFilters.DEFAULT_MIN_LINE_CONFIDENCE)) return@filter false
+				if (cand.confidence < 34f) return@filter false
+				if (validPixels != null && isFaintGrayWatermarkOnWhite(validPixels, imgWidth, imgHeight, cand)) return@filter false
+				val letters = TextBlockFilters.countLetters(cand.text)
+				val junk = TextBlockFilters.countJunk(cand.text)
+				if (letters < 1) return@filter false
+				val ch = cand.height
+				val cw = cand.width
+				val centerXc = cand.centerX
+				val centerYc = cand.centerY
+				val isEdgeTruncated = cand.y0 <= 4f || cand.y1 >= imgHeight - 4f
+
+				strongLines.any { s ->
+					val sh = s.height
+					val sw = s.width
+					val minH = min(ch, sh)
+					val maxH = max(ch, sh)
+					if (!isEdgeTruncated && maxH / max(1f, minH) > 2.85f) return@any false
+
+					val vOverlap = min(cand.y1, s.y1) - max(cand.y0, s.y0)
+					val hGap = max(cand.x0, s.x0) - min(cand.x1, s.x1)
 					if (
-						vOverlap >= minH * 0.25f &&
-						hGap >= -minW * 0.45f &&
-						hGap <= maxW * 1.25f &&
-						maxW / max(1f, minW) <= 1.75f
+						maxH / max(1f, minH) <= 1.85f &&
+						vOverlap >= minH * 0.5f &&
+						hGap >= -minH * 0.4f &&
+						hGap <= maxH * 0.55f &&
+						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, cand, s))
+					) {
+						return@any true
+					}
+
+					val reqConf = if (isEdgeTruncated) 34f else 36f
+					val maxJunk = if (isEdgeTruncated) 2 else 1
+					val minOverlapRatio = if (isEdgeTruncated) 0.25f else 0.32f
+					if (letters >= 2 && junk <= maxJunk && cand.confidence >= reqConf) {
+						val vGap = max(cand.y0, s.y0) - min(cand.y1, s.y1)
+						val hOverlap = min(cand.x1, s.x1) - max(cand.x0, s.x0)
+						val narrow = min(cw, sw)
+						val centerDist = abs(centerXc - s.centerX)
+						val centerYDist = abs(centerYc - s.centerY)
+						if (
+							vGap >= -minH * 0.62f &&
+							centerYDist >= minH * 0.45f &&
+							vGap <= maxH * 1.55f &&
+							hOverlap > narrow * minOverlapRatio &&
+							centerDist < maxH * 2.1f
+						) {
+							return@any true
+						}
+					}
+					false
+				}
+			}
+
+			val lines = (strongLines + rescuedLines).sortedWith(
+				compareBy<RawOcrLine> { it.y0 }.thenBy { it.x0 },
+			)
+			if (lines.isEmpty()) return emptyList()
+
+			val collarLums = validPixels?.let { px ->
+				FloatArray(lines.size) { idx -> sampleLineCollarLum(px, imgWidth, imgHeight, lines[idx]) }
+			}
+
+			fun hasIndependentVerticalPartner(targetIdx: Int, otherIdx: Int): Boolean {
+				val tBox = lines[targetIdx]
+				val oBox = lines[otherIdx]
+				val th = tBox.height
+				val tw = tBox.width
+				for (k in lines.indices) {
+					if (k == targetIdx || k == otherIdx) continue
+					val kBox = lines[k]
+					val kh = kBox.height
+					val vGap = max(tBox.y0, kBox.y0) - min(tBox.y1, kBox.y1)
+					if (vGap < -min(th, kh) * 0.4f || vGap > max(th, kh) * 1.35f) continue
+					val ovT = min(tBox.x1, kBox.x1) - max(tBox.x0, kBox.x0)
+					val ovO = min(oBox.x1, kBox.x1) - max(oBox.x0, kBox.x0)
+					if (ovT > min(tw, kBox.width) * 0.42f && ovO <= 0f) {
+						return true
+					}
+				}
+				return false
+			}
+
+			fun spansSeparateSideBySideColumns(wideIdx: Int, colIdx: Int): Boolean {
+				val wBox = lines[wideIdx]
+				val cBox = lines[colIdx]
+				val ch = cBox.height
+				for (k in lines.indices) {
+					if (k == wideIdx || k == colIdx) continue
+					val oBox = lines[k]
+					val oh = oBox.height
+					val vOv = min(cBox.y1, oBox.y1) - max(cBox.y0, oBox.y0)
+					val hGap = max(cBox.x0, oBox.x0) - min(cBox.x1, oBox.x1)
+					if (vOv >= min(ch, oh) * 0.4f && hGap > max(ch, oh) * 0.55f) {
+						val ov1 = min(wBox.x1, cBox.x1) - max(wBox.x0, cBox.x0)
+						val ov2 = min(wBox.x1, oBox.x1) - max(wBox.x0, oBox.x0)
+						if (ov1 > 0f && ov2 > 0f) return true
+					}
+				}
+				return false
+			}
+
+			val parent = IntArray(lines.size) { it }
+			fun find(index: Int): Int {
+				var i = index
+				while (parent[i] != i) {
+					parent[i] = parent[parent[i]]
+					i = parent[i]
+				}
+				return i
+			}
+
+			for (i in lines.indices) {
+				val a = lines[i]
+				val ha = a.height
+				val wa = a.width
+				val centerXa = a.centerX
+				val centerYa = a.centerY
+				val isStatA = TextBlockFilters.isRpgStatLine(a.text)
+				val textA = a.text.trim()
+				val wordsA = textA.split(WHITESPACE_REGEX).size
+
+				for (j in i + 1 until lines.size) {
+					val b = lines[j]
+					val hb = b.height
+					val wb = b.width
+					val centerXb = b.centerX
+					val centerYb = b.centerY
+					val minH = min(ha, hb)
+					val maxH = max(ha, hb)
+
+					val vOverlap = min(a.y1, b.y1) - max(a.y0, b.y0)
+					val hGap = max(a.x0, b.x0) - min(a.x1, b.x1)
+					val vertA = ha > wa * 1.4f
+					val vertB = hb > wb * 1.4f
+					if (vertA && vertB) {
+						val minW = min(wa, wb)
+						val maxW = max(wa, wb)
+						if (
+							vOverlap >= minH * 0.25f &&
+							hGap >= -minW * 0.45f &&
+							hGap <= maxW * 1.25f &&
+							maxW / max(1f, minW) <= 1.75f &&
+							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
+						) {
+							parent[find(j)] = find(i)
+							continue
+						}
+					} else if (
+						!vertA && !vertB &&
+						vOverlap >= minH * 0.52f &&
+						hGap >= -minH * 0.35f &&
+						hGap <= maxH * 0.45f &&
+						maxH / max(1f, minH) <= 1.65f &&
+						!(hasIndependentVerticalPartner(i, j) && hasIndependentVerticalPartner(j, i)) &&
+						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
 					) {
 						parent[find(j)] = find(i)
 						continue
 					}
-				} else if (
-					!vertA && !vertB &&
-					vOverlap >= minH * 0.52f &&
-					hGap >= -minH * 0.35f &&
-					hGap <= maxH * 0.62f &&
-					maxH / max(1f, minH) <= 1.65f
-				) {
-					parent[find(j)] = find(i)
-					continue
-				}
 
-				if (b.y0 - a.y1 > maxH * 1.55f) {
-					if (b.y0 - a.y1 > maxH * 4f) break
-					continue
-				}
+					if (b.y0 - a.y1 > maxH * 1.55f) {
+						if (b.y0 - a.y1 > maxH * 4f) break
+						continue
+					}
 
-				val isStatB = KEY_VALUE_STAT_LINE_REGEX.containsMatchIn(b.text)
-				if (isStatA || isStatB) continue
+					val isStatB = TextBlockFilters.isRpgStatLine(b.text)
+					if (isStatA || isStatB) continue
 
-				val wordsB = b.text.trim().split(WHITESPACE_REGEX).size
-				if (ha >= hb * 1.16f && wordsA <= 3 && (wordsB >= 5 || wb >= wa * 1.42f)) {
-					continue
-				}
+					val wordsB = b.text.trim().split(WHITESPACE_REGEX).size
+					if (
+						ha >= hb * 1.16f &&
+						wordsA <= 3 &&
+						(wordsB >= 5 || wb >= wa * 1.42f) &&
+						TextBlockFilters.isSystemBoxHeader(textA)
+					) {
+						continue
+					}
 
-				val vGap = max(a.y0, b.y0) - min(a.y1, b.y1)
-				val centerYDist = abs(centerYb - centerYa)
-				if (vGap > maxH * 1.5f || vGap < -minH * 0.62f || centerYDist < minH * 0.45f) continue
+					val vGap = max(a.y0, b.y0) - min(a.y1, b.y1)
+					val centerYDist = abs(centerYb - centerYa)
+					if (vGap > maxH * 1.5f || vGap < -minH * 0.62f || centerYDist < minH * 0.45f) continue
 
-				var hasIntermediateRow = false
-				for (m in i + 1 until j) {
-					val mb = lines[m]
-					val mCenterY = mb.centerY
-					if (mCenterY > a.y1 - minH * 0.2f && mCenterY < b.y0 + minH * 0.2f) {
-						val ovA = min(a.x1, mb.x1) - max(a.x0, mb.x0)
-						val ovB = min(b.x1, mb.x1) - max(b.x0, mb.x0)
-						if (ovA > 0f || ovB > 0f) {
-							hasIntermediateRow = true
-							break
+					var hasIntermediateRow = false
+					for (m in i + 1 until j) {
+						val mb = lines[m]
+						val mCenterY = mb.centerY
+						if (mCenterY > a.y1 - minH * 0.2f && mCenterY < b.y0 + minH * 0.2f) {
+							val ovA = min(a.x1, mb.x1) - max(a.x0, mb.x0)
+							val ovB = min(b.x1, mb.x1) - max(b.x0, mb.x0)
+							if (ovA > 0f || ovB > 0f) {
+								hasIntermediateRow = true
+								break
+							}
+						}
+					}
+					if (hasIntermediateRow) continue
+
+					if (
+						spansSeparateSideBySideColumns(i, j) ||
+						spansSeparateSideBySideColumns(j, i) ||
+						(validPixels != null && vGap >= -2f && hasVerticalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
+					) {
+						continue
+					}
+
+					val overlap = min(a.x1, b.x1) - max(a.x0, b.x0)
+					val narrow = min(wa, wb)
+					val centerDist = abs(centerXa - centerXb)
+					val heightRatio = maxH / max(1f, minH)
+
+					if (heightRatio <= 1.65f) {
+						val aligned =
+							(overlap > narrow * 0.35f && centerDist < max(maxH * 2.2f, max(wa, wb) * 0.32f)) ||
+								(overlap > 0f && centerDist < maxH * 1.8f)
+						if (aligned && vGap <= minH * 1.35f) {
+							parent[find(j)] = find(i)
+							continue
+						}
+					}
+
+					if (heightRatio <= 2.85f) {
+						val stronglyAligned =
+							(overlap > narrow * 0.36f && centerDist < maxH * 1.55f) ||
+								(overlap > narrow * 0.6f && centerDist < max(wa, wb) * 0.45f)
+						if (stronglyAligned && vGap >= -minH * 0.55f && vGap <= maxH * 1.45f) {
+							parent[find(j)] = find(i)
 						}
 					}
 				}
-				if (hasIntermediateRow) continue
-
-				if (spansSeparateSideBySideColumns(i, j) || spansSeparateSideBySideColumns(j, i)) {
-					continue
-				}
-
-				val overlap = min(a.x1, b.x1) - max(a.x0, b.x0)
-				val narrow = min(wa, wb)
-				val centerDist = abs(centerXa - centerXb)
-				val heightRatio = maxH / max(1f, minH)
-
-				if (heightRatio <= 1.65f) {
-					val aligned =
-						(overlap > narrow * 0.35f && centerDist < max(maxH * 2.2f, max(wa, wb) * 0.32f)) ||
-							(overlap > 0f && centerDist < maxH * 1.8f)
-					if (aligned && vGap <= minH * 1.35f) {
-						parent[find(j)] = find(i)
-						continue
-					}
-				}
-
-				if (heightRatio <= 2.85f) {
-					val stronglyAligned =
-						(overlap > narrow * 0.36f && centerDist < maxH * 1.55f) ||
-							(overlap > narrow * 0.6f && centerDist < max(wa, wb) * 0.45f)
-					if (stronglyAligned && vGap >= -minH * 0.55f && vGap <= maxH * 1.45f) {
-						parent[find(j)] = find(i)
-					}
-				}
 			}
-		}
 
-		val groups = LinkedHashMap<Int, ArrayList<RawOcrLine>>()
-		for (i in lines.indices) {
-			val root = find(i)
-			groups.getOrPut(root) { ArrayList() }.add(lines[i])
-		}
+			val groups = LinkedHashMap<Int, ArrayList<RawOcrLine>>()
+			for (i in lines.indices) {
+				val root = find(i)
+				groups.getOrPut(root) { ArrayList() }.add(lines[i])
+			}
 
-		val sortedGroups = ArrayList<Pair<Float, OcrBubbleGroup>>(groups.size)
-		for (group in groups.values) {
-			val isVerticalCjkGroup = group.all { it.height > it.width * 1.4f } &&
-				group.any { TextBlockFilters.hasCjkOrHangulOrArabic(it.text) }
-			group.sortWith { a, b ->
-				if (isVerticalCjkGroup) {
-					// Dikey Japonca/Çince balon sütunları sağdan sola okunur
-					b.x0.compareTo(a.x0)
-				} else {
-					val ha = a.height
-					val hb = b.height
-					val vOv = min(a.y1, b.y1) - max(a.y0, b.y0)
-					if (vOv >= min(ha, hb) * 0.5f) {
-						a.x0.compareTo(b.x0)
+			val sortedGroups = ArrayList<Pair<Float, OcrBubbleGroup>>(groups.size)
+			for (group in groups.values) {
+				val isVerticalCjkGroup = group.all { it.height > it.width * 1.4f } &&
+					group.any { TextBlockFilters.hasCjkOrHangulOrArabic(it.text) }
+				group.sortWith { a, b ->
+					if (isVerticalCjkGroup) {
+						b.x0.compareTo(a.x0)
 					} else {
-						val yCmp = a.y0.compareTo(b.y0)
-						if (yCmp != 0) yCmp else a.x0.compareTo(b.x0)
-					}
-				}
-			}
-
-			val mergedRows = ArrayList<RawOcrLine>(group.size)
-			for (item in group) {
-				val prev = mergedRows.lastOrNull()
-				if (prev != null && !isVerticalCjkGroup) {
-					val hp = prev.height
-					val hi = item.height
-					val minH = min(hp, hi)
-					val vOv = min(prev.y1, item.y1) - max(prev.y0, item.y0)
-					val hGap = item.x0 - prev.x1
-					if (vOv >= minH * 0.52f && abs(prev.centerY - item.centerY) < minH * 0.45f && hGap >= -minH * 0.4f) {
-						val joiner = if (
-							hGap < minH * 0.28f &&
-							ENDS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(prev.text) &&
-							STARTS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(item.text)
-						) {
-							""
+						val ha = a.height
+						val hb = b.height
+						val vOv = min(a.y1, b.y1) - max(a.y0, b.y0)
+						if (vOv >= min(ha, hb) * 0.5f) {
+							a.x0.compareTo(b.x0)
 						} else {
-							" "
+							val yCmp = a.y0.compareTo(b.y0)
+							if (yCmp != 0) yCmp else a.x0.compareTo(b.x0)
 						}
-						mergedRows[mergedRows.lastIndex] = RawOcrLine(
-							text = "${prev.text}$joiner${item.text}".trim(),
-							confidence = max(prev.confidence, item.confidence),
-							x0 = min(prev.x0, item.x0),
-							y0 = min(prev.y0, item.y0),
-							x1 = max(prev.x1, item.x1),
-							y1 = max(prev.y1, item.y1),
-						)
-						continue
 					}
 				}
-				mergedRows.add(item)
-			}
 
-			var x0 = Float.POSITIVE_INFINITY
-			var y0 = Float.POSITIVE_INFINITY
-			var x1 = Float.NEGATIVE_INFINITY
-			var y1 = Float.NEGATIVE_INFINITY
-			for (l in mergedRows) {
-				x0 = min(x0, l.x0)
-				y0 = min(y0, l.y0)
-				x1 = max(x1, l.x1)
-				y1 = max(y1, l.y1)
-			}
+				val mergedRows = ArrayList<RawOcrLine>(group.size)
+				for (item in group) {
+					val prev = mergedRows.lastOrNull()
+					if (prev != null && !isVerticalCjkGroup) {
+						val hp = prev.height
+						val hi = item.height
+						val minH = min(hp, hi)
+						val vOv = min(prev.y1, item.y1) - max(prev.y0, item.y0)
+						val hGap = item.x0 - prev.x1
+						if (
+							vOv >= minH * 0.52f &&
+							abs(prev.centerY - item.centerY) < minH * 0.45f &&
+							hGap >= -minH * 0.4f &&
+							hGap <= minH * 0.65f &&
+							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, prev, item))
+						) {
+							val joiner = if (
+								hGap < minH * 0.28f &&
+								ENDS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(prev.text) &&
+								STARTS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(item.text)
+							) {
+								""
+							} else {
+								" "
+							}
+							mergedRows[mergedRows.lastIndex] = RawOcrLine(
+								text = "${prev.text}$joiner${item.text}".trim(),
+								confidence = max(prev.confidence, item.confidence),
+								x0 = min(prev.x0, item.x0),
+								y0 = min(prev.y0, item.y0),
+								x1 = max(prev.x1, item.x1),
+								y1 = max(prev.y1, item.y1),
+							)
+							continue
+						}
+					}
+					mergedRows.add(item)
+				}
 
-			val joinedText = if (isVerticalCjkGroup) {
-				mergedRows.joinToString("") { it.text }
-			} else {
-				mergedRows.joinToString(" ") { it.text }
-			}
-			val text = TextBlockFilters.joinHyphenatedWords(joinedText)
-			if (text.isEmpty()) continue
+				var x0 = Float.POSITIVE_INFINITY
+				var y0 = Float.POSITIVE_INFINITY
+				var x1 = Float.NEGATIVE_INFINITY
+				var y1 = Float.NEGATIVE_INFINITY
+				for (l in mergedRows) {
+					x0 = min(x0, l.x0)
+					y0 = min(y0, l.y0)
+					x1 = max(x1, l.x1)
+					y1 = max(y1, l.y1)
+				}
 
-			val groupBox = NormalizedBox(
-				yMin = toNormCoord(y0, imgHeight),
-				xMin = toNormCoord(x0, imgWidth),
-				yMax = toNormCoord(y1, imgHeight),
-				xMax = toNormCoord(x1, imgWidth),
-			)
-			if (!groupBox.isValid()) continue
+				val joinedText = if (isVerticalCjkGroup) {
+					mergedRows.joinToString("") { it.text }
+				} else {
+					mergedRows.joinToString(" ") { it.text }
+				}
+				val text = TextBlockFilters.joinHyphenatedWords(joinedText)
+				if (text.isEmpty()) continue
 
-			val lineModels = mergedRows.map { r ->
-				OcrLine(
-					box = NormalizedBox(
-						yMin = toNormCoord(r.y0, imgHeight),
-						xMin = toNormCoord(r.x0, imgWidth),
-						yMax = toNormCoord(r.y1, imgHeight),
-						xMax = toNormCoord(r.x1, imgWidth),
+				val groupBox = NormalizedBox(
+					yMin = toNormCoord(y0, imgHeight),
+					xMin = toNormCoord(x0, imgWidth),
+					yMax = toNormCoord(y1, imgHeight),
+					xMax = toNormCoord(x1, imgWidth),
+				)
+				if (!groupBox.isValid()) continue
+
+				var emphasisLastLineScale = 1f
+				if (!isVerticalCjkGroup && mergedRows.size >= 2) {
+					val lastH = mergedRows.last().height
+					var sumOtherH = 0f
+					for (idx in 0 until mergedRows.lastIndex) {
+						sumOtherH += mergedRows[idx].height
+					}
+					val avgOtherH = sumOtherH / mergedRows.lastIndex
+					if (avgOtherH > 0f && lastH / avgOtherH >= 1.32f) {
+						val clamped = (lastH / avgOtherH).coerceIn(1.25f, 1.65f)
+						emphasisLastLineScale = (clamped * 100f).roundToInt() / 100f
+					}
+				}
+
+				val lineModels = mergedRows.map { r ->
+					OcrLine(
+						box = NormalizedBox(
+							yMin = toNormCoord(r.y0, imgHeight),
+							xMin = toNormCoord(r.x0, imgWidth),
+							yMax = toNormCoord(r.y1, imgHeight),
+							xMax = toNormCoord(r.x1, imgWidth),
+						),
+						text = r.text,
+						confidence = (r.confidence / 100f).coerceIn(0f, 1f),
+					)
+				}
+
+				val bw = x1 - x0
+				val bh = y1 - y0
+				val isVertical = bh > bw * 1.4f && mergedRows.size == 1 && TextBlockFilters.hasCjkOrHangulOrArabic(text)
+				val kindHint = if (TextBlockFilters.isPureSoundEffect(text)) TextBlockKind.SFX else TextBlockKind.DIALOGUE
+
+				sortedGroups.add(
+					y0 to OcrBubbleGroup(
+						id = "",
+						box = groupBox,
+						text = text,
+						lines = lineModels,
+						isVertical = isVertical,
+						kindHint = kindHint,
+						emphasisLastLineScale = emphasisLastLineScale,
 					),
-					text = r.text,
-					confidence = (r.confidence / 100f).coerceIn(0f, 1f),
 				)
 			}
 
-			val bw = x1 - x0
-			val bh = y1 - y0
-			val isVertical = bh > bw * 1.4f && mergedRows.size == 1 && TextBlockFilters.hasCjkOrHangulOrArabic(text)
-			val kindHint = if (TextBlockFilters.isPureSoundEffect(text)) TextBlockKind.SFX else TextBlockKind.DIALOGUE
-
-			sortedGroups.add(
-				y0 to OcrBubbleGroup(
-					id = "",
-					box = groupBox,
-					text = text,
-					lines = lineModels,
-					isVertical = isVertical,
-					kindHint = kindHint,
-				),
-			)
+			sortedGroups.sortBy { it.first }
+			return sortedGroups.mapIndexed { index, pair ->
+				pair.second.copy(id = "b$index")
+			}
 		}
-
-		sortedGroups.sortBy { it.first }
-		return sortedGroups.mapIndexed { index, pair ->
-			pair.second.copy(id = "b$index")
-		}
-	}
-
-	private fun toNormCoord(value: Float, total: Int): Float =
-		((value / max(1, total)) * 1000f).coerceIn(0f, 1000f)
-
-	private companion object {
-		const val LOG_TAG = OcrModelManager.LOG_TAG
-		const val AUTO_PROBE_MAX_BOXES = 6
-		const val DET_MAX_WIDTH = 960
-		const val DET_SLICE_H = 1536
-		const val DET_SLICE_OVERLAP = 192
-		const val DET_BIN_THRESH = 0.3f
-		const val DET_BOX_THRESH = 0.58f
-		const val DET_UNCLIP_RATIO = 1.78f
-		const val REC_H = 48
-		const val REC_MAX_W = 1600
-		const val INV_255 = 1f / 255f
-
-		val DET_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
-		val DET_STD = floatArrayOf(0.229f, 0.224f, 0.225f)
-		val REC_MEAN = floatArrayOf(0.5f, 0.5f, 0.5f)
-		val REC_STD = floatArrayOf(0.5f, 0.5f, 0.5f)
-
-		val KEY_VALUE_STAT_LINE_REGEX = Regex("""^[A-Za-zÇĞİÖŞÜçğıöşü0-9\s/()+-]{2,26}:\s*\S""")
-		val WHITESPACE_REGEX = Regex("""\s+""")
-		val ENDS_WITH_ASCII_ALPHA_REGEX = Regex("""[a-zA-Z]$""")
-		val STARTS_WITH_ASCII_ALPHA_REGEX = Regex("""^[a-zA-Z]""")
 	}
 }

@@ -29,7 +29,13 @@ object TextBlockFilters {
 	private val EDGE_SYMBOLS_TRAILING_REGEX = Regex("""[|\\/_=~^`<>]+$""")
 	private val ANGLE_TAG_REGEX = Regex("""<[^>]{1,28}>""")
 	private val ANGLE_BRACKET_REGEX = Regex("""[<>]+""")
-	private val HYPHEN_JOIN_REGEX = Regex("""(\p{L})- (\p{L})""")
+	private val QUOTE_CONTRACTION_REGEX = Regex(
+		"""(?<=\p{L})["“”](?=(?:s|t|m|d|re|ve|ll)\b)""",
+		RegexOption.IGNORE_CASE,
+	)
+	private val QUOTE_BETWEEN_ALPHA_REGEX = Regex("""(?<=[A-Za-z])["“”](?=[A-Za-z])""")
+	private val HYPHEN_TRAILING_QUOTE_REGEX = Regex("""(\p{L})-[\"'“”‘’`]+(?=\s|$)""")
+	private val HYPHEN_JOIN_REGEX = Regex("""(\p{L})-[\"'“”‘’`]?\s+(\p{L})""")
 	private val ZERO_AFTER_ALPHA_REGEX = Regex("""(?<=[A-Za-z])0(?=[A-Za-z.!?,;:'"\s]|$)""")
 	private val ZERO_BEFORE_ALPHA_REGEX = Regex("""(?:^|(?<=[\s"'(\[¡¿]))0(?=[A-Za-z]+)""")
 	private val FIVE_ZERO_TO_SO_REGEX = Regex("""^5[0O]([!?.…]*)$""", RegexOption.IGNORE_CASE)
@@ -49,6 +55,12 @@ object TextBlockFilters {
 	private val PUNCT_ONLY_ALLOW_REGEX = Regex("""^[.…!?]+$""")
 	private val SINGLE_LATIN_WORD_REGEX = Regex("""^(?:I|A|O)[!?.…,]*$""", RegexOption.IGNORE_CASE)
 	private val NON_LETTER_DIGIT_EDGE_REGEX = Regex("""^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$""")
+	private val TRIPLE_SAME_CHAR_REGEX = Regex("""^(.)\1{2,}$""", RegexOption.IGNORE_CASE)
+	private val LATIN_VOWEL_REGEX = Regex(
+		"""[aeiouyáàâäãåéèêëíìîïóòôöõøúùûüýÿ]""",
+		RegexOption.IGNORE_CASE,
+	)
+	private val ASCII_VOWEL_REGEX = Regex("""[aeiouy]""", RegexOption.IGNORE_CASE)
 	private val CLEAN_MULTI_TOKEN_REGEX = Regex(
 		"""^[\p{L}\p{N}]+(?:[\s.,!?'"“”‘’…:;()\-–—~「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛]+[\p{L}\p{N}]+)*[\s.,!?'"“”‘’…:;()\-–—~「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛]*$""",
 	)
@@ -72,6 +84,8 @@ object TextBlockFilters {
 	private val COLLAPSE_TRIPLE_REGEX = Regex("""([a-z])\1{2,}""")
 	private val COLLAPSE_DOUBLE_REGEX = Regex("""([a-z])\1+""")
 	private val NON_ASCII_LOWER_ALPHA_REGEX = Regex("""[^a-z]""")
+	private val NON_ASCII_ALPHA_REGEX = Regex("""[^a-zA-Z]""")
+	private val NON_UNICODE_LOWER_ALPHA_REGEX = Regex("""[^\p{L}]""")
 	private val SFX_CLEAN_EDGE_REGEX = Regex(
 		"""^[¡¿.,!?:;…\-_~*^'"/\\()\[\]{}<>◁▷◀▶★☆•\s]+|[¡¿.,!?:;…\-_~*^'"/\\()\[\]{}<>◁▷◀▶★☆•\s]+$""",
 	)
@@ -79,37 +93,48 @@ object TextBlockFilters {
 
 	private val PURE_SFX_STEMS = hashSetOf(
 		// Darbe / Patlama / Çarpma
-		"boom", "kaboom", "bam", "baam", "bang", "clang", "clank", "clash", "clack",
-		"clatter", "crash", "crack", "crackle", "cruck", "crach", "grack", "craek", "krack",
-		"crunch", "thud", "thump", "thwack", "wham", "whack", "slam", "smack", "smash",
-		"pow", "poof", "bonk", "boing", "bong", "ding", "dong", "kring", "ting", "plink",
-		"plop", "splat", "sploosh", "squelch", "squish", "thwip", "twang", "zing", "zap",
-		"zzt", "zzzt", "bzz", "bzzt", "vroom", "screech", "skrrt",
-		// Rüzgar / Kesme / Hareket / İrkilme efektleri
+		"boom", "kaboom", "kabam", "kapow", "kerplunk", "kaching", "bam", "baam", "bang",
+		"clang", "clank", "clink", "clunk", "clash", "clack", "clatter", "crash", "crack",
+		"crackle", "cruck", "crach", "grack", "craek", "krack", "crunch", "thud", "thump",
+		"thwack", "wham", "whack", "slam", "smack", "smash", "pow", "poof", "bonk", "boing",
+		"bong", "ding", "dong", "kring", "ting", "plink", "plop", "splat", "splish", "splash",
+		"sploosh", "squelch", "squish", "thwip", "twang", "zing", "zap", "zzt", "zzzt", "bzz",
+		"bzzt", "vroom", "screech", "skrrt", "squeak", "squawk",
+		// Rüzgar / Kesme / Hareket / İrkilme / Yüz ifadesi efektleri
 		"swoosh", "whoosh", "swish", "shing", "shwing", "schwing", "fwip", "fwoosh",
 		"whir", "whirr", "rustle", "patter", "stomp", "startle", "startles", "flinch",
 		"flinches", "shudder", "shudders", "tremble", "trembles", "twitch", "twitches",
-		"jolt", "jolts",
+		"jolt", "jolts", "shiver", "gasp", "grin", "smirk", "stare", "glare",
 		// Titreme / Çevre / Hayvan / Kalp atışı
 		"rumble", "grumble", "rattle", "creak", "sizzle", "fizz", "glug", "gulp",
 		"slurp", "munch", "chomp", "woof", "meow", "purr", "grr", "grrr", "roar", "growl", "howl",
-		"badump", "badum", "lubdub", "doki", "dokidoki",
+		"hiss", "snarl", "badump", "badum", "lubdub", "doki", "dokidoki",
 		// Nefes / Gülme / Seslenme / Anlamsız homurtu efektleri
 		"wheeze", "sniffle", "achoo", "hic", "zzz", "bwahaha", "muahaha", "mwahaha",
 		"kekeke", "kukuku", "agh", "aghh", "aghhh", "ugh", "ughh", "ughhh", "argh", "urgh",
 		"ergh", "mmph", "mmmph", "mph", "hmph", "hmmph", "huff", "pant", "phew", "tsk",
 		"tch", "pff", "pfft", "bleh", "gack", "guh", "blub", "glub", "aaah", "aaaah",
+		"sigh", "groan", "grunt", "snort", "snicker",
 		// Korece / Japonca romanize saf ses efektleri
-		"kwang", "kwaang", "kung", "kuung", "dugeun", "dukgeun", "jjeoreong", "puk",
-		"peok", "ssuk", "geuk", "kkeuk", "heok", "heuk", "deolkeok", "chirik", "sarak",
-		"ttuk", "jjak", "gogo", "gogogo", "menacing",
+		"kwang", "kwaang", "kung", "kuung", "kkung", "kukung", "kukuung", "dugeun", "dukgeun",
+		"dugeundugeun", "dudun", "dudung", "jjeoreong", "puk", "peok", "ssuk", "geuk", "kkeuk",
+		"heok", "heuk", "deolkeok", "chirik", "sarak", "ttuk", "jjak", "hwak", "ssak", "seuk",
+		"wajak", "ujik", "jjirit", "zzirit", "jirit", "shwik", "shwiik", "chwiiik", "ppak",
+		"bbak", "ttak", "duduk", "tuduk", "papak", "pittik", "jjeong", "kkeung", "teok",
+		"tadak", "tadatadak", "chiik", "chiiik", "gogo", "gogogo", "menacing", "dokaan",
+		"dokan", "bakiin", "gashaan", "kirakira", "pikapika", "gorogoro", "garagara", "kyaa",
+		"kyaaa", "byuun",
+		// Korece / Japonca alfabe saf ses efektleri
+		"쾅", "쿵", "퍽", "두근두근", "덜컥", "우르릉", "끼이익", "바스락", "찌릿",
+		"ゴゴゴ", "ドキドキ", "ガシャン", "ドカン", "ズキューン", "バキィ",
 		// Türkçe yansıma / ses efekti karşılıkları
 		"çat", "pat", "küt", "güm", "şak", "tak", "tık", "çatır", "çatırt", "çatırtı",
 		"şırrak", "şangır", "gıcırt", "gıcırtı", "hışırt", "hışırtı", "vın", "vınn",
 		"vız", "vızz", "hart", "kırt", "fış", "fışş", "cız", "cızz", "şlap", "irülür", "irkilir",
 	)
 
-	private val REPEATED_ONLY_SFX_STEMS = hashSetOf(
+	/** Tek başına anlamlı kelime olabilecek ama 2-3 kez arka arkaya tekrarlandığında veya balon dışında ses efekti olan kelimeler */
+	val REPEATED_ONLY_SFX_STEMS: Set<String> = hashSetOf(
 		"tap", "step", "drip", "drop", "clap", "pat", "knock", "tick", "tock", "click",
 		"pop", "snap", "ring", "beep", "honk", "cough", "pant", "sob", "gasp", "gulp",
 		"chew", "chop", "slash", "slice", "poke", "prod", "shake", "tremble", "shiver",
@@ -117,12 +142,12 @@ object TextBlockFilters {
 	)
 
 	private val CREDIT_LINE_REGEX = Regex(
-		"""\b(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|scanlation|fansub|fansube|kurohana|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|cosmic\s*scans|night\s*scans|void\s*scans|recruiting|discord|patreon|paypal|ko-?fi|buymeacoffee|join\s+(?:our|us)|support\s+us|read\s+(?:it\s+)?(?:at|on|first)|chapter\s*\d+|çevirmen|çeviri|editör|dizgi|temizleme)\b|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)\s*[:\-]?\s*[a-z0-9_]{2,14}$""",
+		"""(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|scanlation|fansub|fansube|kurohana|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|tapas|lezhin|recruiting|discord|patreon|paypal|ko-?fi|buymeacoffee|join\s+(?:our|us)|support\s+us|read\s+(?:it\s+)?(?:at|on|first)|chapter\s*\d+|çevirmen|çeviri|editör|dizgi|temizleme)(?![\p{L}\p{N}_])|^dsns$|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)(?:\s*[:\-]\s*|\s+)[a-z0-9_]{2,14}$""",
 		RegexOption.IGNORE_CASE,
 	)
 
 	private val INDIVIDUAL_PROMO_CREDIT_REGEX = Regex(
-		"""(?:https?://|www\.|discord\.gg|\b(?:discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|scanlation|fansub|fansube|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|cosmic\s*scans|night\s*scans|void\s*scans)\b|\b(?:join\s+(?:our|us)|support\s+us|follow\s+us|read\s+(?:it\s+)?(?:at|on|first))\b|\b(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|raw\s*provider|çevirmen|dizgi)\s*[:\-]|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)\s*[:\-]\s*\S)""",
+		"""(?:https?://|www\.|discord\.gg|(?<![\p{L}\p{N}_])(?:discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|scanlation|fansub|fansube|kurohana|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|lezhin)(?![\p{L}\p{N}_])|^dsns$|(?<![\p{L}\p{N}_])(?:join\s+(?:our|us)|support\s+us|follow\s+us|read\s+(?:it\s+)?(?:at|on|first))(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|çevirmen|çeviri|editör|dizgi|temizleme)\s*[:\-]|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)\s*[:\-]\s*\S)""",
 		RegexOption.IGNORE_CASE,
 	)
 
@@ -132,14 +157,38 @@ object TextBlockFilters {
 	)
 
 	private val STRONG_PROMO_REGEX = Regex(
-		"""(?:https?://|www\.|discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|join\s+(?:our|us)|asurascans|asura\s*scans|\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|me|to|xyz|club|online|site)\b)""",
+		"""(?:https?://|www\.|discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|join\s+(?:our|us)|asurascans|asura\s*scans|reaperscans|reaper\s*scans|flamescans|flame\s*scans|disaster\s*scans|surya\s*scans|\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|me|to|xyz|club|online|site)\b)""",
+		RegexOption.IGNORE_CASE,
+	)
+
+	private val KNOWN_RPG_STAT_KEY_REGEX = Regex(
+		"""^(?:name|isim|ad|level|lvl|lv|seviye|race|type|t[üu]r|class|s[ıi]n[ıi]f|rank|r[üu]tbe|title|unvan|hp|mp|sp|xp|exp|health|can|mana|b[üu]y[üu]|stamina|dayan[ıi]kl[ıi]l[ıi]k|atk|attack|sald[ıi]r[ıi]|def|defense|savunma|str|strength|g[üu][çc]|agi|agility|[çc]eviklik|dex|int|intelligence|zeka|vit|vitality|luk|luck|[şs]ans|speed|h[ıi]z|weapon|silah|armor|z[ıi]rh|skill|skills|yetenek|yetenekler|ability|abilities|owner|sahip|master|stat|stats|status|durum|power|g[üu][çc]\s*puan[ıi]|evolution(?:\s*points?)?|evrim(?:\s*puan[ıi])?|points?|tier|grade|element|attribute|effect|passive|active|reward|[öo]d[üu]l|quest|g[öo]rev|mission|condition|ko[şs]ul|age|ya[şs]|gender|cinsiyet|affiliation|clan|klan|sect|tarikat|realm|diyar|stage|a[şs]ama|cultivation|trait|traits|buff|debuff|equipment|ekipman|item|e[şs]ya|description|a[çc][ıi]klama|durability|host|system)$""",
+		RegexOption.IGNORE_CASE,
+	)
+
+	private val RPG_KEY_VALUE_REGEX = Regex("""^([A-Za-zÇĞİÖŞÜçğıöşü0-9\s/()+-]{2,26}):\s*(.+)$""")
+	private val RPG_DIALOGUE_ENDING_REGEX = Regex("""[?]$|,$""")
+	private val RPG_DIALOGUE_EXCLAMATION_START_REGEX = Regex(
+		"""^(?:oh|ah|uh|um|hey|well|wait|what|why|how|damn|shit|fuck)$""",
+		RegexOption.IGNORE_CASE,
+	)
+	private val RPG_YES_NO_START_REGEX = Regex("""^(?:no|yes)$""", RegexOption.IGNORE_CASE)
+	private val RPG_NUMERIC_START_REGEX = Regex("""^[+-]?\d""")
+	private val RPG_UPPER_CODE_VAL_REGEX = Regex("""^[A-Z0-9+/().\s-]+$""")
+
+	private val SYSTEM_BOX_HEADER_REGEX = Regex(
+		"""^(?:SYSTEM(?:\s+PROMPT|\s+NOTICE|\s+MESSAGE|\s+ALERT|\s+WINDOW)?|QUEST(?:\s+INFO|\s+ALERT|\s+NOTICE|\s+UPDATED?)?|NOTICE|WARNING|ALERT|INFO|INFORMATION|NOTIFICATION|TIP|STATUS|PROFILE|STATS|SKILLS?|SKILLS?\s+LIST|INVENTORY|EVOLUTION|ANNOUNCEMENT|CONGRATULATIONS|HINT|OBJECTIVE)\b[:!]?$""",
 		RegexOption.IGNORE_CASE,
 	)
 
 	fun cleanOcrText(text: String): String {
-		val normalized = WHITESPACE_REGEX.replace(text, " ").trim()
-		if (normalized.isEmpty()) return ""
-		val tokens = normalized.split(' ').toMutableList()
+		var preCleaned = WHITESPACE_REGEX.replace(text, " ").trim()
+		if (preCleaned.isEmpty()) return ""
+		preCleaned = ANGLE_TAG_REGEX.replace(preCleaned, " ")
+		preCleaned = ANGLE_BRACKET_REGEX.replace(preCleaned, " ")
+		preCleaned = WHITESPACE_REGEX.replace(preCleaned, " ").trim()
+		if (preCleaned.isEmpty()) return ""
+		val tokens = preCleaned.split(' ').toMutableList()
 		fun isJunkToken(tok: String): Boolean =
 			!LETTER_REGEX.containsMatchIn(tok) && !DIGIT_REGEX.containsMatchIn(tok) && !PUNCT_ONLY_ALLOW_REGEX.matches(tok)
 		while (tokens.isNotEmpty() && isJunkToken(tokens.first())) tokens.removeAt(0)
@@ -149,9 +198,10 @@ object TextBlockFilters {
 		var result = tokens.joinToString(" ")
 		result = EDGE_SYMBOLS_LEADING_REGEX.replace(result, "")
 		result = EDGE_SYMBOLS_TRAILING_REGEX.replace(result, "")
-		result = ANGLE_TAG_REGEX.replace(result, " ")
-		result = ANGLE_BRACKET_REGEX.replace(result, " ")
 		result = WHITESPACE_REGEX.replace(result, " ")
+		result = QUOTE_CONTRACTION_REGEX.replace(result, "'")
+		result = QUOTE_BETWEEN_ALPHA_REGEX.replace(result, "'")
+		result = HYPHEN_TRAILING_QUOTE_REGEX.replace(result, "$1-")
 		result = ZERO_AFTER_ALPHA_REGEX.replace(result, "O")
 		result = ZERO_BEFORE_ALPHA_REGEX.replace(result, "O")
 		result = FIVE_ZERO_TO_SO_REGEX.replace(result, "SO$1")
@@ -159,7 +209,7 @@ object TextBlockFilters {
 		result = SPANISH_QLE_REGEX.replace(result, "QUE")
 		result = SPANISH_QLIEN_REGEX.replace(result, "QUIEN")
 		result = SPANISH_MLCH_REGEX.replace(result) { m -> "Much${m.groupValues[1]}" }
-		return result.trim()
+		return WHITESPACE_REGEX.replace(result, " ").trim()
 	}
 
 	internal fun joinHyphenatedWords(text: String): String =
@@ -203,12 +253,17 @@ object TextBlockFilters {
 		val junk = countJunk(text)
 		val multiScript = hasCjkOrHangulOrArabic(text)
 		val minCleanLetters = if (multiScript) 2 else 3
+		val cleanTarget = stripped.ifEmpty { text }
 		val isCleanText = junk == 0 &&
 			letters >= minCleanLetters &&
-			CLEAN_MULTI_TOKEN_REGEX.matches(stripped.ifEmpty { text })
+			digits == 0 &&
+			!TRIPLE_SAME_CHAR_REGEX.matches(cleanTarget) &&
+			CLEAN_MULTI_TOKEN_REGEX.matches(cleanTarget)
+		val hasLatinVowel = LATIN_VOWEL_REGEX.containsMatchIn(stripped)
 
 		val effectiveMinConf = when {
 			isShortMeaningful -> minOf(minConfidence, 40f)
+			isCleanText && letters >= 3 && hasLatinVowel -> minOf(minConfidence, 48f)
 			isCleanText -> minOf(minConfidence, 56f)
 			multiScript && letters >= 1 && junk == 0 -> minOf(minConfidence, 58f)
 			else -> minConfidence
@@ -223,17 +278,24 @@ object TextBlockFilters {
 
 		if (!multiScript) {
 			val words = text.split(WHITESPACE_REGEX).filter { LETTER_REGEX.containsMatchIn(it) }
-			if (words.size >= 3 && words.all { NON_LETTER_DIGIT_EDGE_REGEX.replace(it, "").length <= 1 }) {
+			val allSingleLetter = words.all { NON_LETTER_DIGIT_EDGE_REGEX.replace(it, "").length <= 1 }
+			if (allSingleLetter && (words.size >= 3 || (words.size >= 2 && (junk > 0 || digits > 0)))) {
 				return false
 			}
 		}
 		return true
 	}
 
-	private fun collapseRepeatedChars(word: String): String {
-		val lower = word.lowercase(Locale.ROOT)
-		return COLLAPSE_DOUBLE_REGEX.replace(COLLAPSE_TRIPLE_REGEX.replace(lower, "$1$1"), "$1")
-	}
+	private fun collapseTripleToDouble(word: String): String =
+		COLLAPSE_TRIPLE_REGEX.replace(word.lowercase(Locale.ROOT), "$1$1")
+
+	private fun collapseRepeatedChars(word: String): String =
+		COLLAPSE_DOUBLE_REGEX.replace(collapseTripleToDouble(word), "$1")
+
+	private fun matchesPureSfxStem(alpha: String): Boolean =
+		alpha in PURE_SFX_STEMS ||
+			collapseTripleToDouble(alpha) in PURE_SFX_STEMS ||
+			collapseRepeatedChars(alpha) in PURE_SFX_STEMS
 
 	fun isPureSoundEffect(text: String): Boolean {
 		val cleaned = SFX_CLEAN_EDGE_REGEX.replace(text.trim(), "")
@@ -245,27 +307,44 @@ object TextBlockFilters {
 
 		if (rawTokens.isEmpty() || rawTokens.size > 4) return false
 
-		val joinedAlpha = NON_ASCII_LOWER_ALPHA_REGEX.replace(rawTokens.joinToString(""), "")
-		if (joinedAlpha.isNotEmpty() && (joinedAlpha in PURE_SFX_STEMS || collapseRepeatedChars(joinedAlpha) in PURE_SFX_STEMS)) {
+		val joinedUnicodeAlpha = NON_UNICODE_LOWER_ALPHA_REGEX.replace(rawTokens.joinToString(""), "")
+		val joinedAsciiAlpha = NON_ASCII_LOWER_ALPHA_REGEX.replace(rawTokens.joinToString(""), "")
+		if (joinedUnicodeAlpha.isNotEmpty() && matchesPureSfxStem(joinedUnicodeAlpha)) {
+			return true
+		}
+		if (
+			joinedAsciiAlpha.isNotEmpty() &&
+			joinedAsciiAlpha != joinedUnicodeAlpha &&
+			matchesPureSfxStem(joinedAsciiAlpha)
+		) {
 			return true
 		}
 
+		var matchedSfxTokenCount = 0
 		val allPureSfx = rawTokens.all { tok ->
-			val exact = NON_ASCII_LOWER_ALPHA_REGEX.replace(tok, "")
-			if (exact.isEmpty()) return@all true
-			if (exact in PURE_SFX_STEMS) return@all true
-			val collapsed = collapseRepeatedChars(exact)
-			if (collapsed in PURE_SFX_STEMS) return@all true
-			if (CONSONANT_STRETCH_SFX_REGEX.matches(exact)) return@all true
-			if (exact.length >= 4 && VOWEL_GRUNT_STRETCH_REGEX.matches(exact)) return@all true
-			false
+			if (!LETTER_REGEX.containsMatchIn(tok)) {
+				return@all !DIGIT_REGEX.containsMatchIn(tok)
+			}
+			val unicodeExact = NON_UNICODE_LOWER_ALPHA_REGEX.replace(tok, "")
+			val asciiExact = NON_ASCII_LOWER_ALPHA_REGEX.replace(tok, "")
+			val matched = (unicodeExact.isNotEmpty() && matchesPureSfxStem(unicodeExact)) ||
+				(asciiExact.isNotEmpty() && (
+					matchesPureSfxStem(asciiExact) ||
+						CONSONANT_STRETCH_SFX_REGEX.matches(asciiExact) ||
+						(asciiExact.length >= 4 && VOWEL_GRUNT_STRETCH_REGEX.matches(asciiExact))
+					))
+			if (matched) matchedSfxTokenCount++
+			matched
 		}
-		if (allPureSfx) return true
+		if (allPureSfx && matchedSfxTokenCount > 0) return true
 
 		if (rawTokens.size >= 2) {
 			val stems = rawTokens.map { NON_ASCII_LOWER_ALPHA_REGEX.replace(it, "") }
+			if (stems.any { it.isEmpty() }) return false
 			val allRepeatedSfx = stems.all { s ->
-				s in REPEATED_ONLY_SFX_STEMS || collapseRepeatedChars(s) in REPEATED_ONLY_SFX_STEMS
+				s in REPEATED_ONLY_SFX_STEMS ||
+					collapseTripleToDouble(s) in REPEATED_ONLY_SFX_STEMS ||
+					collapseRepeatedChars(s) in REPEATED_ONLY_SFX_STEMS
 			}
 			if (allRepeatedSfx) {
 				val uniqueStems = stems.mapTo(HashSet()) { collapseRepeatedChars(it) }
@@ -277,9 +356,49 @@ object TextBlockFilters {
 		return false
 	}
 
+	/**
+	 * RPG / Sistem durum penceresi anahtar-değer satırlarını ("HEALTH: 100", "NAME: JIANG CHENG")
+	 * normal konuşma diyaloglarından ("CHICKITO: OH DAMN,") güvenle ayırır.
+	 */
+	fun isRpgStatLine(rawText: String): Boolean {
+		val cleaned = WHITESPACE_REGEX.replace(rawText.trim(), " ")
+		val match = RPG_KEY_VALUE_REGEX.matchEntire(cleaned) ?: return false
+		val key = match.groupValues[1].trim()
+		val value = match.groupValues[2].trim()
+		if (value.isEmpty()) return false
+		if (RPG_DIALOGUE_ENDING_REGEX.containsMatchIn(value)) return false
+		val valueWords = value.split(WHITESPACE_REGEX)
+		val firstWord = valueWords.firstOrNull().orEmpty()
+		if (
+			RPG_DIALOGUE_EXCLAMATION_START_REGEX.matches(firstWord) ||
+			(RPG_YES_NO_START_REGEX.matches(firstWord) && valueWords.size >= 2)
+		) {
+			return false
+		}
+		if (KNOWN_RPG_STAT_KEY_REGEX.matches(key)) return true
+		if (RPG_NUMERIC_START_REGEX.containsMatchIn(value)) return true
+		return valueWords.size <= 3 && !value.contains('!') && !value.contains('?') && RPG_UPPER_CODE_VAL_REGEX.matches(value)
+	}
+
+	internal fun isSystemBoxHeader(text: String): Boolean =
+		SYSTEM_BOX_HEADER_REGEX.matches(text.trim())
+
+	private fun isConsonantWatermark(trimmed: String): Boolean {
+		val alphaOnly = NON_ASCII_ALPHA_REGEX.replace(trimmed, "")
+		if (alphaOnly.length !in 4..14 || alphaOnly.length != trimmed.length) return false
+		if (ASCII_VOWEL_REGEX.containsMatchIn(alphaOnly)) return false
+		val distinct = HashSet<Char>(alphaOnly.length)
+		for (ch in alphaOnly) {
+			distinct.add(ch.lowercaseChar())
+		}
+		return distinct.size >= 3
+	}
+
 	fun isCreditOrPromoText(text: String): Boolean {
 		val trimmed = text.trim()
-		return CREDIT_LINE_REGEX.containsMatchIn(trimmed) || URL_LINE_REGEX.containsMatchIn(trimmed)
+		return CREDIT_LINE_REGEX.containsMatchIn(trimmed) ||
+			URL_LINE_REGEX.containsMatchIn(trimmed) ||
+			isConsonantWatermark(trimmed)
 	}
 
 	fun shouldSkipBlock(
@@ -290,7 +409,13 @@ object TextBlockFilters {
 		val trimmed = text.trim()
 		if (trimmed.isEmpty()) return true
 		if (countLetters(trimmed) == 0) return true
-		if (filterPromoAndCredits && (URL_LINE_REGEX.containsMatchIn(trimmed) || INDIVIDUAL_PROMO_CREDIT_REGEX.containsMatchIn(trimmed))) {
+		if (
+			filterPromoAndCredits && (
+				URL_LINE_REGEX.containsMatchIn(trimmed) ||
+					INDIVIDUAL_PROMO_CREDIT_REGEX.containsMatchIn(trimmed) ||
+					isConsonantWatermark(trimmed)
+				)
+		) {
 			return true
 		}
 		if (skipPureSfx && isPureSoundEffect(trimmed)) {

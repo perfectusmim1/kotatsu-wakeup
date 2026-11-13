@@ -145,6 +145,9 @@ class ReaderViewModel @Inject constructor(
     @Volatile
     private var autoResolveAttempted = false
 
+    @Volatile
+    private var lastActivePageIds: Set<Long> = emptySet()
+
     init {
         mangaDetails.value = intent.manga?.let { MangaDetails(it) }
     }
@@ -540,19 +543,21 @@ class ReaderViewModel @Inject constructor(
                 }
             }
             if (pageLoader.isPrefetchApplicable()) {
-                pageLoader.prefetch(pages.trySublist(upperPos + 1, upperPos + PREFETCH_LIMIT))
+                pageLoader.prefetch(pages.trySublist(upperPos + 1, upperPos + 1 + PREFETCH_LIMIT))
             }
         }
     }
 
     private fun updateTranslationWindow(pages: List<ReaderPage>, lowerPos: Int, upperPos: Int) {
         if (pages.isEmpty()) {
+            lastActivePageIds = emptySet()
             translationCoordinator.updateReadingWindow(emptyList(), emptyList())
             return
         }
         val safeLower = lowerPos.coerceIn(0, pages.lastIndex)
         val safeUpper = upperPos.coerceIn(safeLower, pages.lastIndex)
         val activePages = pages.subList(safeLower, safeUpper + 1).toList()
+        lastActivePageIds = activePages.mapTo(HashSet(activePages.size)) { it.id }
         val prefetchStart = (safeUpper + 1).coerceAtMost(pages.size)
         val prefetchEnd = (safeUpper + 1 + ReaderTranslationCoordinator.PREFETCH_PAGE_COUNT).coerceAtMost(pages.size)
         val prefetchPages = if (prefetchStart < prefetchEnd) {
@@ -722,13 +727,32 @@ class ReaderViewModel @Inject constructor(
         if (snapshot.isNotEmpty()) {
             autoResolveAttempted = false
         }
-        if (state != null && snapshot.isNotEmpty()) {
-            var idx = snapshot.indexOfFirst { it.chapterId == state.chapterId && it.index == state.page }
-            if (idx < 0) {
-                idx = snapshot.indexOfFirst { it.chapterId == state.chapterId }
+        val resolvedState = state ?: readingState.value
+        if (snapshot.isNotEmpty()) {
+            val activeIdsSnapshot = lastActivePageIds
+            var lowerIdx = -1
+            var upperIdx = -1
+            if (state == null && activeIdsSnapshot.isNotEmpty()) {
+                lowerIdx = snapshot.indexOfFirst { it.id in activeIdsSnapshot }
+                if (lowerIdx >= 0) {
+                    upperIdx = snapshot.indexOfLast { it.id in activeIdsSnapshot }
+                }
             }
-            if (idx >= 0) {
-                updateTranslationWindow(snapshot, idx, idx)
+            if (lowerIdx < 0 && resolvedState != null) {
+                var idx = snapshot.indexOfFirst { it.chapterId == resolvedState.chapterId && it.index == resolvedState.page }
+                if (idx < 0) {
+                    idx = snapshot.indexOfFirst { it.chapterId == resolvedState.chapterId }
+                }
+                if (idx >= 0) {
+                    lowerIdx = idx
+                    upperIdx = idx
+                }
+            }
+            if (lowerIdx >= 0 && upperIdx >= lowerIdx) {
+                updateTranslationWindow(snapshot, lowerIdx, upperIdx)
+                if (pageLoader.isPrefetchApplicable()) {
+                    pageLoader.prefetch(snapshot.trySublist(upperIdx + 1, upperIdx + 1 + PREFETCH_LIMIT))
+                }
             }
         }
     }
@@ -749,8 +773,9 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun <T> List<T>.trySublist(fromIndex: Int, toIndex: Int): List<T> {
-        val fromIndexBounded = fromIndex.coerceAtMost(lastIndex)
-        val toIndexBounded = toIndex.coerceIn(fromIndexBounded, lastIndex)
+        if (isEmpty()) return emptyList()
+        val fromIndexBounded = fromIndex.coerceIn(0, size)
+        val toIndexBounded = toIndex.coerceIn(fromIndexBounded, size)
         return if (fromIndexBounded == toIndexBounded) {
             emptyList()
         } else {

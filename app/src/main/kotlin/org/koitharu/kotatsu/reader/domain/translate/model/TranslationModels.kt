@@ -96,6 +96,7 @@ data class OcrBubbleGroup(
 	val lines: List<OcrLine>,
 	val isVertical: Boolean = false,
 	val kindHint: TextBlockKind = TextBlockKind.DIALOGUE,
+	val emphasisLastLineScale: Float = 1f,
 )
 
 @Serializable
