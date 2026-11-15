@@ -1629,7 +1629,7 @@ class MangaTranslationService @Inject constructor(
 			}
 			if (skipPureSfx) {
 				appendLine("- STRICT SFX RULE: If an entry is purely an onomatopoeia, sound effect, visual action cue, or non-verbal noise without dialogue/story meaning (e.g., \"BOOM\", \"BAM\", \"CRACK!\", \"WHOOSH\", \"SLAM\", \"CLANK\", \"THUD\", \"GASP\", \"GRIN\", \"SMIRK\", \"SHIVER\", \"STARE\", \"RUSTLE\", \"CREAK\", \"SQUEAK\", \"TAP TAP\", \"STARTLE!\", \"Flinch\", \"Twitch\", \"Patter\", \"Rumble\", \"Zzzt\", \"Doki doki\", \"Kwaang\"), set \"trash\": true, \"kind\": \"sfx\", and \"text\": \"[SFX]\". NEVER translate pure sound effects into local words like \"Güm\", \"Sırıtış\", \"İrkilir\", or \"Bakış\".")
-				appendLine("- MEANINGFUL LINES MUST BE TRANSLATED: NEVER skip meaningful statements, short exclamations, questions, dialogue, narration, or RPG stats (e.g., \"NO!\", \"HELP!\", \"WHY?\", \"WAIT!\", \"STOP!\", \"ALONE?\", \"FIRST MURDER.\", \"HEALTH: 100\") — always translate those into $targetLangLabel with \"trash\": false.")
+				appendLine("- MEANINGFUL LINES & STYLIZED TITLES MUST BE TRANSLATED: NEVER mark meaningful dialogue, exclamations, questions, narration, stylized artwork titles/headings, floating captions, bracketed UI/RPG alerts (e.g., \"[STATUS]\", \"[WARNING]\", \"[LEVEL UP]\", \"HEALTH: 100/100\"), or single meaningful command/banner words (e.g., \"NO!\", \"HELP!\", \"WHY?\", \"WAIT!\", \"STOP!\", \"ALONE?\", \"ATTACK!\", \"REWARD\", \"CLEAR\", \"FIRST MURDER.\") as SFX or trash — classify stylized banners/headings as \"emphasis\" or \"narration\" and translate them into $targetLangLabel with \"trash\": false.")
 			} else {
 				appendLine("- Keep sound effects: translate or stylize SFX naturally into $targetLangLabel with \"kind\": \"sfx\" and \"trash\": false.")
 			}
@@ -1943,15 +1943,20 @@ class MangaTranslationService @Inject constructor(
 			}
 
 			if (!hasQuestionMark && strippedTokens.size <= 4) {
+				var hasAlphaToken = false
 				val allExtraSfx = strippedTokens.all { tok ->
 					val alpha = NON_ASCII_LOWER_ALPHA_REGEX.replace(tok, "")
-					alpha.isEmpty() ||
+					if (alpha.isEmpty()) {
+						!tok.any { it.isDigit() }
+					} else {
+						hasAlphaToken = true
 						alpha in EXTRA_PURE_SFX_STEMS ||
-						CONSONANT_STRETCH_SFX_REGEX.matches(alpha) ||
-						(HYPHENATED_STUTTER_SFX_REGEX.matches(tok) &&
-							tok.substringAfter('-').lowercase(Locale.ROOT) in EXTRA_PURE_SFX_STEMS)
+							CONSONANT_STRETCH_SFX_REGEX.matches(alpha) ||
+							(HYPHENATED_STUTTER_SFX_REGEX.matches(tok) &&
+								tok.substringAfter('-').lowercase(Locale.ROOT) in EXTRA_PURE_SFX_STEMS)
+					}
 				}
-				if (allExtraSfx) return true
+				if (hasAlphaToken && allExtraSfx) return true
 			}
 
 			return false
@@ -2162,6 +2167,13 @@ class MangaTranslationService @Inject constructor(
 			val trimmedOrig = originalText.trim()
 			val trimmedTrans = translatedText.trim()
 			if (QUESTION_END_REGEX.containsMatchIn(trimmedOrig) || QUESTION_END_REGEX.containsMatchIn(trimmedTrans)) return true
+			val isBracketedUiOrSystem =
+				(trimmedOrig.startsWith('[') && trimmedOrig.endsWith(']')) ||
+					(trimmedOrig.startsWith('【') && trimmedOrig.endsWith('】')) ||
+					TextBlockFilters.isSystemBoxHeader(trimmedOrig) ||
+					TextBlockFilters.isRpgStatLine(trimmedOrig)
+			if (isBracketedUiOrSystem) return true
+			if (trimmedOrig.any { it.isDigit() } && trimmedOrig.any { it.isLetter() }) return true
 			val origTokens = SFX_TOKEN_SPLIT_REGEX.split(trimmedOrig)
 				.map { it.trim().lowercase(Locale.ROOT).replace("\u0307", "") }
 				.filter { it.isNotEmpty() }

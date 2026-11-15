@@ -194,4 +194,66 @@ class BubbleInpainterBackgroundTest {
 			),
 		)
 	}
+
+	@Test
+	fun brightChromaticYellowGlyphsOnWhiteSelectWhiteBackground() {
+		val ww = 160
+		val wh = 120
+		val pixels = IntArray(ww * wh) { argb(252, 252, 252) }
+		val core = BubbleInpainter.LineCoreRect(x0 = 24, x1 = 136, y0 = 32, y1 = 78)
+		for (y in (core.y0 + 2) until (core.y1 - 2)) {
+			for (x in (core.x0 + 4) until (core.x1 - 4)) {
+				if ((x - core.x0) % 10 < 7) {
+					pixels[y * ww + x] = argb(255, 220, 40)
+				}
+			}
+		}
+
+		val bg = BubbleInpainter.findDominantBackgroundRgb(
+			pixels = pixels,
+			ww = ww,
+			wh = wh,
+			cx0 = 24,
+			cy0 = 32,
+			cx1 = 136,
+			cy1 = 78,
+			lineCores = listOf(core),
+		)
+		val lum = PixelColorMath.luminance(bg[0], bg[1], bg[2])
+		assertTrue(
+			"Expected near-white background (>= 240 lum) over chromatic yellow strokes, got rgb=(${bg[0]}, ${bg[1]}, ${bg[2]}) lum=$lum",
+			lum >= 240f,
+		)
+	}
+
+	@Test
+	fun resolveNonOverlappingRectsSeparatesCollidingVerticalAndHorizontalBlocks() {
+		val vRects = listOf(
+			BitmapTranslationBaker.Companion.BlockRect(left = 100f, top = 80f, right = 340f, bottom = 210f),
+			BitmapTranslationBaker.Companion.BlockRect(left = 105f, top = 165f, right = 345f, bottom = 290f),
+		)
+		val vAnchors = listOf(
+			BitmapTranslationBaker.Companion.BlockRect(left = 110f, top = 90f, right = 330f, bottom = 155f),
+			BitmapTranslationBaker.Companion.BlockRect(left = 115f, top = 195f, right = 335f, bottom = 270f),
+		)
+		BitmapTranslationBaker.resolveNonOverlappingRects(vRects, vAnchors, imgW = 600f, imgH = 800f)
+		assertTrue(
+			"Expected vertical colliding blocks to separate cleanly: upper.bottom=${vRects[0].bottom} lower.top=${vRects[1].top}",
+			vRects[0].bottom < vRects[1].top,
+		)
+
+		val hRects = listOf(
+			BitmapTranslationBaker.Companion.BlockRect(left = 60f, top = 100f, right = 260f, bottom = 220f),
+			BitmapTranslationBaker.Companion.BlockRect(left = 220f, top = 105f, right = 420f, bottom = 225f),
+		)
+		val hAnchors = listOf(
+			BitmapTranslationBaker.Companion.BlockRect(left = 70f, top = 110f, right = 210f, bottom = 210f),
+			BitmapTranslationBaker.Companion.BlockRect(left = 250f, top = 110f, right = 410f, bottom = 215f),
+		)
+		BitmapTranslationBaker.resolveNonOverlappingRects(hRects, hAnchors, imgW = 600f, imgH = 800f)
+		assertTrue(
+			"Expected horizontal colliding blocks to separate cleanly: left.right=${hRects[0].right} right.left=${hRects[1].left}",
+			hRects[0].right < hRects[1].left,
+		)
+	}
 }

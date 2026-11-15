@@ -508,4 +508,37 @@ class MangaTranslationNormalizationTest {
 		val gluedDo = MangaTranslationService.normalizeEnglishForGoogleTranslate("IDO- I REALLY DO!")
 		assertTrue("Expected 'I do-' instead of 'Ido-', got: $gluedDo", gluedDo.startsWith("I do-"))
 	}
+
+	@Test
+	fun isPureSfxOrNoise_and_finalizeSingleItem_preserveSystemUiAndNumericStats() {
+		assertFalse(MangaTranslationService.isPureSfxOrNoise("+100!"))
+		assertFalse(MangaTranslationService.isPureSfxOrNoise("[STATUS]"))
+		assertFalse(MangaTranslationService.isPureSfxOrNoise("LVL 5"))
+		assertFalse(MangaTranslationService.isPureSfxOrNoise("HP: 100/100"))
+		assertTrue(MangaTranslationService.isPureSfxOrNoise("BOOM!"))
+		assertTrue(MangaTranslationService.isPureSfxOrNoise("SWOOSH"))
+
+		val settings = TranslationSettingsSnapshot(
+			sourceLang = OcrSourceLanguage.ENGLISH,
+			targetLang = "tr",
+			skipPureSfx = true,
+		)
+		val systemHeader = MangaTranslationService.finalizeSingleItem(
+			item = TranslatedTextItem(id = "s1", text = "[DURUM]"),
+			originalCleanText = "[STATUS]",
+			settings = settings,
+			targetLang = "tr",
+		)
+		assertFalse(systemHeader.isTrash)
+		assertEquals("[DURUM]", systemHeader.text)
+
+		val numericStat = MangaTranslationService.finalizeSingleItem(
+			item = TranslatedTextItem(id = "s2", text = "Sv. 5"),
+			originalCleanText = "LVL 5",
+			settings = settings,
+			targetLang = "tr",
+		)
+		assertFalse(numericStat.isTrash)
+		assertEquals("Sv. 5", numericStat.text)
+	}
 }

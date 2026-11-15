@@ -427,6 +427,32 @@ class OcrBubbleGroupingAndFiltersTest {
 		assertTrue(TextBlockFilters.filterBubbles(creditsBanner).isEmpty())
 	}
 
+	@Test
+	fun `isUsableOcrLine preserves bracketed RPG system tags and giant callouts while groupLinesIntoBubbles deduplicates overlaps`() {
+		assertTrue(TextBlockFilters.isUsableOcrLine(line("[HP]", conf = 62f)))
+		assertTrue(TextBlockFilters.isUsableOcrLine(line("[LV. 5]", conf = 64f)))
+		assertTrue(TextBlockFilters.isUsableOcrLine(line("[S]", conf = 62f)))
+		assertTrue(TextBlockFilters.isUsableOcrLine(line("HP: 100/100", conf = 65f)))
+		assertTrue(
+			TextBlockFilters.isUsableOcrLine(
+				RawOcrLine("RUN!", 44f, x0 = 10f, y0 = 10f, x1 = 120f, y1 = 140f),
+			),
+		)
+
+		assertTrue(PaddleOcrEngine.textsOverlapNearDuplicate("HELLO WORLD", "HELLO WORLD!"))
+		assertFalse(PaddleOcrEngine.textsOverlapNearDuplicate("FIRST LINE", "COMPLETELY DIFFERENT"))
+
+		val overlappingDuplicates = listOf(
+			RawOcrLine("HELLO!", 92f, x0 = 40f, y0 = 50f, x1 = 180f, y1 = 80f),
+			RawOcrLine("HELL0!", 68f, x0 = 42f, y0 = 51f, x1 = 182f, y1 = 81f),
+			RawOcrLine("NEXT BUBBLE", 90f, x0 = 40f, y0 = 160f, x1 = 220f, y1 = 190f),
+		)
+		val grouped = PaddleOcrEngine.groupLinesIntoBubbles(overlappingDuplicates, imgWidth = 400, imgHeight = 400)
+		assertEquals(2, grouped.size)
+		assertEquals("HELLO!", grouped[0].text)
+		assertEquals("NEXT BUBBLE", grouped[1].text)
+	}
+
 	private fun line(text: String, conf: Float = 90f) = RawOcrLine(
 		text = text,
 		confidence = conf,

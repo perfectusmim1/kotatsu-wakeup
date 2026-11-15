@@ -430,12 +430,12 @@ class StyleExtractor @Inject constructor() {
 					val maxDiffHoleBg = PixelColorMath.maxChannelDiff(holeR, holeG, holeB, bgR, bgG, bgB)
 
 					val isDarkCounterHole =
-						rawLum >= 185f &&
-							holeLum < rawLum - 65f &&
-							dHoleToBg >= 42f &&
-							maxDiffHoleBg >= 48 &&
-							bgLum < 52f &&
-							glyphSpanY >= 26
+						rawLum >= 165f &&
+							holeLum < rawLum - 55f &&
+							dHoleToBg >= 36f &&
+							maxDiffHoleBg >= 40 &&
+							(bgLum < 165f || holeLum < bgLum - 25f) &&
+							glyphSpanY >= 16
 
 					val isColoredGlowAroundWhite =
 						rawLum <= 190f &&
@@ -446,24 +446,25 @@ class StyleExtractor @Inject constructor() {
 							cTail >= 24 &&
 							hasColoredGlowRaw
 
-					val isBrightInsideDarkOutline =
+					val isBrightOrColoredInsideOutline =
 						isColoredGlowAroundWhite ||
-							(rawLum <= 105f &&
-								holeLum >= max(195f, rawLum + 80f) &&
-								glyphSpanY >= 18 &&
-								(dHoleToBg >= 32f ||
-									maxDiffHoleBg >= 36 ||
-									(holeLum >= bgLum + 12f && bgLum < 225f) ||
+							(rawLum <= 165f &&
+								(holeLum >= max(195f, rawLum + 55f) ||
+									(holeLum >= max(150f, rawLum + 45f) && dHoleToBg >= 36f && maxDiffHoleBg >= 38)) &&
+								glyphSpanY >= 14 &&
+								(dHoleToBg >= 28f ||
+									maxDiffHoleBg >= 32 ||
+									(holeLum >= bgLum + 12f && bgLum < 228f) ||
 									bgLum <= 185f))
 
-					if (isDarkCounterHole || isBrightInsideDarkOutline) {
+					if (isDarkCounterHole || isBrightOrColoredInsideOutline) {
 						for (i in 0 until cTail) {
 							val pIdx = compPixels[i]
 							combinedMask[pIdx] = 1
 							enclosedInteriorMask[pIdx] = 1
 							enclosedCount++
 						}
-					} else if (cTail <= min(maxHoleArea, 360)) {
+					} else if (cTail <= min(maxHoleArea, 640)) {
 						for (i in 0 until cTail) {
 							combinedMask[compPixels[i]] = 1
 						}
@@ -1173,7 +1174,17 @@ class StyleExtractor @Inject constructor() {
 				ringMedLum >= 140f -> min(64f, (ringMedLum * 0.4f).roundToInt().toFloat())
 				else -> 42f
 			}
-			if ((dRing > 48f &&
+			val isUnmaskedDarkHalo = dRing >= 22f &&
+				ringMedLum >= 75f &&
+				pLum < ringMedLum - 28f &&
+				!hasSmoothCleanNeighbor(pIdx, cr, cg, cb)
+			val isUnmaskedGlowHalo = dRing >= 26f &&
+				ringMedLum < 160f &&
+				pLum > ringMedLum + 32f &&
+				!hasSmoothCleanNeighbor(pIdx, cr, cg, cb)
+			if (isUnmaskedDarkHalo ||
+				isUnmaskedGlowHalo ||
+				(dRing > 48f &&
 					pLum < darkAAFloor &&
 					ringMedLum >= 52f &&
 					pLum < ringMedLum - 20f &&
@@ -1185,7 +1196,7 @@ class StyleExtractor @Inject constructor() {
 			) {
 				return false
 			}
-			if (dRing <= 78f) return true
+			if (dRing <= 42f) return true
 			return hasSmoothCleanNeighbor(pIdx, cr, cg, cb)
 		}
 

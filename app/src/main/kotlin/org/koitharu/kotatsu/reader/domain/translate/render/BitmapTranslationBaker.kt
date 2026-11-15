@@ -13,6 +13,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -90,8 +92,9 @@ class BitmapTranslationBaker @Inject constructor(
 				val paint = TextPaint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG)
 				val imgW = workBitmap.width
 				val imgH = workBitmap.height
+				val resolvedLayouts = resolveNonOverlappingLayouts(refinedLayouts, paint, imgW, imgH)
 
-				for (layout in refinedLayouts) {
+				for (layout in resolvedLayouts) {
 					coroutineContext.ensureActive()
 					if (layout.isSeamEraseOnly || layout.wrappedLines.isEmpty()) continue
 					drawLayoutBlock(canvas, paint, layout, imgW, imgH)
@@ -146,15 +149,28 @@ class BitmapTranslationBaker @Inject constructor(
 		}
 
 		try {
+			var effectiveBaseFontPx = baseFontPx
 			var totalHeightPx = 0f
 			for (line in lines) {
-				val lineFontPx = (baseFontPx * line.scale).coerceAtLeast(6f)
+				val lineFontPx = (effectiveBaseFontPx * line.scale).coerceAtLeast(6f)
 				totalHeightPx += lineFontPx * layout.lineHeightRatio
 			}
+			if (!blockSaved && rect.height() >= 14f && totalHeightPx > rect.height() && totalHeightPx > 0f) {
+				val fitScale = (rect.height() / totalHeightPx).coerceIn(0.58f, 1f)
+				effectiveBaseFontPx = (effectiveBaseFontPx * fitScale).coerceAtLeast(6f)
+				totalHeightPx = 0f
+				for (line in lines) {
+					val lineFontPx = (effectiveBaseFontPx * line.scale).coerceAtLeast(6f)
+					totalHeightPx += lineFontPx * layout.lineHeightRatio
+				}
+			}
+
 			var cursorY = rect.top + (rect.height() - totalHeightPx) * 0.5f
 			if (!blockSaved) {
-				val maxTop = (imgH - 4f - totalHeightPx).coerceAtLeast(4f)
-				cursorY = cursorY.coerceIn(4f, maxTop)
+				val minTop = max(4f, rect.top)
+				val boxMaxTop = if (rect.height() >= 14f) max(minTop, rect.bottom - totalHeightPx) else (imgH - 4f - totalHeightPx)
+				val maxTop = min((imgH - 4f - totalHeightPx).coerceAtLeast(4f), boxMaxTop).coerceAtLeast(minTop)
+				cursorY = cursorY.coerceIn(minTop, maxTop)
 			}
 
 			val hasStroke = style.hasTextStroke || style.strokeWidthEm > 0f
@@ -165,7 +181,7 @@ class BitmapTranslationBaker @Inject constructor(
 			}
 
 			for (line in lines) {
-				val rawLineFontPx = (baseFontPx * line.scale).coerceAtLeast(6f)
+				val rawLineFontPx = (effectiveBaseFontPx * line.scale).coerceAtLeast(6f)
 				val lineH = rawLineFontPx * layout.lineHeightRatio
 				val lineCenterY = cursorY + lineH * 0.5f
 				cursorY += lineH
@@ -180,14 +196,14 @@ class BitmapTranslationBaker @Inject constructor(
 				} else {
 					2f
 				}
-				val boxBoundW = if (!layout.isSingleLineStat && abs(style.rotationDeg) < 0.5f && rect.width() >= 64f) {
+				val boxBoundW = if (!blockSaved && rect.width() >= 20f) {
 					rect.width() - rawPadPx * 2f
 				} else {
 					imgW - 8f - rawPadPx * 2f
 				}
 				val maxSpanW = (imgW - 8f - rawPadPx * 2f)
-					.coerceAtMost(boxBoundW.coerceAtLeast(24f))
-					.coerceAtLeast(12f)
+					.coerceAtMost(boxBoundW.coerceAtLeast(14f))
+					.coerceAtLeast(10f)
 				val rawLineW = paint.measureText(line.text)
 				val drawFontPx = if (rawLineW > maxSpanW && rawLineW > 0f) {
 					(rawLineFontPx * (maxSpanW / rawLineW)).coerceAtLeast(6f)
@@ -208,13 +224,16 @@ class BitmapTranslationBaker @Inject constructor(
 				var drawX = anchorX
 				if (!blockSaved) {
 					if (paint.textAlign == Paint.Align.LEFT) {
-						val minLeftX = 4f + finalPadPx
-						val maxLeftX = (imgW - 4f - finalLineW - finalPadPx).coerceAtLeast(minLeftX)
+						val minLeftX = max(4f, rect.left) + finalPadPx
+						val maxBoxRight = if (rect.width() >= 20f) min(imgW - 4f, rect.right) else imgW - 4f
+						val maxLeftX = (maxBoxRight - finalLineW - finalPadPx).coerceAtLeast(minLeftX)
 						drawX = drawX.coerceIn(minLeftX, maxLeftX)
 					} else {
 						val halfSpan = finalLineW * 0.5f + finalPadPx
-						val minCenterX = (4f + halfSpan).coerceAtMost(imgW * 0.5f)
-						val maxCenterX = (imgW - 4f - halfSpan).coerceAtLeast(imgW * 0.5f)
+						val leftLim = if (rect.width() >= 20f) max(4f, rect.left) else 4f
+						val rightLim = if (rect.width() >= 20f) min(imgW - 4f, rect.right) else imgW - 4f
+						val minCenterX = (leftLim + halfSpan).coerceAtMost((leftLim + rightLim) * 0.5f)
+						val maxCenterX = (rightLim - halfSpan).coerceAtLeast((leftLim + rightLim) * 0.5f)
 						drawX = drawX.coerceIn(minCenterX, maxCenterX)
 					}
 				}
@@ -364,8 +383,226 @@ class BitmapTranslationBaker @Inject constructor(
 		}
 	}
 
-	private companion object {
+	private fun resolveNonOverlappingLayouts(
+		layouts: List<RefinedBlockLayout>,
+		paint: TextPaint,
+		imgW: Int,
+		imgH: Int,
+	): List<RefinedBlockLayout> {
+		if (layouts.size <= 1 || imgW <= 0 || imgH <= 0) return layouts
+		val drawableIndices = ArrayList<Int>(layouts.size)
+		for (i in layouts.indices) {
+			val l = layouts[i]
+			if (!l.isSeamEraseOnly && l.wrappedLines.isNotEmpty()) {
+				drawableIndices.add(i)
+			}
+		}
+		if (drawableIndices.size <= 1) return layouts
+
+		fun toBlockRect(box: NormalizedBox): BlockRect {
+			val x0 = (box.xMin / 1000f) * imgW
+			val y0 = (box.yMin / 1000f) * imgH
+			val x1 = (box.xMax / 1000f) * imgW
+			val y1 = (box.yMax / 1000f) * imgH
+			return BlockRect(
+				left = min(x0, x1),
+				top = min(y0, y1),
+				right = max(x0, x1),
+				bottom = max(y0, y1),
+			)
+		}
+
+		val origRects = drawableIndices.map { idx -> toBlockRect(layouts[idx].refinedBox) }
+		val resolvedRects = origRects.map { it.copy() }
+		val anchorRects = drawableIndices.map { idx -> toBlockRect(layouts[idx].bubble.box) }
+
+		resolveNonOverlappingRects(resolvedRects, anchorRects, imgW.toFloat(), imgH.toFloat())
+
+		val result = layouts.toMutableList()
+		val minFontPx = max(7.5f, imgW * 0.011f)
+		for (dIdx in drawableIndices.indices) {
+			val orig = origRects[dIdx]
+			val res = resolvedRects[dIdx]
+			val layoutIdx = drawableIndices[dIdx]
+			val layout = layouts[layoutIdx]
+			val shrunk = res.width < orig.width - 2f || res.height < orig.height - 2f
+			val shifted = abs(res.left - orig.left) > 1f || abs(res.top - orig.top) > 1f
+			if (!shrunk && !shifted) continue
+
+			val newBox = NormalizedBox(
+				yMin = (res.top / imgH * 1000f).coerceIn(0f, 1000f),
+				xMin = (res.left / imgW * 1000f).coerceIn(0f, 1000f),
+				yMax = (res.bottom / imgH * 1000f).coerceIn(0f, 1000f),
+				xMax = (res.right / imgW * 1000f).coerceIn(0f, 1000f),
+			)
+			if (!shrunk) {
+				result[layoutIdx] = layout.copy(refinedBox = newBox)
+				continue
+			}
+
+			val style = layout.style
+			smartTextLayout.configureTextPaint(paint, style, layout.fontPx.coerceAtLeast(minFontPx), layout.translatedText)
+			fun measureAt(s: String, px: Float): Float {
+				paint.textSize = px.coerceAtLeast(1f)
+				return smartTextLayout.measureStyledWordWidth(s, paint, style.fontFamily)
+			}
+
+			var fontPx = layout.fontPx.coerceAtLeast(minFontPx)
+			val availW = res.width.coerceAtLeast(20f)
+			val availH = res.height.coerceAtLeast(12f)
+			val refitLines = if (layout.isSingleLineStat) {
+				for (step in 0 until 16) {
+					val lineW = measureAt(layout.translatedText, fontPx)
+					val lineH = fontPx * layout.lineHeightRatio
+					if ((lineW <= availW * 0.96f && lineH <= availH) || fontPx <= minFontPx) break
+					fontPx = max(minFontPx, fontPx * 0.92f)
+				}
+				val finalW = measureAt(layout.translatedText, fontPx)
+				val effScale = if (finalW > availW * 0.96f && finalW > 0f) max(0.65f, (availW * 0.96f) / finalW) else 1f
+				listOf(SmartWrappedLine(layout.translatedText, finalW, effScale))
+			} else {
+				var bestWrap = SmartWrapResult(layout.wrappedLines, 0f, 0f, 0f, false)
+				for (step in 0 until 20) {
+					val wrapped = SmartTextLayout.computeSmartWrappedLines(
+						text = layout.translatedText,
+						maxWidthPx = (availW * 0.94f).coerceAtLeast(14f),
+						fontPx = fontPx,
+						fontFamily = style.fontFamily,
+						lineHeightRatio = layout.lineHeightRatio,
+						measureScaledWidth = ::measureAt,
+					)
+					bestWrap = wrapped
+					if ((wrapped.totalHeightPx <= availH * 0.96f &&
+							wrapped.maxWordWidth <= availW * 0.96f &&
+							!wrapped.hasOverflow) ||
+						fontPx <= minFontPx
+					) {
+						break
+					}
+					fontPx = max(minFontPx, fontPx * 0.92f)
+				}
+				bestWrap.lines.ifEmpty { layout.wrappedLines }
+			}
+
+			val updatedStyle = style.copy(
+				fontSizeCqw = ((fontPx / imgW.coerceAtLeast(1)) * 100f).coerceIn(1.2f, 13.5f),
+				lineWidthsPct = emptyList(),
+			)
+			result[layoutIdx] = layout.copy(
+				refinedBox = newBox,
+				style = updatedStyle,
+				wrappedLines = refitLines,
+				fontPx = fontPx,
+			)
+		}
+		return result
+	}
+
+	internal companion object {
 		const val WEBP_QUALITY = 92
 		const val WEBP_MAX_DIMENSION = 16383
+
+		internal data class BlockRect(
+			var left: Float,
+			var top: Float,
+			var right: Float,
+			var bottom: Float,
+		) {
+			val width: Float get() = right - left
+			val height: Float get() = bottom - top
+			val centerX: Float get() = (left + right) * 0.5f
+			val centerY: Float get() = (top + bottom) * 0.5f
+		}
+
+		internal fun resolveNonOverlappingRects(
+			rects: List<BlockRect>,
+			anchors: List<BlockRect>,
+			imgW: Float,
+			imgH: Float,
+		) {
+			if (rects.size <= 1 || rects.size != anchors.size) return
+			val gap = max(6f, min(imgW, imgH) * 0.005f)
+			val minBoxW = 20f
+			val minBoxH = 12f
+			val boundMaxX = (imgW - 4f).coerceAtLeast(4f + minBoxW)
+			val boundMaxY = (imgH - 4f).coerceAtLeast(4f + minBoxH)
+
+			for (pass in 0 until 6) {
+				var anyAdjusted = false
+				for (i in rects.indices) {
+					val ri = rects[i]
+					val ai = anchors[i]
+					for (j in i + 1 until rects.size) {
+						val rj = rects[j]
+						val aj = anchors[j]
+						val overlapX = min(ri.right, rj.right) + gap - max(ri.left, rj.left)
+						val overlapY = min(ri.bottom, rj.bottom) + gap - max(ri.top, rj.top)
+						if (overlapX <= 0.5f || overlapY <= 0.5f) continue
+
+						val dxNorm = abs(ai.centerX - aj.centerX) / max(16f, (ai.width + aj.width) * 0.5f)
+						val dyNorm = abs(ai.centerY - aj.centerY) / max(16f, (ai.height + aj.height) * 0.5f)
+						val separateVertically = if (abs(dyNorm - dxNorm) >= 0.08f) {
+							dyNorm > dxNorm
+						} else {
+							overlapY <= overlapX
+						}
+
+						if (separateVertically) {
+							val iIsUpper = if (abs(ai.centerY - aj.centerY) > 1f) ai.centerY < aj.centerY else ri.centerY <= rj.centerY
+							val upper = if (iIsUpper) ri else rj
+							val lower = if (iIsUpper) rj else ri
+							val upperA = if (iIsUpper) ai else aj
+							val lowerA = if (iIsUpper) aj else ai
+
+							val minSplitY = (upper.top + minBoxH).coerceAtMost(boundMaxY - minBoxH)
+							val maxSplitY = (lower.bottom - minBoxH).coerceAtLeast(minSplitY)
+							val anchorSplitY = if (upperA.bottom <= lowerA.top) {
+								(upperA.bottom + lowerA.top) * 0.5f
+							} else {
+								(upperA.centerY + lowerA.centerY) * 0.5f
+							}
+							val splitY = anchorSplitY.coerceIn(minSplitY, maxSplitY)
+							val newUpperBot = min(upper.bottom, (splitY - gap * 0.5f).coerceAtLeast(upper.top + minBoxH))
+							val newLowerTop = max(lower.top, (splitY + gap * 0.5f).coerceAtMost(lower.bottom - minBoxH))
+							if (newUpperBot < upper.bottom - 0.5f || newLowerTop > lower.top + 0.5f) {
+								upper.bottom = newUpperBot
+								lower.top = newLowerTop
+								anyAdjusted = true
+							}
+						} else {
+							val iIsLeft = if (abs(ai.centerX - aj.centerX) > 1f) ai.centerX < aj.centerX else ri.centerX <= rj.centerX
+							val leftR = if (iIsLeft) ri else rj
+							val rightR = if (iIsLeft) rj else ri
+							val leftA = if (iIsLeft) ai else aj
+							val rightA = if (iIsLeft) aj else ai
+
+							val minSplitX = (leftR.left + minBoxW).coerceAtMost(boundMaxX - minBoxW)
+							val maxSplitX = (rightR.right - minBoxW).coerceAtLeast(minSplitX)
+							val anchorSplitX = if (leftA.right <= rightA.left) {
+								(leftA.right + rightA.left) * 0.5f
+							} else {
+								(leftA.centerX + rightA.centerX) * 0.5f
+							}
+							val splitX = anchorSplitX.coerceIn(minSplitX, maxSplitX)
+							val newLeftRight = min(leftR.right, (splitX - gap * 0.5f).coerceAtLeast(leftR.left + minBoxW))
+							val newRightLeft = max(rightR.left, (splitX + gap * 0.5f).coerceAtMost(rightR.right - minBoxW))
+							if (newLeftRight < leftR.right - 0.5f || newRightLeft > rightR.left + 0.5f) {
+								leftR.right = newLeftRight
+								rightR.left = newRightLeft
+								anyAdjusted = true
+							}
+						}
+					}
+				}
+				if (!anyAdjusted) break
+			}
+
+			for (r in rects) {
+				r.left = r.left.coerceIn(4f, boundMaxX - minBoxW)
+				r.right = r.right.coerceIn(r.left + minBoxW, boundMaxX)
+				r.top = r.top.coerceIn(4f, boundMaxY - minBoxH)
+				r.bottom = r.bottom.coerceIn(r.top + minBoxH, boundMaxY)
+			}
+		}
 	}
 }

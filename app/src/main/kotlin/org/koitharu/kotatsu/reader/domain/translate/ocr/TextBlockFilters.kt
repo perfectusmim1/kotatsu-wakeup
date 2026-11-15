@@ -50,7 +50,7 @@ object TextBlockFilters {
 	private val LETTER_REGEX = Regex("""\p{L}""")
 	private val DIGIT_REGEX = Regex("""\p{N}""")
 	private val JUNK_CHAR_REGEX = Regex(
-		"""[^\p{L}\p{N}\s.,!?'"“”‘’…:;()\-–—~&%+*「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛«»]""",
+		"""[^\p{L}\p{N}\s.,!?'"“”‘’…:;()\[\]{}/#=\-–—~&%+*「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛«»]""",
 	)
 	private val PUNCT_ONLY_ALLOW_REGEX = Regex("""^[.…!?]+$""")
 	private val SINGLE_LATIN_WORD_REGEX = Regex("""^(?:I|A|O)[!?.…,]*$""", RegexOption.IGNORE_CASE)
@@ -62,7 +62,7 @@ object TextBlockFilters {
 	)
 	private val ASCII_VOWEL_REGEX = Regex("""[aeiouy]""", RegexOption.IGNORE_CASE)
 	private val CLEAN_MULTI_TOKEN_REGEX = Regex(
-		"""^[\p{L}\p{N}]+(?:[\s.,!?'"“”‘’…:;()\-–—~「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛]+[\p{L}\p{N}]+)*[\s.,!?'"“”‘’…:;()\-–—~「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛]*$""",
+		"""^(?:[\[\(【「『〈《«#+*\-–—]*[\p{L}\p{N}]+)(?:[\s.,!?'"“”‘’…:;()\[\]{}/#+=&%*~\-–—「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛«»]+[\p{L}\p{N}]+)*[\s.,!?'"“”‘’…:;()\[\]{}/#+=&%*~\-–—「」『』【】〈〉《》（）？！。、，・ー〜～،؟؛«»]*$""",
 	)
 
 	private val SHORT_MEANINGFUL_WORD_REGEX = Regex(
@@ -261,11 +261,14 @@ object TextBlockFilters {
 		val multiScript = hasCjkOrHangulOrArabic(text)
 		val minCleanLetters = if (multiScript) 2 else 3
 		val cleanTarget = stripped.ifEmpty { text }
-		val isCleanText = junk == 0 &&
-			letters >= minCleanLetters &&
-			digits == 0 &&
+		val isBracketedTag = (text.startsWith('[') && text.endsWith(']')) ||
+			(text.startsWith('【') && text.endsWith('】')) ||
+			(text.startsWith('{') && text.endsWith('}'))
+		val hasValidCharsOnly = junk == 0 &&
 			!TRIPLE_SAME_CHAR_REGEX.matches(cleanTarget) &&
 			CLEAN_MULTI_TOKEN_REGEX.matches(cleanTarget)
+		val isCleanText = hasValidCharsOnly && letters >= minCleanLetters && digits == 0
+		val isAlnumCleanText = hasValidCharsOnly && digits > 0 && letters >= 2 && (letters + digits) >= 3
 		val hasLatinVowel = LATIN_VOWEL_REGEX.containsMatchIn(stripped)
 		val alphaOnly = NON_ASCII_ALPHA_REGEX.replace(stripped, "")
 		val isMixedWeirdCasing = alphaOnly.length in 2..4 &&
@@ -274,12 +277,15 @@ object TextBlockFilters {
 			alphaOnly.drop(1).dropLast(1).any { it.isUpperCase() }
 		val isGiantArtworkShortWord = line.height >= 110f &&
 			letters <= 4 &&
-			!stripped.contains(' ')
+			!stripped.contains(' ') &&
+			!isShortMeaningful &&
+			!isBracketedTag
 		val isTinyLowerJunk = !multiScript &&
 			alphaOnly.length <= 2 &&
 			alphaOnly.isNotEmpty() &&
 			alphaOnly.all { it.isLowerCase() } &&
-			!isShortMeaningful
+			!isShortMeaningful &&
+			!isBracketedTag
 
 		val effectiveMinConf = when {
 			isMixedWeirdCasing -> maxOf(minConfidence, 85f)
@@ -288,13 +294,17 @@ object TextBlockFilters {
 			isShortMeaningful -> minOf(minConfidence, 40f)
 			isCleanText && letters >= 3 && hasLatinVowel -> minOf(minConfidence, 48f)
 			isCleanText -> minOf(minConfidence, 56f)
+			isBracketedTag && junk == 0 && letters >= 1 -> minOf(minConfidence, 54f)
+			isAlnumCleanText -> minOf(minConfidence, 58f)
 			multiScript && letters >= 1 && junk == 0 -> minOf(minConfidence, 58f)
 			else -> minConfidence
 		}
 
 		if (line.confidence < effectiveMinConf) return false
 		if (letters == 0) return false
-		if (letters < 2 && !multiScript && !SINGLE_LATIN_WORD_REGEX.matches(text)) return false
+		if (letters < 2 && !multiScript && !SINGLE_LATIN_WORD_REGEX.matches(text) && !(isBracketedTag && junk == 0)) {
+			return false
+		}
 
 		val total = maxOf(1, letters + digits + junk)
 		if (junk.toFloat() / total > 0.25f) return false

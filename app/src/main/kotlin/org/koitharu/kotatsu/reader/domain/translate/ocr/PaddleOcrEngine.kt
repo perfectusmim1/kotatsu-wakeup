@@ -533,10 +533,18 @@ class PaddleOcrEngine @Inject constructor(
 		val obbW: Float = 0f,
 		val obbH: Float = 0f,
 		val angleDeg: Float = 0f,
+		val edgeClipped: Boolean = false,
 	) {
 		val width: Float get() = x1 - x0
 		val height: Float get() = y1 - y0
 		val area: Float get() = max(0f, width) * max(0f, height)
+	}
+
+	private enum class CropOrientation {
+		HORIZONTAL,
+		ROTATE_90_CCW,
+		ROTATE_90_CW,
+		TILTED_OBB,
 	}
 
 	private suspend fun detectAllRegions(
@@ -639,8 +647,9 @@ class PaddleOcrEngine @Inject constructor(
 			val fy = srcH.toFloat() / mapH
 
 			for (b in detBoxes) {
-				if (!isFirst && b.y0 <= 6f && b.y1 < mapH * 0.55f) continue
-				if (!isLast && b.y1 >= mapH - 6f && b.y0 > mapH * 0.45f) continue
+				val clippedTop = !isFirst && b.y0 <= 4f && b.y1 < mapH * 0.72f
+				val clippedBottom = !isLast && b.y1 >= mapH - 4f && b.y0 > mapH * 0.28f
+				val isEdgeClipped = clippedTop || clippedBottom
 
 				val pageX0 = (b.x0 * fx).coerceIn(0f, width.toFloat())
 				val pageY0 = (b.y0 * fy + sy).coerceIn(0f, height.toFloat())
@@ -648,9 +657,9 @@ class PaddleOcrEngine @Inject constructor(
 				val pageY1 = (b.y1 * fy + sy).coerceIn(0f, height.toFloat())
 				val cw = pageX1 - pageX0
 				val ch = pageY1 - pageY0
-				if (cw < 10f || ch < 8f || ch > cw * 20f) continue
+				if (cw < 10f || ch < 8f || ch > cw * 24f) continue
 
-				val hasTiltedObb = abs(b.angleDeg) >= 6f && b.obbW > 1f && b.obbH > 1f
+				val hasTiltedObb = abs(b.angleDeg) >= 4f && b.obbW > 1f && b.obbH > 1f
 				val cand = if (hasTiltedObb) {
 					val rad = Math.toRadians(b.angleDeg.toDouble())
 					val ux = cos(rad).toFloat() * fx
@@ -669,23 +678,33 @@ class PaddleOcrEngine @Inject constructor(
 						obbW = b.obbW * uScale,
 						obbH = b.obbH * vScale,
 						angleDeg = Math.toDegrees(atan2((uy / uScale).toDouble(), (ux / uScale).toDouble())).toFloat(),
+						edgeClipped = isEdgeClipped,
 					)
 				} else {
-					DetRegion(pageX0, pageY0, pageX1, pageY1)
+					DetRegion(pageX0, pageY0, pageX1, pageY1, edgeClipped = isEdgeClipped)
 				}
 
-				var replacedOrDuplicate = false
-				for (idx in detected.indices) {
+				var absorbedByExisting = false
+				var replacedIdx = -1
+				for (idx in detected.indices.reversed()) {
 					val existing = detected[idx]
-					if (iouRect(existing, cand) > 0.50f || ioMinRect(existing, cand) > 0.65f) {
-						if (cand.area > existing.area * 1.15f) {
-							detected[idx] = cand
+					if (iouRect(existing, cand) > 0.42f || ioMinRect(existing, cand) > 0.60f) {
+						val existingWins = when {
+							existing.edgeClipped && !cand.edgeClipped -> false
+							!existing.edgeClipped && cand.edgeClipped -> true
+							else -> cand.area <= existing.area * 1.10f
 						}
-						replacedOrDuplicate = true
-						break
+						if (existingWins) {
+							absorbedByExisting = true
+						} else if (replacedIdx == -1) {
+							detected[idx] = cand
+							replacedIdx = idx
+						} else {
+							detected.removeAt(idx)
+						}
 					}
 				}
-				if (!replacedOrDuplicate) {
+				if (!absorbedByExisting && replacedIdx == -1) {
 					detected.add(cand)
 				}
 			}
@@ -709,6 +728,9 @@ class PaddleOcrEngine @Inject constructor(
 		val recInputName = recSession.inputNames.first()
 		val allowVerticalRotation = modelGroup == "cjk" || modelGroup == "korean"
 		var cropPixels = IntArray(0)
+		var enhancedPixels = IntArray(0)
+		val lumHist = IntArray(256)
+		val borderHist = IntArray(256)
 		var recFloatArray = FloatArray(0)
 		var recDirectBuf: FloatBuffer? = null
 		var recLogitsArray = FloatArray(0)
@@ -716,49 +738,37 @@ class PaddleOcrEngine @Inject constructor(
 		var aspectSkipped = 0
 		var lowConfSkipped = 0
 
+		fun scoreCandidate(text: String, conf: Float): Float {
+			if (text.isEmpty()) return -1f
+			val clean = TextBlockFilters.cleanOcrText(text)
+			if (clean.isEmpty()) return -1f
+			val letters = TextBlockFilters.countLetters(clean)
+			if (letters == 0) return -1f
+			val junk = TextBlockFilters.countJunk(clean)
+			return (conf - junk * 18f).coerceAtLeast(0f) * sqrt(letters.toFloat() + 0.5f)
+		}
+
 		for (region in regions) {
 			currentCoroutineContext().ensureActive()
 			val cw = region.width
 			val ch = region.height
 			if (cw < 10f || ch < 8f) continue
-			val useTiltedUnwarp = abs(region.angleDeg) >= 6f && region.obbW >= 12f && region.obbH >= 8f
+			val useTiltedUnwarp = abs(region.angleDeg) >= 4f && region.obbW >= 12f && region.obbH >= 8f
 			val effW = if (useTiltedUnwarp) region.obbW else cw
 			val effH = if (useTiltedUnwarp) region.obbH else ch
-			if (!useTiltedUnwarp && !allowVerticalRotation && ch > cw * 6f) {
+			if (!useTiltedUnwarp && ch > cw * 24f) {
 				aspectSkipped++
 				continue
 			}
 
-			val rotateVertical = !useTiltedUnwarp && allowVerticalRotation && ch >= cw * 1.6f
-			val padAlongW = if (rotateVertical) (cw * 0.08f).coerceIn(1.5f, 4f) else (effH * 0.14f).coerceIn(2f, 5f)
-			val padAlongH = if (rotateVertical) (ch * 0.05f).coerceIn(2f, 5f) else (effH * 0.08f).coerceIn(1.5f, 4f)
-			val sampleW = effW + padAlongW * 2f
-			val sampleH = effH + padAlongH * 2f
+			val isVerticalShape = !useTiltedUnwarp && ch >= cw * 1.55f
+			val fetchPadW = max((effH * 0.14f).coerceIn(2f, 5f), (cw * 0.08f).coerceIn(1.5f, 4f))
+			val fetchPadH = max((effH * 0.08f).coerceIn(1.5f, 4f), (ch * 0.05f).coerceIn(2f, 5f))
 
-			val rawTw = if (rotateVertical) {
-				((REC_H * sampleH) / sampleW).roundToInt()
-			} else {
-				((REC_H * sampleW) / sampleH).roundToInt()
-			}
-			val tw = rawTw.coerceIn(16, REC_MAX_W)
-			val outW = ((tw + 7) / 8) * 8
-			val recTotal = 3 * REC_H * outW
-			if (recFloatArray.size < recTotal) {
-				recFloatArray = FloatArray(recTotal)
-				recDirectBuf = allocateDirectFloatBuffer(recTotal)
-			}
-			recFloatArray.fill(0f, 0, recTotal)
-			val recBuf = checkNotNull(recDirectBuf)
-
-			val sampleX0 = (region.x0 - padAlongW).coerceIn(0f, (width - 1).toFloat())
-			val sampleY0 = (region.y0 - padAlongH).coerceIn(0f, (height - 1).toFloat())
-			val sampleX1 = (region.x1 + padAlongW).coerceIn(sampleX0 + 1f, width.toFloat())
-			val sampleY1 = (region.y1 + padAlongH).coerceIn(sampleY0 + 1f, height.toFloat())
-
-			val cropX0 = floor(sampleX0).toInt().coerceIn(0, width - 1)
-			val cropY0 = floor(sampleY0).toInt().coerceIn(0, height - 1)
-			val cropX1 = ceil(sampleX1).toInt().coerceIn(cropX0 + 1, width)
-			val cropY1 = ceil(sampleY1).toInt().coerceIn(cropY0 + 1, height)
+			val cropX0 = floor((region.x0 - fetchPadW).coerceIn(0f, (width - 1).toFloat())).toInt().coerceIn(0, width - 1)
+			val cropY0 = floor((region.y0 - fetchPadH).coerceIn(0f, (height - 1).toFloat())).toInt().coerceIn(0, height - 1)
+			val cropX1 = ceil((region.x1 + fetchPadW).coerceIn(cropX0 + 1f, width.toFloat())).toInt().coerceIn(cropX0 + 1, width)
+			val cropY1 = ceil((region.y1 + fetchPadH).coerceIn(cropY0 + 1f, height.toFloat())).toInt().coerceIn(cropY0 + 1, height)
 			val cropW = cropX1 - cropX0
 			val cropH = cropY1 - cropY0
 			val neededPixels = cropW * cropH
@@ -767,96 +777,199 @@ class PaddleOcrEngine @Inject constructor(
 			}
 			bitmap.getPixels(cropPixels, 0, cropW, cropX0, cropY0, cropW, cropH)
 
-			if (useTiltedUnwarp) {
-				sampleRotatedAngleToBgrTensor(
-					pixels = cropPixels,
-					imgW = cropW,
-					imgH = cropH,
-					cx = region.cx - cropX0,
-					cy = region.cy - cropY0,
-					boxW = sampleW,
-					boxH = sampleH,
-					angleDeg = region.angleDeg,
-					tw = tw,
-					th = REC_H,
-					outW = outW,
-					mean = REC_MEAN,
-					std = REC_STD,
-					out = recFloatArray,
-				)
-			} else if (rotateVertical) {
-				sampleRotated90CcwToBgrTensor(
-					pixels = cropPixels,
-					imgW = cropW,
-					imgH = cropH,
-					sx0 = sampleX0 - cropX0,
-					sy0 = sampleY0 - cropY0,
-					sw = sampleX1 - sampleX0,
-					sh = sampleY1 - sampleY0,
-					tw = tw,
-					th = REC_H,
-					outW = outW,
-					mean = REC_MEAN,
-					std = REC_STD,
-					out = recFloatArray,
-				)
-			} else {
-				sampleToBgrTensor(
-					pixels = cropPixels,
-					imgW = cropW,
-					imgH = cropH,
-					sx0 = sampleX0 - cropX0,
-					sy0 = sampleY0 - cropY0,
-					sw = sampleX1 - sampleX0,
-					sh = sampleY1 - sampleY0,
-					tw = tw,
-					th = REC_H,
-					outW = outW,
-					mean = REC_MEAN,
-					std = REC_STD,
-					out = recFloatArray,
-				)
-			}
-			recBuf.clear()
-			recBuf.put(recFloatArray, 0, recTotal)
-			recBuf.rewind()
-			recBuf.limit(recTotal)
+			suspend fun runOrientation(srcPixels: IntArray, mode: CropOrientation): Pair<String, Float> {
+				val isVertMode = mode == CropOrientation.ROTATE_90_CCW || mode == CropOrientation.ROTATE_90_CW
+				val baseW = if (mode == CropOrientation.TILTED_OBB) region.obbW else cw
+				val baseH = if (mode == CropOrientation.TILTED_OBB) region.obbH else ch
+				val padAlongW = if (isVertMode) (cw * 0.08f).coerceIn(1.5f, 4f) else (baseH * 0.14f).coerceIn(2f, 5f)
+				val padAlongH = if (isVertMode) (ch * 0.05f).coerceIn(2f, 5f) else (baseH * 0.08f).coerceIn(1.5f, 4f)
+				val sampleW = baseW + padAlongW * 2f
+				val sampleH = baseH + padAlongH * 2f
+				val rawTw = if (isVertMode) {
+					((REC_H * sampleH) / sampleW).roundToInt()
+				} else {
+					((REC_H * sampleW) / sampleH).roundToInt()
+				}
+				val tw = rawTw.coerceIn(16, REC_MAX_W)
+				val outW = ((tw + 7) / 8) * 8
+				val recTotal = 3 * REC_H * outW
+				if (recFloatArray.size < recTotal) {
+					recFloatArray = FloatArray(recTotal)
+					recDirectBuf = allocateDirectFloatBuffer(recTotal)
+				}
+				recFloatArray.fill(0f, 0, recTotal)
+				val recBuf = checkNotNull(recDirectBuf)
 
-			val (text, confidence) = OnnxTensor.createTensor(
-				env,
-				recBuf,
-				longArrayOf(1L, 3L, REC_H.toLong(), outW.toLong()),
-			).use { recTensor ->
-				recSession.run(Collections.singletonMap(recInputName, recTensor)).use { recResult ->
-					val outTensor = recResult[0] as OnnxTensor
-					val outShape = (outTensor.info as TensorInfo).shape
-					if (outShape.size < 3) {
-						"" to 0f
-					} else {
-						val steps = outShape[1].toInt()
-						val classes = outShape[2].toInt()
-						val logitsCount = steps * classes
-						if (recLogitsArray.size < logitsCount) {
-							recLogitsArray = FloatArray(logitsCount)
+				val sampleX0 = (region.x0 - padAlongW).coerceIn(cropX0.toFloat(), (cropX1 - 1).toFloat())
+				val sampleY0 = (region.y0 - padAlongH).coerceIn(cropY0.toFloat(), (cropY1 - 1).toFloat())
+				val sampleX1 = (region.x1 + padAlongW).coerceIn(sampleX0 + 1f, cropX1.toFloat())
+				val sampleY1 = (region.y1 + padAlongH).coerceIn(sampleY0 + 1f, cropY1.toFloat())
+
+				when (mode) {
+					CropOrientation.TILTED_OBB -> sampleRotatedAngleToBgrTensor(
+						pixels = srcPixels,
+						imgW = cropW,
+						imgH = cropH,
+						cx = region.cx - cropX0,
+						cy = region.cy - cropY0,
+						boxW = sampleW,
+						boxH = sampleH,
+						angleDeg = region.angleDeg,
+						tw = tw,
+						th = REC_H,
+						outW = outW,
+						mean = REC_MEAN,
+						std = REC_STD,
+						out = recFloatArray,
+					)
+					CropOrientation.ROTATE_90_CCW -> sampleRotated90CcwToBgrTensor(
+						pixels = srcPixels,
+						imgW = cropW,
+						imgH = cropH,
+						sx0 = sampleX0 - cropX0,
+						sy0 = sampleY0 - cropY0,
+						sw = sampleX1 - sampleX0,
+						sh = sampleY1 - sampleY0,
+						tw = tw,
+						th = REC_H,
+						outW = outW,
+						mean = REC_MEAN,
+						std = REC_STD,
+						out = recFloatArray,
+					)
+					CropOrientation.ROTATE_90_CW -> sampleRotated90CwToBgrTensor(
+						pixels = srcPixels,
+						imgW = cropW,
+						imgH = cropH,
+						sx0 = sampleX0 - cropX0,
+						sy0 = sampleY0 - cropY0,
+						sw = sampleX1 - sampleX0,
+						sh = sampleY1 - sampleY0,
+						tw = tw,
+						th = REC_H,
+						outW = outW,
+						mean = REC_MEAN,
+						std = REC_STD,
+						out = recFloatArray,
+					)
+					CropOrientation.HORIZONTAL -> sampleToBgrTensor(
+						pixels = srcPixels,
+						imgW = cropW,
+						imgH = cropH,
+						sx0 = sampleX0 - cropX0,
+						sy0 = sampleY0 - cropY0,
+						sw = sampleX1 - sampleX0,
+						sh = sampleY1 - sampleY0,
+						tw = tw,
+						th = REC_H,
+						outW = outW,
+						mean = REC_MEAN,
+						std = REC_STD,
+						out = recFloatArray,
+					)
+				}
+				recBuf.clear()
+				recBuf.put(recFloatArray, 0, recTotal)
+				recBuf.rewind()
+				recBuf.limit(recTotal)
+
+				return OnnxTensor.createTensor(
+					env,
+					recBuf,
+					longArrayOf(1L, 3L, REC_H.toLong(), outW.toLong()),
+				).use { recTensor ->
+					recSession.run(Collections.singletonMap(recInputName, recTensor)).use { recResult ->
+						val outTensor = recResult[0] as OnnxTensor
+						val outShape = (outTensor.info as TensorInfo).shape
+						if (outShape.size < 3) {
+							"" to 0f
+						} else {
+							val steps = outShape[1].toInt()
+							val classes = outShape[2].toInt()
+							val logitsCount = steps * classes
+							if (recLogitsArray.size < logitsCount) {
+								recLogitsArray = FloatArray(logitsCount)
+							}
+							outTensor.floatBuffer.apply {
+								rewind()
+								get(recLogitsArray, 0, logitsCount)
+							}
+							ctcDecode(recLogitsArray, steps, classes, dictionary)
 						}
-						outTensor.floatBuffer.apply {
-							rewind()
-							get(recLogitsArray, 0, logitsCount)
-						}
-						ctcDecode(recLogitsArray, steps, classes, dictionary)
 					}
 				}
 			}
 
-			val trimmed = text.trim()
-			if (trimmed.isEmpty() || confidence < minConfidence) {
+			val primaryMode = when {
+				useTiltedUnwarp -> CropOrientation.TILTED_OBB
+				isVerticalShape && (allowVerticalRotation || ch >= cw * 2.3f) -> CropOrientation.ROTATE_90_CCW
+				else -> CropOrientation.HORIZONTAL
+			}
+			var (bestText, bestConf) = runOrientation(cropPixels, primaryMode).let { it.first.trim() to it.second }
+			var bestMode = primaryMode
+			var bestScore = scoreCandidate(bestText, bestConf)
+
+			fun acceptFallback(candPair: Pair<String, Float>, mode: CropOrientation) {
+				val candText = candPair.first.trim()
+				val candConf = candPair.second
+				val candScore = scoreCandidate(candText, candConf)
+				if (candScore > bestScore * 1.05f || (bestScore < 0f && candScore > 0f)) {
+					bestText = candText
+					bestConf = candConf
+					bestMode = mode
+					bestScore = candScore
+				}
+			}
+
+			if (useTiltedUnwarp && (bestConf < 68f || bestScore < 0f)) {
+				val axisFallback = if (ch >= cw * 1.55f) CropOrientation.ROTATE_90_CCW else CropOrientation.HORIZONTAL
+				acceptFallback(runOrientation(cropPixels, axisFallback), axisFallback)
+			}
+			if (isVerticalShape && (bestConf < 82f || bestScore < 0f)) {
+				if (bestMode != CropOrientation.ROTATE_90_CCW) {
+					acceptFallback(runOrientation(cropPixels, CropOrientation.ROTATE_90_CCW), CropOrientation.ROTATE_90_CCW)
+				}
+				if (bestConf < 82f || bestScore < 0f) {
+					acceptFallback(runOrientation(cropPixels, CropOrientation.ROTATE_90_CW), CropOrientation.ROTATE_90_CW)
+				}
+				if (bestMode != CropOrientation.HORIZONTAL && ch < cw * 2.4f && (bestConf < 72f || bestScore < 0f)) {
+					acceptFallback(runOrientation(cropPixels, CropOrientation.HORIZONTAL), CropOrientation.HORIZONTAL)
+				}
+			}
+
+			val needsContrastRetry = bestText.isEmpty() ||
+				bestConf < 68f ||
+				TextBlockFilters.countLetters(bestText) < 2
+			if (needsContrastRetry) {
+				if (enhancedPixels.size < neededPixels) {
+					enhancedPixels = IntArray(neededPixels)
+				}
+				enhanceCropForRecRetry(
+					src = cropPixels,
+					w = cropW,
+					h = cropH,
+					out = enhancedPixels,
+					lumHist = lumHist,
+					borderHist = borderHist,
+				)
+				val enhancedRes = runOrientation(enhancedPixels, bestMode)
+				val eText = enhancedRes.first.trim()
+				val eConf = enhancedRes.second
+				val eScore = scoreCandidate(eText, eConf)
+				if (eText.isNotEmpty() && (eScore > bestScore * 1.05f || (bestConf < minConfidence && eConf >= minConfidence && eScore > 0f))) {
+					bestText = eText
+					bestConf = eConf
+				}
+			}
+
+			if (bestText.isEmpty() || bestConf < minConfidence) {
 				lowConfSkipped++
 				continue
 			}
 			collectedLines.add(
 				RawOcrLine(
-					text = trimmed,
-					confidence = confidence,
+					text = bestText,
+					confidence = bestConf,
 					x0 = region.x0.roundToInt().toFloat(),
 					y0 = region.y0.roundToInt().toFloat(),
 					x1 = region.x1.roundToInt().toFloat(),
@@ -873,11 +986,17 @@ class PaddleOcrEngine @Inject constructor(
 			)
 		}
 
-		// Dilim örtüşmelerinden gelen çift kutuları IoU ve içerme (IoMin) ile tekilleştir
+		// Dilim örtüşmelerinden gelen çift kutuları IoU, içerme (IoMin) ve metin benzerliği ile tekilleştir
 		val sorted = collectedLines.sortedByDescending { it.confidence * sqrt(it.text.length.coerceAtLeast(1).toFloat()) }
 		val kept = ArrayList<RawOcrLine>(sorted.size)
 		for (line in sorted) {
-			if (kept.any { existing -> iou(existing, line) > 0.45f || ioMin(existing, line) > 0.68f }) continue
+			val duplicate = kept.any { existing ->
+				val lineIoMin = ioMin(existing, line)
+				iou(existing, line) > 0.40f ||
+					lineIoMin > 0.58f ||
+					(lineIoMin > 0.35f && textsOverlapNearDuplicate(existing.text, line.text))
+			}
+			if (duplicate) continue
 			kept.add(line)
 		}
 		return kept
@@ -1067,6 +1186,59 @@ class PaddleOcrEngine @Inject constructor(
 		}
 	}
 
+	private fun sampleRotated90CwToBgrTensor(
+		pixels: IntArray,
+		imgW: Int,
+		imgH: Int,
+		sx0: Float,
+		sy0: Float,
+		sw: Float,
+		sh: Float,
+		tw: Int,
+		th: Int,
+		outW: Int,
+		mean: FloatArray,
+		std: FloatArray,
+		out: FloatArray,
+	) {
+		val plane = outW * th
+		val scaleY = sh / tw
+		val scaleX = sw / th
+		val maxImgX = (imgW - 1).toFloat()
+		val maxImgY = (imgH - 1).toFloat()
+
+		for (y in 0 until th) {
+			val fx = (sx0 + (y + 0.5f) * scaleX - 0.5f).coerceIn(0f, maxImgX)
+			val x0 = floor(fx).toInt()
+			val x1 = min(imgW - 1, x0 + 1)
+			val wx = fx - x0
+			val outRow = y * outW
+
+			for (x in 0 until tw) {
+				val fy = (sy0 + sh - (x + 0.5f) * scaleY - 0.5f).coerceIn(0f, maxImgY)
+				val y0 = floor(fy).toInt()
+				val y1 = min(imgH - 1, y0 + 1)
+				val wy = fy - y0
+				val row0 = y0 * imgW
+				val row1 = y1 * imgW
+				writeBilinearBgrPixel(
+					p00 = pixels[row0 + x0],
+					p01 = pixels[row0 + x1],
+					p10 = pixels[row1 + x0],
+					p11 = pixels[row1 + x1],
+					wx = wx,
+					invWy = 1f - wy,
+					wy = wy,
+					outOffset = outRow + x,
+					plane = plane,
+					mean = mean,
+					std = std,
+					out = out,
+				)
+			}
+		}
+	}
+
 	private fun writeBilinearBgrPixel(
 		p00: Int,
 		p01: Int,
@@ -1185,16 +1357,164 @@ class PaddleOcrEngine @Inject constructor(
 	internal companion object {
 		const val LOG_TAG = OcrModelManager.LOG_TAG
 		private const val AUTO_PROBE_MAX_BOXES = 12
-		private const val DET_MAX_WIDTH = 960
+		private const val DET_MAX_WIDTH = 1280
 		private const val DET_SLICE_H = 1536
-		private const val DET_SLICE_OVERLAP = 192
-		private const val DET_BIN_THRESH = 0.3f
-		internal const val DET_BOX_THRESH = 0.50f
-		private const val DET_UNCLIP_RATIO = 1.78f
+		private const val DET_SLICE_OVERLAP = 256
+		private const val DET_BIN_THRESH = 0.28f
+		internal const val DET_BOX_THRESH = 0.48f
+		private const val DET_UNCLIP_RATIO = 1.80f
 		private const val REC_H = 48
 		private const val REC_MAX_W = 1600
 		private const val INV_255 = 1f / 255f
 		private const val MAX_GROUPING_PIXELS = 32_000_000L
+
+		internal fun textsOverlapNearDuplicate(a: String, b: String): Boolean {
+			val normA = TextBlockFilters.cleanOcrText(a).lowercase().filter { it.isLetterOrDigit() }
+			val normB = TextBlockFilters.cleanOcrText(b).lowercase().filter { it.isLetterOrDigit() }
+			if (normA.isEmpty() || normB.isEmpty()) return false
+			if (normA == normB) return true
+			val shorter = if (normA.length <= normB.length) normA else normB
+			val longer = if (normA.length <= normB.length) normB else normA
+			if (longer.contains(shorter) && shorter.length >= max(3, (longer.length * 0.65f).toInt())) {
+				return true
+			}
+			var match = 0
+			val used = BooleanArray(longer.length)
+			for (ch in shorter) {
+				val idx = longer.indexOf(ch)
+				if (idx >= 0) {
+					var searchFrom = idx
+					while (searchFrom >= 0 && used[searchFrom]) {
+						searchFrom = longer.indexOf(ch, searchFrom + 1)
+					}
+					if (searchFrom >= 0) {
+						used[searchFrom] = true
+						match++
+					}
+				}
+			}
+			return match.toFloat() / shorter.length >= 0.80f &&
+				shorter.length.toFloat() / longer.length >= 0.65f
+		}
+
+		internal fun enhanceCropForRecRetry(
+			src: IntArray,
+			w: Int,
+			h: Int,
+			out: IntArray,
+			lumHist: IntArray = IntArray(256),
+			borderHist: IntArray = IntArray(256),
+		) {
+			val total = w * h
+			if (total <= 0) return
+			lumHist.fill(0)
+			borderHist.fill(0)
+			var borderR = 0L
+			var borderG = 0L
+			var borderB = 0L
+			var borderCount = 0
+
+			for (y in 0 until h) {
+				val rowOff = y * w
+				val yBorder = y == 0 || y == h - 1
+				for (x in 0 until w) {
+					val p = src[rowOff + x]
+					val r = (p ushr 16) and 0xFF
+					val g = (p ushr 8) and 0xFF
+					val b = p and 0xFF
+					val lum = ((r * 77 + g * 150 + b * 29) ushr 8).coerceIn(0, 255)
+					lumHist[lum]++
+					if (yBorder || x == 0 || x == w - 1) {
+						borderHist[lum]++
+						borderR += r
+						borderG += g
+						borderB += b
+						borderCount++
+					}
+				}
+			}
+
+			fun percentile(hist: IntArray, count: Int, q: Float): Int {
+				if (count <= 0) return 128
+				val target = (count * q).roundToInt().coerceIn(0, count - 1)
+				var acc = 0
+				for (i in 0..255) {
+					acc += hist[i]
+					if (acc > target) return i
+				}
+				return 255
+			}
+
+			val p2 = percentile(lumHist, total, 0.02f)
+			val p98 = percentile(lumHist, total, 0.98f)
+			val borderMedLum = percentile(borderHist, borderCount, 0.50f)
+			val lumRange = (p98 - p2).coerceAtLeast(1)
+
+			var bgR = if (borderCount > 0) (borderR / borderCount).toInt() else 255
+			var bgG = if (borderCount > 0) (borderG / borderCount).toInt() else 255
+			var bgB = if (borderCount > 0) (borderB / borderCount).toInt() else 255
+			if (borderCount > 0) {
+				var nearR = 0L
+				var nearG = 0L
+				var nearB = 0L
+				var nearCnt = 0
+				for (y in 0 until h) {
+					val rowOff = y * w
+					val yBorder = y == 0 || y == h - 1
+					for (x in 0 until w) {
+						if (!yBorder && x != 0 && x != w - 1) continue
+						val p = src[rowOff + x]
+						val r = (p ushr 16) and 0xFF
+						val g = (p ushr 8) and 0xFF
+						val b = p and 0xFF
+						val lum = (r * 77 + g * 150 + b * 29) ushr 8
+						if (abs(lum - borderMedLum) <= 28) {
+							nearR += r
+							nearG += g
+							nearB += b
+							nearCnt++
+						}
+					}
+				}
+				if (nearCnt > 0) {
+					bgR = (nearR / nearCnt).toInt()
+					bgG = (nearG / nearCnt).toInt()
+					bgB = (nearB / nearCnt).toInt()
+				}
+			}
+
+			var maxBgDiff = 0
+			for (i in 0 until total) {
+				val p = src[i]
+				val r = (p ushr 16) and 0xFF
+				val g = (p ushr 8) and 0xFF
+				val b = p and 0xFF
+				val d = max(abs(r - bgR), max(abs(g - bgG), abs(b - bgB)))
+				if (d > maxBgDiff) maxBgDiff = d
+			}
+
+			val useChromaProjection = lumRange < 72 && maxBgDiff >= 50
+			val invertPolarity = borderMedLum < 120
+			val invLumRange = 255f / lumRange
+			val chromaSpan = (maxBgDiff - 12).coerceAtLeast(24).toFloat()
+
+			for (i in 0 until total) {
+				val p = src[i]
+				val r = (p ushr 16) and 0xFF
+				val g = (p ushr 8) and 0xFF
+				val b = p and 0xFF
+				val outGray = if (useChromaProjection) {
+					val dBg = max(abs(r - bgR), max(abs(g - bgG), abs(b - bgB)))
+					val norm = ((dBg - 12).coerceAtLeast(0) / chromaSpan).coerceIn(0f, 1f)
+					(255f - norm * 255f).roundToInt().coerceIn(0, 255)
+				} else {
+					val lum = (r * 77 + g * 150 + b * 29) ushr 8
+					val stretched = ((lum - p2) * invLumRange).roundToInt().coerceIn(0, 255)
+					if (invertPolarity) 255 - stretched else stretched
+				}
+				out[i] = (0xFF shl 24) or (outGray shl 16) or (outGray shl 8) or outGray
+			}
+		}
 
 		internal fun isAcceptableAutoMatch(
 			usableLines: Int,
@@ -1351,7 +1671,7 @@ class PaddleOcrEngine @Inject constructor(
 
 				val bw = maxX - minX + 1
 				val bh = maxY - minY + 1
-				if (count < 8 || bw < 3 || bh < 3) continue
+				if (count < 6 || bw < 2 || bh < 2) continue
 				val score = sum / count
 				if (score < DET_BOX_THRESH) continue
 
@@ -1370,7 +1690,7 @@ class PaddleOcrEngine @Inject constructor(
 				var angleDeg = 0f
 
 				val fillRatio = count.toFloat() / max(1, bw * bh)
-				if (count >= 24 && fillRatio < 0.65f && bw >= 10 && bh >= 8) {
+				if (count >= 20 && fillRatio < 0.68f && bw >= 8 && bh >= 7) {
 					val mx = sumX / count
 					val my = sumY / count
 					val cxx = sumXX / count - mx * mx
@@ -1378,7 +1698,7 @@ class PaddleOcrEngine @Inject constructor(
 					val cxy = sumXY / count - mx * my
 					val theta = 0.5f * atan2(2f * cxy, cxx - cyy)
 					val deg = Math.toDegrees(theta.toDouble()).toFloat()
-					if (abs(deg) in 6f..68f) {
+					if (abs(deg) in 4f..74f) {
 						val ux = cos(theta.toDouble()).toFloat()
 						val uy = sin(theta.toDouble()).toFloat()
 						val vx = -uy
@@ -1400,7 +1720,7 @@ class PaddleOcrEngine @Inject constructor(
 						}
 						val uSpan = (maxU - minU + 1f).coerceAtLeast(1f)
 						val vSpan = (maxV - minV + 1f).coerceAtLeast(1f)
-						if (uSpan / vSpan >= 2.0f && (uSpan * vSpan) < (bw * bh) * 0.80f) {
+						if (uSpan / vSpan >= 1.6f && (uSpan * vSpan) < (bw * bh) * 0.85f) {
 							val midU = (minU + maxU + 1f) * 0.5f
 							val midV = (minV + maxV + 1f) * 0.5f
 							val obbD = (uSpan * vSpan * DET_UNCLIP_RATIO) / (2f * (uSpan + vSpan))
@@ -2082,8 +2402,48 @@ class PaddleOcrEngine @Inject constructor(
 				)
 			}
 
-			sortedGroups.sortBy { it.first }
-			return sortedGroups.mapIndexed { index, pair ->
+			fun normIoMin(a: NormalizedBox, b: NormalizedBox): Float {
+				val ix = min(a.xMax, b.xMax) - max(a.xMin, b.xMin)
+				val iy = min(a.yMax, b.yMax) - max(a.yMin, b.yMin)
+				if (ix <= 0f || iy <= 0f) return 0f
+				val inter = ix * iy
+				val areaA = (a.xMax - a.xMin).coerceAtLeast(1f) * (a.yMax - a.yMin).coerceAtLeast(1f)
+				val areaB = (b.xMax - b.xMin).coerceAtLeast(1f) * (b.yMax - b.yMin).coerceAtLeast(1f)
+				return inter / min(areaA, areaB)
+			}
+
+			fun groupScore(g: OcrBubbleGroup): Float {
+				val avgConf = if (g.lines.isEmpty()) 0.5f else g.lines.sumOf { it.confidence.toDouble() }.toFloat() / g.lines.size
+				val letters = TextBlockFilters.countLetters(g.text).coerceAtLeast(1)
+				return avgConf * sqrt(letters.toFloat())
+			}
+
+			val dedupedGroups = ArrayList<Pair<Float, OcrBubbleGroup>>(sortedGroups.size)
+			for (candPair in sortedGroups.sortedByDescending { groupScore(it.second) }) {
+				val cand = candPair.second
+				val collides = dedupedGroups.any { existingPair ->
+					val existing = existingPair.second
+					val hasOverlappingLine = existing.lines.any { el ->
+						cand.lines.any { cl ->
+							val lineOverlap = normIoMin(el.box, cl.box)
+							lineOverlap >= 0.78f ||
+								(lineOverlap >= 0.48f && textsOverlapNearDuplicate(el.text, cl.text))
+						}
+					}
+					if (hasOverlappingLine) {
+						true
+					} else {
+						normIoMin(existing.box, cand.box) >= 0.72f &&
+							textsOverlapNearDuplicate(existing.text, cand.text)
+					}
+				}
+				if (!collides) {
+					dedupedGroups.add(candPair)
+				}
+			}
+
+			dedupedGroups.sortWith(compareBy<Pair<Float, OcrBubbleGroup>> { it.first }.thenBy { it.second.box.xMin })
+			return dedupedGroups.mapIndexed { index, pair ->
 				pair.second.copy(id = "b$index")
 			}
 		}

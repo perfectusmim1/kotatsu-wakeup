@@ -397,16 +397,14 @@ class BubbleInpainter @Inject constructor(
 						val pg = PixelColorMath.green(p)
 						val pb = PixelColorMath.blue(p)
 						val pixLum = PixelColorMath.luminance(pr, pg, pb)
-						if (pixLum >= 225f) continue
+						val pixChroma = max(abs(pr - pg), max(abs(pr - pb), abs(pg - pb)))
+						if (pixLum >= 238f && pixChroma < 28) continue
 
 						val inCore = isInsideAnyCore(x, y)
 						val nearCore3 = isNearAnyCore(x, y, 3)
-						if (hasJetBlackCoreInk && pixLum > (if (nearCore3) 58f else 120f)) {
-							continue
-						}
 
 						val dBg = PixelColorMath.maxChannelDiff(pr, pg, pb, bgR, bgG, bgB)
-						if (dBg < 26 && abs(pixLum - bgLumInit) < 20f) continue
+						if (dBg < 24 && abs(pixLum - bgLumInit) < 18f) continue
 
 						val x0s = max(0, x - rBig)
 						val x1s = min(ww, x + rBig + 1)
@@ -415,6 +413,20 @@ class BubbleInpainter @Inject constructor(
 						val meanG = ((iiG[r1Off + x1s] - iiG[r0Off + x1s] - iiG[r1Off + x0s] + iiG[r0Off + x0s]) * invArea).toFloat()
 						val meanB = ((iiB[r1Off + x1s] - iiB[r0Off + x1s] - iiB[r1Off + x0s] + iiB[r0Off + x0s]) * invArea).toFloat()
 
+						val effLocal = if (inCore) max(9f, localThresh * 0.65f) else localThresh
+						val chromaDiffLocal =
+							abs((pr - pg) - (meanR - meanG)) +
+								abs((pr - pb) - (meanR - meanB)) +
+								abs((pg - pb) - (meanG - meanB))
+						val maxDiffMean = max(abs(pr - meanR), max(abs(pg - meanG), abs(pb - meanB)))
+						val isSaturatedCoreInk = (inCore || nearCore3) &&
+							(pixChroma >= 42 || chromaDiffLocal > effLocal * 1.85f) &&
+							maxDiffMean > max(20f, effLocal)
+
+						if (hasJetBlackCoreInk && pixLum > (if (nearCore3) 58f else 120f) && !isSaturatedCoreInk) {
+							continue
+						}
+
 						val tx0s = max(0, x - rTight)
 						val tx1s = min(ww, x + rTight + 1)
 						val tInvArea = 1.0 / (tSpanY * (tx1s - tx0s))
@@ -422,7 +434,6 @@ class BubbleInpainter @Inject constructor(
 						val tMeanG = ((iiG[tr1Off + tx1s] - iiG[tr0Off + tx1s] - iiG[tr1Off + tx0s] + iiG[tr0Off + tx0s]) * tInvArea).toFloat()
 						val tMeanB = ((iiB[tr1Off + tx1s] - iiB[tr0Off + tx1s] - iiB[tr1Off + tx0s] + iiB[tr0Off + tx0s]) * tInvArea).toFloat()
 
-						val effLocal = if (inCore) max(9f, localThresh * 0.65f) else localThresh
 						val meanLum = PixelColorMath.luminance(meanR, meanG, meanB)
 						val tMeanLum = PixelColorMath.luminance(tMeanR, tMeanG, tMeanB)
 
@@ -442,10 +453,16 @@ class BubbleInpainter @Inject constructor(
 								dLumMedDark > effLocal * 0.78f &&
 								dMedDark > effLocal * 0.85f &&
 								(meanLum >= 85f || tMeanLum >= 120f)
+						val coloredPanelInk =
+							(inCore || nearCore3 || meanLum >= 105f) &&
+								chromaDiffLocal > effLocal * 1.75f &&
+								maxDiffMean > max(20f, effLocal) &&
+								(pixLum < meanLum - effLocal * 0.45f || pixChroma >= 45 || meanLum >= 135f)
 
 						if ((meanLum >= 160f && dLumMedDark > effLocal * 0.82f && dMedDark > effLocal) ||
 							nearDarkRingWhite ||
 							midToneDarkInk ||
+							coloredPanelInk ||
 							(pixLum < 115f &&
 								tMeanLum >= 135f &&
 								tMeanLum > bgLumInit + 32f &&
@@ -485,6 +502,7 @@ class BubbleInpainter @Inject constructor(
 						val pb = PixelColorMath.blue(p)
 
 						val inCore = isInsideAnyCore(x, y)
+						val nearCore3 = isNearAnyCore(x, y, 3)
 						val effLocal = if (inCore) max(9f, localThresh * 0.65f) else localThresh
 						val dLocalLight = max(pr - meanR, max(pg - meanG, pb - meanB))
 						val dGlobalLight = max(pr - bgR, max(pg - bgG, pb - bgB)).toFloat()
@@ -498,7 +516,52 @@ class BubbleInpainter @Inject constructor(
 							abs((pr - pg) - (meanR - meanG)) +
 								abs((pr - pb) - (meanR - meanB)) +
 								abs((pg - pb) - (meanG - meanB))
-						if (chromaDiffLocal > effLocal * 1.55f && dLocalLight > 6f) {
+						val maxDiffMean = max(abs(pr - meanR), max(abs(pg - meanG), abs(pb - meanB)))
+						val dBg = PixelColorMath.maxChannelDiff(pr, pg, pb, bgR, bgG, bgB)
+						if (chromaDiffLocal > effLocal * 1.55f &&
+							(dLocalLight > 6f || ((inCore || nearCore3) && dBg >= 24 && maxDiffMean > effLocal * 1.15f))
+						) {
+							fg[pIdx] = 1
+						}
+					}
+				}
+				return fg
+			}
+
+			fun buildCoreChromaContrastMask(localThresh: Float, bgDiffThresh: Int): ByteArray {
+				val fg = ByteArray(numPixels)
+				for (y in 0 until wh) {
+					val y0s = max(0, y - rBig)
+					val y1s = min(wh, y + rBig + 1)
+					val r0Off = y0s * iw
+					val r1Off = y1s * iw
+					val spanY = y1s - y0s
+					val rowOff = y * ww
+
+					for (x in 0 until ww) {
+						if (!isNearAnyCore(x, y, 5) && (x < cx0 || x > cx1 || y < cy0 || y > cy1)) continue
+						val pIdx = rowOff + x
+						val p = pixels[pIdx]
+						val pr = PixelColorMath.red(p)
+						val pg = PixelColorMath.green(p)
+						val pb = PixelColorMath.blue(p)
+						val dBg = PixelColorMath.maxChannelDiff(pr, pg, pb, bgR, bgG, bgB)
+						if (dBg < bgDiffThresh) continue
+
+						val x0s = max(0, x - rBig)
+						val x1s = min(ww, x + rBig + 1)
+						val invArea = 1.0 / (spanY * (x1s - x0s))
+						val meanR = ((iiR[r1Off + x1s] - iiR[r0Off + x1s] - iiR[r1Off + x0s] + iiR[r0Off + x0s]) * invArea).toFloat()
+						val meanG = ((iiG[r1Off + x1s] - iiG[r0Off + x1s] - iiG[r1Off + x0s] + iiG[r0Off + x0s]) * invArea).toFloat()
+						val meanB = ((iiB[r1Off + x1s] - iiB[r0Off + x1s] - iiB[r1Off + x0s] + iiB[r0Off + x0s]) * invArea).toFloat()
+
+						val chromaDiffLocal =
+							abs((pr - pg) - (meanR - meanG)) +
+								abs((pr - pb) - (meanR - meanB)) +
+								abs((pg - pb) - (meanG - meanB))
+						val maxDiffMean = max(abs(pr - meanR), max(abs(pg - meanG), abs(pb - meanB)))
+						val lumDiffMean = abs(PixelColorMath.luminance(pr, pg, pb) - PixelColorMath.luminance(meanR, meanG, meanB))
+						if (maxDiffMean >= localThresh || lumDiffMean >= localThresh * 0.9f || chromaDiffLocal >= localThresh * 1.55f) {
 							fg[pIdx] = 1
 						}
 					}
@@ -827,31 +890,43 @@ class BubbleInpainter @Inject constructor(
 					!c.touchesBorder &&
 						(coreRatio >= 0.32f ||
 							(preferLightFirst && isContainedInParagraphBand) ||
-							(coreRatio >= 0.14f && c.overlapsCore && c.h <= max(medLineH * 2.15f, 58f)))
+							(coreRatio >= 0.14f && c.overlapsCore && c.h <= max(medLineH * 2.55f, max(bh * 1.25f, 58f))))
 				val maxAllowedCompH = if (isStrongCoreOrGlowingWord) {
-					max(medLineH * 2.5f, 58f)
+					max(medLineH * 2.75f, max(bh * 1.25f, 58f))
 				} else {
 					max(medLineH * 1.65f, 32f)
 				}
 				val maxAllowedCompW = when {
 					isStrongCoreOrGlowingWord -> max(bw * 1.25f, max(ww * 0.95f, 450f))
 					coreRatio >= 0.45f -> max(medLineH * 5.2f, 96f)
-					else -> max(medLineH * 3.2f, 64f)
+					else -> max(medLineH * 3.5f, 72f)
 				}
 				if (c.h > maxAllowedCompH || c.w > maxAllowedCompW) return false
 				val maxH = max(medLineH, 18f)
 				if (!isSingleOrDarkSfx &&
+					c.touchesBorder &&
 					c.overlapsCore &&
 					coreRatio < 0.38f &&
-					(c.minx < cx0 - max(26f, maxH * 1.1f) ||
-						c.maxx > cx1 + max(26f, maxH * 1.1f) ||
-						c.miny < cy0 - max(16f, maxH * 0.65f) ||
-						c.maxy > cy1 + max(16f, maxH * 0.65f))
+					(c.minx < cx0 - max(26f, maxH * 1.2f) ||
+						c.maxx > cx1 + max(26f, maxH * 1.2f) ||
+						c.miny < cy0 - max(16f, maxH * 0.7f) ||
+						c.maxy > cy1 + max(16f, maxH * 0.7f))
+				) {
+					return false
+				}
+				if (!isSingleOrDarkSfx &&
+					!c.touchesBorder &&
+					c.overlapsCore &&
+					coreRatio < 0.25f &&
+					(c.minx < cx0 - max(32f, maxH * 1.35f) ||
+						c.maxx > cx1 + max(32f, maxH * 1.35f) ||
+						c.miny < cy0 - max(20f, maxH * 0.85f) ||
+						c.maxy > cy1 + max(20f, maxH * 0.85f))
 				) {
 					return false
 				}
 				if (c.area > medLineH * medLineH * 0.75f &&
-					coreRatio < 0.16f &&
+					coreRatio < 0.14f &&
 					!(preferLightFirst && isContainedInParagraphBand)
 				) {
 					return false
@@ -968,9 +1043,9 @@ class BubbleInpainter @Inject constructor(
 			}
 			if (pass.accepted.isEmpty() || pass.spanW < bw * 0.68f) {
 				val canTryAlt = if (preferLightFirst) {
-					darkerCount >= brighterCount * 0.25f
+					darkerCount >= brighterCount * 0.25f || pass.accepted.isEmpty()
 				} else {
-					bgLumInit < 210f && whiteCoreCount >= 24
+					whiteCoreCount >= 6 || bgLumInit < 228f || darkerCount <= brighterCount * 3
 				}
 				if (canTryAlt) {
 					val altPass = runMaskPass(
@@ -980,6 +1055,12 @@ class BubbleInpainter @Inject constructor(
 						pass = altPass
 						preferLightFirst = !preferLightFirst
 					}
+				}
+			}
+			if (pass.accepted.isEmpty() || pass.spanW < bw * 0.48f) {
+				val chromaPass = runMaskPass(buildCoreChromaContrastMask(11f, 18))
+				if (chromaPass.spanW > pass.spanW * 1.15f || (pass.accepted.isEmpty() && chromaPass.accepted.isNotEmpty())) {
+					pass = chromaPass
 				}
 			}
 
@@ -1279,6 +1360,23 @@ class BubbleInpainter @Inject constructor(
 			}
 		}
 
+		var accComps = valid.filter { it.id in accepted }
+		var gMinX = ww
+		var gMaxX = 0
+		var gMinY = wh
+		var gMaxY = 0
+		for (c in accComps) {
+			if (c.minx < gMinX) gMinX = c.minx
+			if (c.maxx > gMaxX) gMaxX = c.maxx
+			if (c.miny < gMinY) gMinY = c.miny
+			if (c.maxy > gMaxY) gMaxY = c.maxy
+		}
+
+		val guardX0 = min(cx0, gMinX) - 10
+		val guardX1 = max(cx1, gMaxX) + 10
+		val guardY0 = min(cy0, gMinY) - 6
+		val guardY1 = max(cy1, gMaxY) + 6
+
 		val borderMask = ByteArray(numPixels)
 		val rawGlyphMask = ByteArray(numPixels)
 		for (i in 0 until numPixels) {
@@ -1301,7 +1399,7 @@ class BubbleInpainter @Inject constructor(
 					val diff = PixelColorMath.maxChannelDiff(pr, pg, pb, bgR, bgG, bgB)
 					val ly = i / ww
 					val lx = i - ly * ww
-					val outsideCore = lx < cx0 - 6 || lx > cx1 + 6 || ly < cy0 - 6 || ly > cy1 + 6
+					val outsideCore = lx < guardX0 || lx > guardX1 || ly < guardY0 || ly > guardY1
 					if (lum >= 185f && diff >= 110 && outsideCore) {
 						borderMask[i] = 1
 					}
@@ -1311,7 +1409,7 @@ class BubbleInpainter @Inject constructor(
 			if (bgLumInit >= 195f || (preferLightFirst && bgLumInit <= 75f)) {
 				val ly = i / ww
 				val lx = i - ly * ww
-				if (lx < cx0 - 6 || lx > cx1 + 6 || ly < cy0 - 6 || ly > cy1 + 6) {
+				if (lx < guardX0 || lx > guardX1 || ly < guardY0 || ly > guardY1) {
 					val p = pixels[i]
 					val pr = PixelColorMath.red(p)
 					val pg = PixelColorMath.green(p)
@@ -1328,18 +1426,6 @@ class BubbleInpainter @Inject constructor(
 					}
 				}
 			}
-		}
-
-		var accComps = valid.filter { it.id in accepted }
-		var gMinX = ww
-		var gMaxX = 0
-		var gMinY = wh
-		var gMaxY = 0
-		for (c in accComps) {
-			if (c.minx < gMinX) gMinX = c.minx
-			if (c.maxx > gMaxX) gMaxX = c.maxx
-			if (c.miny < gMinY) gMinY = c.miny
-			if (c.maxy > gMaxY) gMaxY = c.maxy
 		}
 
 		val glyphHInts = accComps.filter { it.h >= 7 }.map { it.h }.toIntArray()
@@ -1456,22 +1542,57 @@ class BubbleInpainter @Inject constructor(
 			}
 		}
 
-		// Clamp walls away from neighboring sibling bubbles.
+		// Clamp walls away from neighboring sibling bubbles (horizontally and vertically).
+		val gAbsX0 = wx0 + gMinX
+		val gAbsX1 = wx0 + gMaxX
 		val gAbsY0 = wy0 + gMinY
 		val gAbsY1 = wy0 + gMaxY
-		val gAbsMidX = wx0 + (gMinX + gMaxX) * 0.5f
+		val gAbsMidX = (gAbsX0 + gAbsX1) * 0.5f
+		val gAbsMidY = (gAbsY0 + gAbsY1) * 0.5f
+		var sibClampedLeft = false
+		var sibClampedRight = false
+		var sibClampedTop = false
+		var sibClampedBottom = false
 		for (sib in absSiblings) {
 			val vOv = min(gAbsY1, sib.y1) - max(gAbsY0, sib.y0)
-			if (vOv < min(gMaxY - gMinY + 1, sib.y1 - sib.y0) * 0.25f) continue
-			val sibMidX = (sib.x0 + sib.x1) * 0.5f
-			if (sibMidX < gAbsMidX && sib.x1 <= wx0 + gMinX + 8) {
-				safeLocalLeft = max(safeLocalLeft, sib.x1 - wx0 + 8)
-			} else if (sibMidX > gAbsMidX && sib.x0 >= wx0 + gMaxX - 8) {
-				safeLocalRight = min(safeLocalRight, sib.x0 - wx0 - 8)
+			if (vOv >= min(gMaxY - gMinY + 1, sib.y1 - sib.y0) * 0.25f) {
+				val sibMidX = (sib.x0 + sib.x1) * 0.5f
+				if (sibMidX < gAbsMidX && sib.x1 <= gAbsX0 + 8) {
+					val candLeft = sib.x1 - wx0 + 8
+					if (candLeft > safeLocalLeft) {
+						safeLocalLeft = candLeft
+						sibClampedLeft = true
+					}
+				} else if (sibMidX > gAbsMidX && sib.x0 >= gAbsX1 - 8) {
+					val candRight = sib.x0 - wx0 - 8
+					if (candRight < safeLocalRight) {
+						safeLocalRight = candRight
+						sibClampedRight = true
+					}
+				}
+			}
+			val hOv = min(gAbsX1, sib.x1) - max(gAbsX0, sib.x0)
+			if (hOv >= min(gMaxX - gMinX + 1, sib.x1 - sib.x0) * 0.20f) {
+				val sibMidY = (sib.y0 + sib.y1) * 0.5f
+				if (sibMidY < gAbsMidY && sib.y1 <= gAbsY0 + 8) {
+					val candTop = sib.y1 - wy0 + 8
+					if (candTop > safeLocalTop) {
+						safeLocalTop = candTop
+						sibClampedTop = true
+					}
+				} else if (sibMidY > gAbsMidY && sib.y0 >= gAbsY1 - 8) {
+					val candBottom = sib.y0 - wy0 - 8
+					if (candBottom < safeLocalBottom) {
+						safeLocalBottom = candBottom
+						sibClampedBottom = true
+					}
+				}
 			}
 		}
 		safeLocalLeft = max(safeLocalLeft, 4 - wx0)
 		safeLocalRight = min(safeLocalRight, fullWidth - 4 - wx0)
+		safeLocalTop = max(safeLocalTop, 4 - wy0)
+		safeLocalBottom = min(safeLocalBottom, fullHeight - 4 - wy0)
 
 		// Capture orphan glyph fragments trapped inside closed bright speech bubble cavity.
 		val cavWallHits =
@@ -1788,7 +1909,8 @@ class BubbleInpainter @Inject constructor(
 		val isOpenLightOutlineScene = preferLightFirst && wallHitsEarly < 3 && bgLumInit < 232f
 		val enclosedCount = fillRes.enclosedCount
 		val dilateSteps = when {
-			isOpenCleanDarkInk -> if (medGlyphH >= 36f) 2 else 1
+			isOpenCleanDarkInk ->
+				if (medGlyphH >= 24f || bgLumInit < 238f || whiteCoreCount >= 6) 2 else 1
 			isOpenLightOutlineScene ->
 				((medGlyphH * 0.09f).roundToInt() + if (enclosedCount > 20) 2 else 1).coerceIn(3, 5)
 			else ->
@@ -2112,7 +2234,7 @@ class BubbleInpainter @Inject constructor(
 			)
 
 			// Post-Inpaint Residual Verification.
-			val residualThresh = max(42f, ringStd * 2.5f)
+			val residualThresh = max(30f, ringStd * 2.35f)
 			var residualFound = 0
 			var resMask = ByteArray(numPixels)
 			for (y in max(3, gMinY - 2)..min(wh - 4, gMaxY + 2)) {
@@ -2156,7 +2278,8 @@ class BubbleInpainter @Inject constructor(
 							) <= 20f &&
 							pLumCur < hLocLum - 18f
 					val isLightSceneResidual = if (!preferLightFirst && ringMedLum >= 120f) {
-						pLumCur <= min(62f, (ringMedLum * 0.42f).roundToInt().toFloat()) && pLumCur < hLocLum - 35f
+						(pLumCur <= min(88f, (ringMedLum * 0.52f).roundToInt().toFloat()) && pLumCur < hLocLum - 26f) ||
+							(ringStd < 12f && dev > residualThresh && PixelColorMath.maxChannelDiff(cleaned[cIdx], cleaned[cIdx + 1], cleaned[cIdx + 2], ringMedR.toFloat(), ringMedG.toFloat(), ringMedB.toFloat()) > residualThresh)
 					} else {
 						dev > residualThresh || hUniformDrop
 					}
@@ -2439,22 +2562,32 @@ class BubbleInpainter @Inject constructor(
 		var finalWrap = SmartWrapResult(emptyList(), 0f, 0f, 0f, false)
 
 		if (isSingleLineStat) {
-			val statLeftLocalX = gMinX.toFloat()
-			val wallRBound = if (hitRightWall) safeLocalRight + (wallPadX * 0.5f).roundToInt() else ww - 4
+			val statLeftLocalX = max(gMinX.toFloat(), safeLocalLeft.toFloat())
+			val wallRBound = when {
+				sibClampedRight -> safeLocalRight
+				hitRightWall -> safeLocalRight + (wallPadX * 0.5f).roundToInt()
+				else -> ww - 4
+			}
 			val maxStatW = max(
-				bw * 1.08f,
+				bw * 1.05f,
 				min(fullWidth - (wx0 + statLeftLocalX) - 8f, wallRBound - statLeftLocalX),
 			).coerceAtLeast(24f)
+			val sibMaxStatH = if (sibClampedTop || sibClampedBottom) {
+				max(bh.toFloat(), (safeLocalBottom - safeLocalTop).toFloat())
+			} else {
+				Float.POSITIVE_INFINITY
+			}
 			val minStatFontPx = max(11f, fullWidth * 0.015f)
 			val maxStatFontPx = max(minStatFontPx, fullWidth * 0.048f)
 			fontPx = targetEmPx.coerceIn(minStatFontPx, maxStatFontPx)
 			finalBoxW = max(bw.toFloat(), glyphW)
-			finalBoxH = max(bh.toFloat(), ceil(fontPx * 1.14f))
+			finalBoxH = min(sibMaxStatH, max(bh.toFloat(), ceil(fontPx * 1.14f)))
 			for (step in 0 until 16) {
 				val lineW = measureAtFontPx(displayText, fontPx)
-				if (lineW <= maxStatW * 0.96f || fontPx <= minStatFontPx) {
+				val candH = ceil(fontPx * 1.14f)
+				if ((lineW <= maxStatW * 0.96f && candH <= sibMaxStatH) || fontPx <= minStatFontPx) {
 					finalBoxW = ceil(lineW + 10f).coerceIn(24f, max(24f, maxStatW))
-					finalBoxH = max(bh.toFloat(), ceil(fontPx * 1.14f))
+					finalBoxH = min(sibMaxStatH, max(bh.toFloat(), candH))
 					val effScale = if (lineW > finalBoxW && lineW > 0f) max(0.88f, finalBoxW / lineW) else 1f
 					finalWrap = SmartWrapResult(
 						lines = listOf(SmartWrappedLine(displayText, lineW, effScale)),
@@ -2489,8 +2622,18 @@ class BubbleInpainter @Inject constructor(
 			} else {
 				max(glyphW * 1.25f, safeW)
 			}
-			finalBoxW = min(finalBoxW, fullWidth * 0.92f).coerceAtLeast(24f)
-			finalBoxH = max(glyphH * 1.25f, safeH)
+			val sibCapW = if (sibClampedLeft || sibClampedRight) {
+				max(glyphW, (safeLocalRight - safeLocalLeft).toFloat())
+			} else {
+				fullWidth * 0.92f
+			}
+			finalBoxW = min(finalBoxW, min(fullWidth * 0.92f, sibCapW)).coerceAtLeast(24f)
+			val sibCapH = if (sibClampedTop || sibClampedBottom) {
+				max(glyphH, (safeLocalBottom - safeLocalTop).toFloat())
+			} else {
+				Float.POSITIVE_INFINITY
+			}
+			finalBoxH = min(sibCapH, max(glyphH * 1.25f, safeH))
 
 			for (step in 0 until 16) {
 				val wrapped = SmartTextLayout.computeSmartWrappedLines(
@@ -2506,7 +2649,7 @@ class BubbleInpainter @Inject constructor(
 					(origLineCount > 1 || wrapped.lines.size <= 2)
 				) {
 					finalBoxW = max(glyphW, min(finalBoxW, wrapped.maxWordWidth * 1.22f + 24f))
-					finalBoxH = max(glyphH, wrapped.totalHeightPx + fontPx * 0.35f)
+					finalBoxH = min(sibCapH, max(glyphH, wrapped.totalHeightPx + fontPx * 0.35f))
 					break
 				}
 				if (fontPx <= minSfxFontPx) break
@@ -2588,16 +2731,24 @@ class BubbleInpainter @Inject constructor(
 				hitTopWall xor hitBottomWall -> max(glyphH * 1.15f, (topWallDist + botWallDist) * 0.90f)
 				else -> min(topWallDist * 2f, botWallDist * 2f)
 			}
-			val maxAvailBoxH = when {
-				hitTopWall && hitBottomWall && isDarkCard ->
-					(safeLocalBottom - safeLocalTop).toFloat().coerceAtLeast(glyphH)
-				hitTopWall && hitBottomWall -> max(safeH, wallVertCapH)
-				(hitTopWall xor hitBottomWall) && !isSingleOrDarkSfx -> {
-					max(safeH, min(safeLocalBottom - safeLocalTop, wh) * 0.55f).coerceAtMost(max(safeH, glyphH * 1.95f))
-				}
-				else -> max(safeH, glyphH * 1.4f)
+			val sibCapBoxH = if (sibClampedTop || sibClampedBottom) {
+				max(glyphH, (safeLocalBottom - safeLocalTop).toFloat())
+			} else {
+				Float.POSITIVE_INFINITY
 			}
-			finalBoxH = min(max(glyphH * 1.15f, safeH), wallVertCapH)
+			val maxAvailBoxH = min(
+				sibCapBoxH,
+				when {
+					hitTopWall && hitBottomWall && isDarkCard ->
+						(safeLocalBottom - safeLocalTop).toFloat().coerceAtLeast(glyphH)
+					hitTopWall && hitBottomWall -> max(safeH, wallVertCapH)
+					(hitTopWall xor hitBottomWall) && !isSingleOrDarkSfx -> {
+						max(safeH, min(safeLocalBottom - safeLocalTop, wh) * 0.55f).coerceAtMost(max(safeH, glyphH * 1.95f))
+					}
+					else -> max(safeH, glyphH * 1.4f)
+				},
+			)
+			finalBoxH = min(sibCapBoxH, min(max(glyphH * 1.15f, safeH), wallVertCapH))
 
 			val canMeasureContour =
 				hasActualPhysicalWalls &&
@@ -2777,10 +2928,24 @@ class BubbleInpainter @Inject constructor(
 		} else {
 			val absCenterX = wx0 + layoutCenterX.toFloat()
 			val rawBoundPad = if (hitLeftWall && hitRightWall && !isDarkCard) wallPadX + 12 else 0
-			val safeAbsLeft = (wx0 + safeLocalLeft - rawBoundPad).toFloat()
-			val safeAbsRight = (wx0 + safeLocalRight + rawBoundPad).toFloat()
-			val minBoundX = max(4f, if (isDarkCard && hitLeftWall) safeAbsLeft else min((wx0 + gMinX).toFloat(), safeAbsLeft))
-			val maxBoundX = min((fullWidth - 4).toFloat(), if (isDarkCard && hitRightWall) safeAbsRight else max((wx0 + gMaxX).toFloat(), safeAbsRight))
+			val safeAbsLeft = (wx0 + safeLocalLeft - if (sibClampedLeft) 0 else rawBoundPad).toFloat()
+			val safeAbsRight = (wx0 + safeLocalRight + if (sibClampedRight) 0 else rawBoundPad).toFloat()
+			val minBoundX = max(
+				4f,
+				when {
+					sibClampedLeft -> min((wx0 + gMinX).toFloat(), safeAbsLeft)
+					isDarkCard && hitLeftWall -> safeAbsLeft
+					else -> min((wx0 + gMinX).toFloat(), safeAbsLeft)
+				}.let { if (sibClampedLeft) max(it, safeAbsLeft) else it },
+			)
+			val maxBoundX = min(
+				(fullWidth - 4).toFloat(),
+				when {
+					sibClampedRight -> max((wx0 + gMaxX).toFloat(), safeAbsRight)
+					isDarkCard && hitRightWall -> safeAbsRight
+					else -> max((wx0 + gMaxX).toFloat(), safeAbsRight)
+				}.let { if (sibClampedRight) min(it, safeAbsRight) else it },
+			)
 			if (finalBoxW > maxBoundX - minBoundX && maxBoundX - minBoundX >= 28f) {
 				finalBoxW = maxBoundX - minBoundX
 			}
@@ -2790,17 +2955,17 @@ class BubbleInpainter @Inject constructor(
 			val absCenterY = wy0 + layoutCenterY.toFloat()
 			val safeAbsTop = (wy0 + safeLocalTop).toFloat()
 			val safeAbsBot = (wy0 + safeLocalBottom).toFloat()
-			val minBoundY = if (hitTopWall) {
-				if (isDarkCard && gMinY >= safeLocalTop) safeAbsTop else min((wy0 + gMinY).toFloat(), safeAbsTop)
-			} else {
-				0f
+			val minBoundY = when {
+				sibClampedTop -> max(4f, safeAbsTop)
+				hitTopWall -> if (isDarkCard && gMinY >= safeLocalTop) safeAbsTop else min((wy0 + gMinY).toFloat(), safeAbsTop)
+				else -> 0f
 			}
-			val maxBoundY = if (hitBottomWall) {
-				if (isDarkCard && gMaxY <= safeLocalBottom) safeAbsBot else max((wy0 + gMaxY).toFloat(), safeAbsBot)
-			} else {
-				fullHeight.toFloat()
+			val maxBoundY = when {
+				sibClampedBottom -> min(fullHeight.toFloat(), safeAbsBot)
+				hitBottomWall -> if (isDarkCard && gMaxY <= safeLocalBottom) safeAbsBot else max((wy0 + gMaxY).toFloat(), safeAbsBot)
+				else -> fullHeight.toFloat()
 			}
-			if (finalBoxH > maxBoundY - minBoundY && maxBoundY - minBoundY >= glyphH) {
+			if (finalBoxH > maxBoundY - minBoundY && maxBoundY - minBoundY >= min(glyphH, 24f)) {
 				finalBoxH = maxBoundY - minBoundY
 			}
 			refinedY0 = (absCenterY - finalBoxH * 0.5f).coerceIn(minBoundY, max(minBoundY, maxBoundY - finalBoxH))
@@ -2894,6 +3059,7 @@ class BubbleInpainter @Inject constructor(
 			var nonCoreDarkFlat = 0
 			var midToneInBoxCount = 0
 			var whiteInBoxCount = 0
+			var nonCoreWhiteFlat = 0
 			var totalFlatCount = 0
 
 			for (y in sy0 until sy1) {
@@ -2906,6 +3072,7 @@ class BubbleInpainter @Inject constructor(
 					val g = PixelColorMath.green(p)
 					val b = PixelColorMath.blue(p)
 					val lum = PixelColorMath.luminance(r, g, b)
+					val chroma = max(r, max(g, b)) - min(r, min(g, b))
 
 					val xNext = if (x + 1 < ww) x + 1 else x
 					val prx = pixels[rowOff + xNext]
@@ -2927,9 +3094,9 @@ class BubbleInpainter @Inject constructor(
 						}
 					}
 					val insideBlockBox = x in cx0 until cx1 && y in cy0 until cy1
-					// Collar & inter-line pixels describe the true background without letting bold white/black glyph bodies outvote it.
+					// Collar & inter-line pixels describe the true background without letting bold white/black/colored glyph bodies outvote it.
 					val weight = if (inLineCore) 1 else if (insideBlockBox) 2 else 3
-					if (insideBlockBox) {
+					if (insideBlockBox && (!inLineCore || chroma <= 36)) {
 						if (lum >= 105f && lum < 228f) midToneInBoxCount++
 						else if (lum >= 232f) whiteInBoxCount++
 					}
@@ -2943,6 +3110,7 @@ class BubbleInpainter @Inject constructor(
 						if (!inLineCore) {
 							nonCoreFlatTotal++
 							if (lum >= 195f) nonCoreBrightFlat++
+							if (lum >= 232f) nonCoreWhiteFlat++
 							if (lum < 105f) nonCoreDarkFlat++
 						}
 					}
@@ -2951,6 +3119,7 @@ class BubbleInpainter @Inject constructor(
 
 			val brightFlatRatio = if (totalFlatCount > 0) brightFlatCount.toFloat() / totalFlatCount else 0f
 			val nonCoreBrightRatio = if (nonCoreFlatTotal > 0) nonCoreBrightFlat.toFloat() / nonCoreFlatTotal else 0f
+			val nonCoreWhiteRatio = if (nonCoreFlatTotal > 0) nonCoreWhiteFlat.toFloat() / nonCoreFlatTotal else 0f
 			val nonCoreDarkRatio = if (nonCoreFlatTotal > 0) nonCoreDarkFlat.toFloat() / nonCoreFlatTotal else 0f
 			val suppressDarkInk = if (nonCoreFlatTotal >= 16) {
 				nonCoreBrightRatio >= 0.50f && nonCoreDarkFlat <= nonCoreBrightFlat * 0.45f
@@ -2960,7 +3129,9 @@ class BubbleInpainter @Inject constructor(
 			val suppressWhiteInk = nonCoreFlatTotal >= 16 &&
 				nonCoreDarkRatio >= 0.45f &&
 				nonCoreBrightFlat <= nonCoreDarkFlat * 0.65f
-			val suppressWhiteHalo = midToneInBoxCount >= 120 && midToneInBoxCount > whiteInBoxCount * 1.35f
+			val suppressWhiteHalo = midToneInBoxCount >= 120 &&
+				midToneInBoxCount > whiteInBoxCount * 1.35f &&
+				nonCoreWhiteRatio < 0.50f
 
 			fun selectBestBin(bins: IntArray, applySuppression: Boolean): Pair<Int, Int> {
 				var best = -1
