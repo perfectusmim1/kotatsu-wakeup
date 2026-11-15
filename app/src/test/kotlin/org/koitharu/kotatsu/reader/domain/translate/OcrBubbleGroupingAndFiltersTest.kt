@@ -453,6 +453,48 @@ class OcrBubbleGroupingAndFiltersTest {
 		assertEquals("NEXT BUBBLE", grouped[1].text)
 	}
 
+	@Test
+	fun `groupLinesIntoBubbles separates stacked identical badges and tilted rows with gray divider`() {
+		val w = 360
+		val h = 240
+		val pixels = IntArray(w * h) { argb(255, 255, 255) }
+		// Draw a continuous diagonal gray (#B5B5B5) divider line between two tilted forum rows
+		for (x in 110..330) {
+			val y = (150f - (x - 110) * 0.32f).toInt()
+			for (dy in 0..1) {
+				if (y + dy in 0 until h) {
+					pixels[(y + dy) * w + x] = argb(181, 181, 181)
+				}
+			}
+		}
+
+		// Stacked identical short badges ("NEW!" / "NEW!") on cyan pills must remain separate
+		fillRect(pixels, w, h, 18, 58, 92, 86, argb(72, 194, 224))
+		fillRect(pixels, w, h, 30, 110, 104, 138, argb(72, 194, 224))
+		fillRect(pixels, w, h, 26, 66, 84, 78, argb(255, 255, 255))
+		fillRect(pixels, w, h, 38, 118, 96, 130, argb(255, 255, 255))
+		val badges = listOf(
+			RawOcrLine("NEW!", 95f, x0 = 20f, y0 = 60f, x1 = 90f, y1 = 84f),
+			RawOcrLine("NEW!", 95f, x0 = 32f, y0 = 112f, x1 = 102f, y1 = 136f),
+		)
+		val badgeGroups = PaddleOcrEngine.groupLinesIntoBubbles(badges, w, h, pixels)
+		assertEquals(2, badgeGroups.size)
+
+		// Tilted forum rows with overlapping axis-aligned Y ranges separated by the diagonal divider
+		for (x in 130..310 step 4) {
+			val yTop = (120f - (x - 130) * 0.32f).toInt()
+			val yBot = (180f - (x - 130) * 0.32f).toInt()
+			fillRect(pixels, w, h, x, yTop - 6, x + 2, yTop + 6, argb(20, 20, 20))
+			fillRect(pixels, w, h, x, yBot - 6, x + 2, yBot + 6, argb(20, 20, 20))
+		}
+		val tiltedRows = listOf(
+			RawOcrLine("Wtf is a dark demon dragon?", 92f, x0 = 120f, y0 = 55f, x1 = 320f, y1 = 135f),
+			RawOcrLine("Wtf is going on?", 92f, x0 = 135f, y0 = 115f, x1 = 320f, y1 = 195f),
+		)
+		val rowGroups = PaddleOcrEngine.groupLinesIntoBubbles(tiltedRows, w, h, pixels)
+		assertEquals(2, rowGroups.size)
+	}
+
 	private fun line(text: String, conf: Float = 90f) = RawOcrLine(
 		text = text,
 		confidence = conf,

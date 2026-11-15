@@ -1952,11 +1952,6 @@ class PaddleOcrEngine @Inject constructor(
 				max(bgT, bgB) < 220f
 			if (abs(bgT - bgB) >= 75f && !fakeOutlineCollar) return true
 
-			if (vGapPx <= 1.5f) return false
-			val gapY0 = max(0, floor(top.y1).toInt() + 1)
-			val gapY1 = min(height - 1, ceil(bot.y0).toInt() - 1)
-			if (gapY1 < gapY0) return false
-
 			val ovX0 = max(0, floor(max(top.x0, bot.x0)).toInt())
 			val ovX1 = min(width - 1, ceil(min(top.x1, bot.x1)).toInt())
 			val spanX = ovX1 - ovX0 + 1
@@ -1964,6 +1959,21 @@ class PaddleOcrEngine @Inject constructor(
 
 			val bothLight = bgT >= 165f && bgB >= 165f
 			val bothDark = bgT <= 105f && bgB <= 105f
+			val bothNearWhite = bgT >= 232f && bgB >= 232f
+			if (vGapPx <= 1.5f) {
+				if (bothNearWhite && spanX >= 12) {
+					val scanY0 = max(0, floor(min(top.centerY, bot.centerY)).toInt())
+					val scanY1 = min(height - 1, ceil(max(top.centerY, bot.centerY)).toInt())
+					if (scanY1 > scanY0 && hasContinuousTiltedDivider(pixels, width, ovX0, ovX1, scanY0, scanY1, max(24, (spanX * 0.55f).toInt()))) {
+						return true
+					}
+				}
+				return false
+			}
+			val gapY0 = max(0, floor(top.y1).toInt() + 1)
+			val gapY1 = min(height - 1, ceil(bot.y0).toInt() - 1)
+			if (gapY1 < gapY0) return false
+			var colsWithDividerStroke = 0
 			for (y in gapY0..gapY1) {
 				var darkCount = 0
 				var brightCount = 0
@@ -1978,6 +1988,51 @@ class PaddleOcrEngine @Inject constructor(
 				if (bothLight && darkCount.toFloat() / spanX >= 0.45f) return true
 				if (bothDark && brightCount.toFloat() / spanX >= 0.45f) return true
 				if (!fakeOutlineCollar && contrastWallCount.toFloat() / spanX >= 0.55f) return true
+			}
+			if (bothNearWhite && gapY1 > gapY0) {
+				for (x in ovX0..ovX1) {
+					for (y in gapY0..gapY1) {
+						val lum = argbLum(pixels[y * width + x])
+						if (lum <= 215f) {
+							colsWithDividerStroke += 1
+							break
+						}
+					}
+				}
+				if (colsWithDividerStroke.toFloat() / spanX >= 0.65f) return true
+			}
+			return false
+		}
+
+		private fun hasContinuousTiltedDivider(
+			pixels: IntArray,
+			width: Int,
+			x0: Int,
+			x1: Int,
+			y0: Int,
+			y1: Int,
+			minRun: Int,
+		): Boolean {
+			val scanH = y1 - y0 + 1
+			if (scanH <= 1) return false
+			var prev = IntArray(scanH)
+			var curr = IntArray(scanH)
+			for (x in x0..x1) {
+				curr.fill(0)
+				for (i in 0 until scanH) {
+					val y = y0 + i
+					if (argbLum(pixels[y * width + x]) <= 215f) {
+						var best = prev[i]
+						if (i > 0 && prev[i - 1] > best) best = prev[i - 1]
+						if (i + 1 < scanH && prev[i + 1] > best) best = prev[i + 1]
+						val nextVal = best + 1
+						if (nextVal >= minRun) return true
+						curr[i] = nextVal
+					}
+				}
+				val tmp = prev
+				prev = curr
+				curr = tmp
 			}
 			return false
 		}
@@ -2177,6 +2232,9 @@ class PaddleOcrEngine @Inject constructor(
 					if (isStatA || isStatB) continue
 
 					val wordsB = b.text.trim().split(WHITESPACE_REGEX).size
+					if (wordsA == 1 && wordsB == 1 && textA.length <= 12 && textA.equals(textB, ignoreCase = true)) {
+						continue
+					}
 					if (
 						ha >= hb * 1.16f &&
 						wordsA <= 3 &&
@@ -2208,7 +2266,7 @@ class PaddleOcrEngine @Inject constructor(
 					if (
 						spansSeparateSideBySideColumns(i, j) ||
 						spansSeparateSideBySideColumns(j, i) ||
-						(validPixels != null && vGap >= -2f && hasVerticalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
+						(validPixels != null && hasVerticalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
 					) {
 						continue
 					}
