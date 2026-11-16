@@ -453,15 +453,22 @@ class BubbleInpainter @Inject constructor(
 								dLumMedDark > effLocal * 0.78f &&
 								dMedDark > effLocal * 0.85f &&
 								(meanLum >= 85f || tMeanLum >= 120f)
+						val thickJetBlackInkOnMid =
+							bgLumInit >= 80f &&
+								pixLum <= 55f &&
+								dBg >= 55 &&
+								pixChroma <= 30 &&
+								(inCore || nearCore3 || meanLum >= 68f || tMeanLum >= 82f)
 						val coloredPanelInk =
 							(inCore || nearCore3 || meanLum >= 105f) &&
 								chromaDiffLocal > effLocal * 1.75f &&
 								maxDiffMean > max(20f, effLocal) &&
 								(pixLum < meanLum - effLocal * 0.45f || pixChroma >= 45 || meanLum >= 135f)
 
-						if ((meanLum >= 160f && dLumMedDark > effLocal * 0.82f && dMedDark > effLocal) ||
+						if (((meanLum >= 160f || (bgLumInit >= 182f && meanLum >= 100f)) && dLumMedDark > effLocal * 0.82f && dMedDark > effLocal) ||
 							nearDarkRingWhite ||
 							midToneDarkInk ||
+							thickJetBlackInkOnMid ||
 							coloredPanelInk ||
 							(pixLum < 115f &&
 								tMeanLum >= 135f &&
@@ -610,8 +617,8 @@ class BubbleInpainter @Inject constructor(
 							if (cy > maxy) maxy = cy
 
 							val hitSideOrInner =
-								cx <= 1 ||
-									cx >= ww - 2 ||
+								(cx <= 1 && curWx0 > 0) ||
+									(cx >= ww - 2 && curWx1 < fullWidth) ||
 									(cy <= 1 && curWy0 > 0) ||
 									(cy >= wh - 2 && curWy1 < fullHeight)
 							val hitSeamEdge =
@@ -697,10 +704,10 @@ class BubbleInpainter @Inject constructor(
 			val flankGs = IntArray(flankRs.size)
 			val flankBs = IntArray(flankRs.size)
 			var flankArrLen = 0
-			val fxL0 = max(0, cx0 - 24)
-			val fxL1 = max(0, cx0 - 6)
-			val fxR0 = min(ww - 1, cx1 + 6)
-			val fxR1 = min(ww - 1, cx1 + 24)
+			val fxL0 = if (cx0 >= 10) max(0, cx0 - 24) else 0
+			val fxL1 = if (cx0 >= 10) cx0 - 6 else -1
+			val fxR0 = if (cx1 <= ww - 10) cx1 + 6 else ww
+			val fxR1 = if (cx1 <= ww - 10) min(ww - 1, cx1 + 24) else ww - 1
 
 			var fy = max(0, cy0)
 			val fyEnd = min(wh - 1, cy1)
@@ -748,8 +755,19 @@ class BubbleInpainter @Inject constructor(
 			val coreWhiteRatio = whiteCoreCount.toFloat() / max(1, coreSamples)
 			val flankWhiteRatio = flankWhite.toFloat() / max(1, flankSamples)
 			val flankMeanLum = if (flankSamples > 0) (flankLumSum / flankSamples).toFloat() else bgLumInit
+			val isDarkHaloScene = isDarkStrokeWithWhiteHaloOnScene(
+				pixels = pixels,
+				ww = ww,
+				wh = wh,
+				cx0 = cx0,
+				cy0 = cy0,
+				cx1 = cx1,
+				cy1 = cy1,
+				bgLumInit = bgLumInit,
+			)
 			val isWhiteFillDarkOutlineOnScene =
-				flankSamples >= 12 &&
+				!isDarkHaloScene &&
+					flankSamples >= 12 &&
 					whiteCoreCount >= 18 &&
 					jetBlackCoreCount >= 18 &&
 					blackTouchesMid >= 20 &&
@@ -757,17 +775,29 @@ class BubbleInpainter @Inject constructor(
 					coreWhiteRatio < 0.45f &&
 					flankWhiteRatio <= 0.25f &&
 					flankMeanLum <= 205f
-			val hasWhiteFillDarkOutlineOnMidScene = isWhiteFillDarkOutlineMidScene(
-				bgLumInit = bgLumInit,
-				flankMeanLum = flankMeanLum,
-				flankWhiteRatio = flankWhiteRatio,
-				coreWhiteRatio = coreWhiteRatio,
-				whiteCoreCount = whiteCoreCount,
-				whiteTouchesDarkOutline = whiteTouchesDarkOutline,
-				brighterCount = brighterCount,
-			)
+			val hasWhiteFillDarkOutlineOnMidScene =
+				!isDarkHaloScene &&
+					isWhiteFillDarkOutlineMidScene(
+						bgLumInit = bgLumInit,
+						flankMeanLum = flankMeanLum,
+						flankWhiteRatio = flankWhiteRatio,
+						coreWhiteRatio = coreWhiteRatio,
+						whiteCoreCount = whiteCoreCount,
+						whiteTouchesDarkOutline = whiteTouchesDarkOutline,
+						brighterCount = brighterCount,
+						blackTouchesMid = blackTouchesMid,
+						whiteTouchesMid = whiteTouchesMid,
+					)
 
-			if ((isWhiteFillDarkOutlineOnScene || (hasWhiteFillDarkOutlineOnMidScene && flankMeanLum < bgLumInit - 12f)) &&
+			val isFakeDarkMarginOnMidScene =
+				bgLumInit <= 40f &&
+					flankArrLen >= 12 &&
+					flankSamples >= 16 &&
+					flankMeanLum >= max(65f, bgLumInit + 45f) &&
+					flankWhiteRatio <= 0.35f
+			if ((isWhiteFillDarkOutlineOnScene ||
+					isFakeDarkMarginOnMidScene ||
+					(hasWhiteFillDarkOutlineOnMidScene && flankMeanLum < bgLumInit - 12f)) &&
 				flankArrLen >= 12
 			) {
 				bgR = PixelColorMath.medianInt(flankRs, flankArrLen)
@@ -776,11 +806,16 @@ class BubbleInpainter @Inject constructor(
 				bgLumInit = PixelColorMath.luminance(bgR, bgG, bgB)
 			}
 
+			val hasWhiteHaloAroundDarkStrokes =
+				jetBlackCoreCount >= 24 &&
+					whiteTouchesDarkOutline >= 24 &&
+					whiteTouchesMid >= blackTouchesMid
 			var preferLightFirst =
-				bgLumInit < 55f ||
-					isWhiteFillDarkOutlineOnScene ||
-					hasWhiteFillDarkOutlineOnMidScene ||
-					(bgLumInit < 160f && brighterCount > darkerCount * 2.2f && darkerCount < brighterCount * 0.35f)
+				!hasWhiteHaloAroundDarkStrokes &&
+					(bgLumInit < 55f ||
+						isWhiteFillDarkOutlineOnScene ||
+						hasWhiteFillDarkOutlineOnMidScene ||
+						(!isDarkHaloScene && bgLumInit < 160f && brighterCount > darkerCount * 2.2f && darkerCount < brighterCount * 0.35f))
 			val isBlueOrMidPanel = bgB > bgR + 20 || bgLumInit >= 50f
 			val isSingleOrDarkSfx =
 				preferLightFirst &&
@@ -973,8 +1008,17 @@ class BubbleInpainter @Inject constructor(
 						}
 						for (i in 0 until numPixels) {
 							if (labelsArr[i] !in mergedBorderIds) continue
-							val lum = PixelColorMath.luminance(pixels[i])
-							val shouldStrip = if (shouldSplitDark) lum > 58f else lum < lightStripThresh
+							val p = pixels[i]
+							val r = PixelColorMath.red(p)
+							val g = PixelColorMath.green(p)
+							val b = PixelColorMath.blue(p)
+							val lum = PixelColorMath.luminance(r, g, b)
+							val chroma = max(r, max(g, b)) - min(r, min(g, b))
+							val shouldStrip = if (shouldSplitDark) {
+								lum > 58f && !(chroma >= 26 && lum < 140f)
+							} else {
+								lum < lightStripThresh
+							}
 							if (shouldStrip) {
 								splitMask[i] = 0
 								stripped++
@@ -1045,7 +1089,8 @@ class BubbleInpainter @Inject constructor(
 				val canTryAlt = if (preferLightFirst) {
 					darkerCount >= brighterCount * 0.25f || pass.accepted.isEmpty()
 				} else {
-					whiteCoreCount >= 6 || bgLumInit < 228f || darkerCount <= brighterCount * 3
+					!hasWhiteHaloAroundDarkStrokes &&
+						(whiteCoreCount >= 6 || bgLumInit < 228f || darkerCount <= brighterCount * 3)
 				}
 				if (canTryAlt) {
 					val altPass = runMaskPass(
@@ -1721,26 +1766,88 @@ class BubbleInpainter @Inject constructor(
 				(if (hitBottomWall) 1 else 0)
 
 		var preDilateMask = fillRes.combinedMask
+		val hasOuterWhiteHaloOnMidLight =
+			!preferLightFirst && wallHitsEarly < 3 && bgLumInit < 246f && whiteCoreCount >= 10
 		if (!preferLightFirst &&
-			(bgLumInit < 236f || (wallHitsEarly < 3 && bgLumInit < 248f && whiteCoreCount >= 12))
+			(bgLumInit < 236f || (wallHitsEarly < 3 && bgLumInit < 248f && whiteCoreCount >= 10))
 		) {
-			val haloSteps = if (isSingleOrDarkSfx || bgLumInit < 190f) 3 else 2
-			val y0H = max(1, gMinY - 5)
-			val y1H = min(wh - 2, gMaxY + 5)
-			val x0H = max(1, gMinX - 6)
-			val x1H = min(ww - 2, gMaxX + 6)
+			val y0H = max(1, gMinY - 14)
+			val y1H = min(wh - 2, gMaxY + 14)
+			val x0H = max(1, gMinX - 14)
+			val x1H = min(ww - 2, gMaxX + 14)
+			val rowCleanBgLum = FloatArray(wh) { bgLumInit }
+			val rowSampleLums = FloatArray(48)
+			for (y in y0H..y1H) {
+				val rrOff = y * ww
+				var rc = 0
+				var rx = max(0, gMinX - 24)
+				val rxL = max(0, gMinX - 7)
+				while (rx <= rxL && rc < rowSampleLums.size) {
+					val idx = rrOff + rx
+					if (preDilateMask[idx] == 0.toByte() && borderMask[idx] == 0.toByte()) {
+						val pLum = PixelColorMath.luminance(pixels[idx])
+						if (pLum < 244f) rowSampleLums[rc++] = pLum
+					}
+					rx += 2
+				}
+				rx = min(ww - 1, gMaxX + 7)
+				val rxR = min(ww - 1, gMaxX + 24)
+				while (rx <= rxR && rc < rowSampleLums.size) {
+					val idx = rrOff + rx
+					if (preDilateMask[idx] == 0.toByte() && borderMask[idx] == 0.toByte()) {
+						val pLum = PixelColorMath.luminance(pixels[idx])
+						if (pLum < 244f) rowSampleLums[rc++] = pLum
+					}
+					rx += 2
+				}
+				if (rc >= 4) {
+					rowCleanBgLum[y] = PixelColorMath.medianFloat(rowSampleLums, rc)
+				}
+			}
+
+			var haloFrontier = preDilateMask
+			if (wallHitsEarly < 3 && whiteCoreCount >= 10 && bgLumInit < 248f) {
+				var bridgeCurr = preDilateMask.copyOf()
+				for (bStep in 0 until 2) {
+					val bridgeNext = bridgeCurr.copyOf()
+					for (y in y0H..y1H) {
+						val rOff = y * ww
+						for (x in x0H..x1H) {
+							val idx = rOff + x
+							if (bridgeCurr[idx] != 0.toByte() || borderMask[idx] != 0.toByte()) continue
+							if (bridgeCurr[idx - 1] != 0.toByte() ||
+								bridgeCurr[idx + 1] != 0.toByte() ||
+								bridgeCurr[idx - ww] != 0.toByte() ||
+								bridgeCurr[idx + ww] != 0.toByte()
+							) {
+								bridgeNext[idx] = 1
+							}
+						}
+					}
+					bridgeCurr = bridgeNext
+				}
+				haloFrontier = bridgeCurr
+			}
+
+			val haloSteps = when {
+				hasOuterWhiteHaloOnMidLight && whiteCoreCount >= 18 -> 9
+				bgLumInit < 248f && whiteCoreCount >= 14 -> 8
+				isSingleOrDarkSfx || bgLumInit < 190f -> 6
+				else -> 2
+			}
 			for (step in 0 until haloSteps) {
 				var haloAdded = 0
-				val nextMask = preDilateMask.copyOf()
+				val nextFrontier = haloFrontier.copyOf()
 				for (y in y0H..y1H) {
 					val rOff = y * ww
+					val effRowBg = rowCleanBgLum[y]
 					for (x in x0H..x1H) {
 						val idx = rOff + x
-						if (preDilateMask[idx] != 0.toByte() || borderMask[idx] != 0.toByte()) continue
-						if (preDilateMask[idx - 1] != 0.toByte() ||
-							preDilateMask[idx + 1] != 0.toByte() ||
-							preDilateMask[idx - ww] != 0.toByte() ||
-							preDilateMask[idx + ww] != 0.toByte()
+						if (haloFrontier[idx] != 0.toByte() || borderMask[idx] != 0.toByte()) continue
+						if (haloFrontier[idx - 1] != 0.toByte() ||
+							haloFrontier[idx + 1] != 0.toByte() ||
+							haloFrontier[idx - ww] != 0.toByte() ||
+							haloFrontier[idx + ww] != 0.toByte()
 						) {
 							val p = pixels[idx]
 							val pr = PixelColorMath.red(p)
@@ -1748,19 +1855,23 @@ class BubbleInpainter @Inject constructor(
 							val pb = PixelColorMath.blue(p)
 							val pLum = PixelColorMath.luminance(pr, pg, pb)
 							val dGlowBg = max(pr - bgR, max(pg - bgG, pb - bgB)).toFloat()
-							val lumPass = if (bgLumInit >= 205f) {
-								pLum >= 232f && pLum > bgLumInit + 16f
-							} else {
-								pLum >= 216f && pLum > bgLumInit + 22f
+							val pChroma = max(pr, max(pg, pb)) - min(pr, min(pg, pb))
+							val lumPass = when {
+								effRowBg >= 249f -> pLum >= 253f && pLum > effRowBg + 4f
+								effRowBg >= 205f ->
+									(pLum >= 238f && pChroma <= 16 && (pLum > effRowBg + 7f || (dGlowBg >= 9f && pLum >= effRowBg - 1f))) ||
+										(hasOuterWhiteHaloOnMidLight && pLum >= 235f && pLum >= effRowBg + 8f && pChroma <= 18)
+								else -> pLum >= 216f && pLum > effRowBg + 18f
 							}
-							if (lumPass || (bgLumInit < 140f && (pLum > bgLumInit + 22f || dGlowBg > 28f))) {
-								nextMask[idx] = 1
+							if (lumPass || (effRowBg < 140f && (pLum > effRowBg + 22f || dGlowBg > 28f))) {
+								nextFrontier[idx] = 1
+								preDilateMask[idx] = 1
 								haloAdded++
 							}
 						}
 					}
 				}
-				preDilateMask = nextMask
+				haloFrontier = nextFrontier
 				if (haloAdded == 0) break
 			}
 		} else if (preferLightFirst) {
@@ -1969,9 +2080,9 @@ class BubbleInpainter @Inject constructor(
 			}
 		}
 
-		val ringMedR: Int
-		val ringMedG: Int
-		val ringMedB: Int
+		var ringMedR: Int
+		var ringMedG: Int
+		var ringMedB: Int
 		var ringStd = 0f
 		if (ringCount > 10) {
 			val medRgb = PixelColorMath.medianRgbFromIndices(pixels, ringIndices, ringCount)
@@ -1992,7 +2103,46 @@ class BubbleInpainter @Inject constructor(
 			ringMedG = bgG
 			ringMedB = bgB
 		}
-		val ringMedLum = PixelColorMath.luminance(ringMedR, ringMedG, ringMedB)
+		var ringMedLum = PixelColorMath.luminance(ringMedR, ringMedG, ringMedB)
+
+		// Guard open/gradient glowing-text scenes against ring pollution from inter-line white halos.
+		if (hasOuterWhiteHaloOnMidLight && whiteCoreCount >= 14) {
+			val outerRingIndices = IntArray(numPixels)
+			var outerRingCount = 0
+			var oy = max(0, gMinY - 18)
+			val oyEnd = min(wh - 1, gMaxY + 18)
+			while (oy <= oyEnd) {
+				val inVertMargin = oy < gMinY - 6 || oy > gMaxY + 6
+				val rOff = oy * ww
+				var ox = max(0, gMinX - 24)
+				val oxEnd = min(ww - 1, gMaxX + 24)
+				while (ox <= oxEnd) {
+					if (inVertMargin || ox < gMinX - 8 || ox > gMaxX + 8) {
+						val idx = rOff + ox
+						if (eraseMask[idx] == 0.toByte() && borderMask[idx] == 0.toByte()) {
+							val p = pixels[idx]
+							val pLum = PixelColorMath.luminance(p)
+							if (pLum >= 95f && pLum < 245f) {
+								outerRingIndices[outerRingCount++] = idx
+							}
+						}
+					}
+					ox += 2
+				}
+				oy += 2
+			}
+			if (outerRingCount >= 16) {
+				val outerRgb = PixelColorMath.medianRgbFromIndices(pixels, outerRingIndices, outerRingCount)
+				val outerLum = PixelColorMath.luminance(outerRgb[0], outerRgb[1], outerRgb[2])
+				if (outerLum <= ringMedLum - 5f) {
+					ringMedR = outerRgb[0]
+					ringMedG = outerRgb[1]
+					ringMedB = outerRgb[2]
+					ringMedLum = outerLum
+					if (ringStd < 8f) ringStd = 8f
+				}
+			}
+		}
 
 		// Verify whether non-erased interior pixels contain scene texture (>= 14%).
 		var interiorNonErase = 0
@@ -2179,9 +2329,12 @@ class BubbleInpainter @Inject constructor(
 			cleaned[c + 2] = PixelColorMath.blue(p).toFloat()
 		}
 
+		val isOpenWhiteHaloScene =
+			!hasActualPhysicalWalls && whiteCoreCount >= 14 && min(bgLumInit, ringMedLum) < 245f
 		val isFlatLightBubble =
 			!hasTexturedSceneInterior &&
 				!isGradientLightBubble &&
+				!isOpenWhiteHaloScene &&
 				((ringStd < 4.5f && ringMedLum >= 232f) ||
 					(wallHits >= 3 && ringStd < 5.5f && ringMedLum >= 220f))
 
@@ -3097,8 +3250,8 @@ class BubbleInpainter @Inject constructor(
 					// Collar & inter-line pixels describe the true background without letting bold white/black/colored glyph bodies outvote it.
 					val weight = if (inLineCore) 1 else if (insideBlockBox) 2 else 3
 					if (insideBlockBox && (!inLineCore || chroma <= 36)) {
-						if (lum >= 105f && lum < 228f) midToneInBoxCount++
-						else if (lum >= 232f) whiteInBoxCount++
+						if (lum >= 105f && lum < 244f) midToneInBoxCount++
+						else if (lum >= 244f) whiteInBoxCount++
 					}
 
 					val bin = ((r ushr 4) shl 8) or ((g ushr 4) shl 4) or (b ushr 4)
@@ -3110,7 +3263,7 @@ class BubbleInpainter @Inject constructor(
 						if (!inLineCore) {
 							nonCoreFlatTotal++
 							if (lum >= 195f) nonCoreBrightFlat++
-							if (lum >= 232f) nonCoreWhiteFlat++
+							if (lum >= 244f) nonCoreWhiteFlat++
 							if (lum < 105f) nonCoreDarkFlat++
 						}
 					}
@@ -3130,7 +3283,7 @@ class BubbleInpainter @Inject constructor(
 				nonCoreDarkRatio >= 0.45f &&
 				nonCoreBrightFlat <= nonCoreDarkFlat * 0.65f
 			val suppressWhiteHalo = midToneInBoxCount >= 120 &&
-				midToneInBoxCount > whiteInBoxCount * 1.35f &&
+				midToneInBoxCount > whiteInBoxCount * 1.10f &&
 				nonCoreWhiteRatio < 0.50f
 
 			fun selectBestBin(bins: IntArray, applySuppression: Boolean): Pair<Int, Int> {
@@ -3146,7 +3299,7 @@ class BubbleInpainter @Inject constructor(
 						val binLum = PixelColorMath.luminance(br, bg, bb)
 						if (suppressDarkInk && binLum < 105f) continue
 						if (suppressWhiteInk && binLum >= 200f) continue
-						if (suppressWhiteHalo && binLum >= 228f) continue
+						if (suppressWhiteHalo && binLum >= 244f) continue
 					}
 					bestCnt = cnt
 					best = bin
@@ -3199,14 +3352,87 @@ class BubbleInpainter @Inject constructor(
 			whiteCoreCount: Int,
 			whiteTouchesDarkOutline: Int,
 			brighterCount: Int,
+			blackTouchesMid: Int = 1,
+			whiteTouchesMid: Int = 0,
 		): Boolean =
-			(bgLumInit < 215f || flankMeanLum <= 198f) &&
+			blackTouchesMid > whiteTouchesMid &&
+				(bgLumInit < 215f || flankMeanLum <= 198f) &&
 				flankWhiteRatio <= 0.48f &&
 				flankMeanLum <= 212f &&
 				coreWhiteRatio in 0.05f..0.46f &&
 				whiteCoreCount >= 24 &&
 				whiteTouchesDarkOutline >= 24 &&
 				(bgLumInit < 178f || brighterCount >= 24 || flankMeanLum <= 198f)
+
+		internal fun isDarkStrokeWithWhiteHaloOnScene(
+			pixels: IntArray,
+			ww: Int,
+			wh: Int,
+			cx0: Int,
+			cy0: Int,
+			cx1: Int,
+			cy1: Int,
+			bgLumInit: Float,
+		): Boolean {
+			if (bgLumInit < 150f) return false
+			val x0 = cx0.coerceIn(0, ww - 1)
+			val x1 = cx1.coerceIn(x0, ww - 1)
+			val y0 = cy0.coerceIn(0, wh - 1)
+			val y1 = cy1.coerceIn(y0, wh - 1)
+			val genuineWhiteThresh = max(226f, bgLumInit + 16f).coerceAtMost(251f)
+			val darkThresh = if (bgLumInit >= 180f) min(125f, bgLumInit - 45f) else 90f
+			var genuineWhiteCount = 0
+			var darkCount = 0
+			var whiteBetweenDark = 0
+			var darkBetweenWhite = 0
+
+			var y = y0
+			while (y <= y1) {
+				val rowOff = y * ww
+				// Scan horizontal runs to distinguish white-fill-inside-dark-outline vs dark-stroke-inside-white-halo
+				var x = x0
+				var prevKind = 0 // 0=bg/mid, 1=dark, 2=white
+				var prevRunLen = 0
+				var beforePrevKind = 0
+				while (x <= x1) {
+					val p = pixels[rowOff + x]
+					val lum = PixelColorMath.luminance(p)
+					val kind = when {
+						lum <= darkThresh -> 1
+						lum >= genuineWhiteThresh -> 2
+						else -> 0
+					}
+					if (kind == 2) genuineWhiteCount++
+					if (kind == 1) darkCount++
+					if (x == x0) {
+						prevKind = kind
+						prevRunLen = 1
+					} else if (kind == prevKind) {
+						prevRunLen++
+					} else {
+						if (prevRunLen in 1..16) {
+							if (prevKind == 2 && beforePrevKind == 1 && kind == 1) {
+								whiteBetweenDark++
+							} else if (prevKind == 1 && beforePrevKind == 2 && kind == 2) {
+								darkBetweenWhite++
+							}
+						}
+						beforePrevKind = prevKind
+						prevKind = kind
+						prevRunLen = 1
+					}
+					x++
+				}
+				y += 2
+			}
+
+			if (genuineWhiteCount < 16) return true
+			if (darkBetweenWhite >= 8 && darkBetweenWhite > whiteBetweenDark * 1.15f) return true
+			if (bgLumInit >= 218f && darkCount >= genuineWhiteCount && whiteBetweenDark <= darkBetweenWhite * 1.35f) {
+				return true
+			}
+			return false
+		}
 
 		internal fun shouldSuppressComponentForSibling(
 			ax0: Int,

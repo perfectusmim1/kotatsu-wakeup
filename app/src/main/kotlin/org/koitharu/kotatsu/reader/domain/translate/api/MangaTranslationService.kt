@@ -647,7 +647,24 @@ class MangaTranslationService @Inject constructor(
 			}
 		}
 
-		val byId = results.associateBy { it.id }
+		val repairedResults = results.map { item ->
+			val cleanOrig = items.firstOrNull { it.bubble.id == item.id }?.cleanText.orEmpty()
+			val origBubble = items.firstOrNull { it.bubble.id == item.id }
+			if (!item.isTrash &&
+				cleanOrig.isNotBlank() &&
+				!isLikelyAlreadyTranslated(cleanOrig, settings.sourceLang, targetLang) &&
+				(hasUntranslatedEnglishClause(item.text, cleanOrig, targetLang) ||
+					(normalizeForCompare(item.text) == normalizeForCompare(cleanOrig) &&
+						isMeaningfulForeignSentence(cleanOrig, settings.sourceLang, targetLang))) &&
+				origBubble != null
+			) {
+				retryBrokenOrPartialItemWithGoogle(origBubble, item, settings, targetLang)
+			} else {
+				item
+			}
+		}
+
+		val byId = repairedResults.associateBy { it.id }
 		if (allowAllUnchangedThrow) {
 			val pairList = items.map { it.bubble.id to it.cleanText }
 			if (shouldRejectUnchangedBatch(pairList, byId, settings.sourceLang, targetLang)) {
@@ -659,10 +676,69 @@ class MangaTranslationService @Inject constructor(
 			}
 		}
 
-		return results.map { item ->
+		return repairedResults.map { item ->
 			val cleanOrig = items.firstOrNull { it.bubble.id == item.id }?.cleanText.orEmpty()
 			finalizeSingleItem(item, cleanOrig, settings, targetLang)
 		}
+	}
+
+	private suspend fun retryBrokenOrPartialItemWithGoogle(
+		prep: PreparedBubble,
+		current: TranslatedTextItem,
+		settings: TranslationSettingsSnapshot,
+		targetLang: String,
+	): TranslatedTextItem {
+		val forcedSource = if (settings.sourceLang == OcrSourceLanguage.AUTO && looksLikeAsciiEnglishSource(prep.cleanText)) {
+			OcrSourceLanguage.ENGLISH
+		} else {
+			settings.sourceLang
+		}
+		val normalized = prepareTextForGoogleTranslate(prep.cleanText, forcedSource, targetLang)
+		if (normalized.isBlank()) return current
+
+		// First retry full item individually with explicit sl=en when English
+		val retriedSingle = runCatching {
+			val raw = executeGoogleTranslateGet(normalized, forcedSource, targetLang)
+			postProcessTranslatedItem(
+				id = prep.bubble.id,
+				translatedRaw = raw.ifBlank { current.text },
+				originalCleanText = prep.cleanText,
+				kind = prep.bubble.kindHint,
+				rawTrash = false,
+				settings = settings,
+				targetLang = targetLang,
+			)
+		}.getOrNull()
+		if (retriedSingle != null &&
+			!retriedSingle.isTrash &&
+			!hasUntranslatedEnglishClause(retriedSingle.text, prep.cleanText, targetLang) &&
+			normalizeForCompare(retriedSingle.text) != normalizeForCompare(prep.cleanText)
+		) {
+			return retriedSingle
+		}
+
+		// If a multi-sentence or numbered list still leaves any English clause, translate clause-by-clause
+		val clauses = splitNormalizedEnglishClauses(normalized)
+		if (clauses.size <= 1) {
+			return retriedSingle ?: current
+		}
+		val translatedParts = ArrayList<String>(clauses.size)
+		for (clause in clauses) {
+			val piece = runCatching {
+				executeGoogleTranslateGet(clause, forcedSource, targetLang).trim()
+			}.getOrNull().orEmpty()
+			translatedParts.add(piece.ifBlank { clause })
+		}
+		val joined = translatedParts.joinToString(" ")
+		return postProcessTranslatedItem(
+			id = prep.bubble.id,
+			translatedRaw = joined,
+			originalCleanText = prep.cleanText,
+			kind = prep.bubble.kindHint,
+			rawTrash = false,
+			settings = settings,
+			targetLang = targetLang,
+		)
 	}
 
 	private suspend fun translateChunkWithGoogleMarkers(
@@ -765,7 +841,7 @@ class MangaTranslationService @Inject constructor(
 	): String {
 		val url = GOOGLE_TRANSLATE_ENDPOINT.toHttpUrl().newBuilder()
 			.addQueryParameter("client", "gtx")
-			.addQueryParameter("sl", sourceLang.toGoogleSourceCode())
+			.addQueryParameter("sl", resolveEffectiveGoogleSourceCode(query, sourceLang))
 			.addQueryParameter("tl", TranslationLanguages.toGoogleTargetCode(targetLang))
 			.addQueryParameter("dt", "t")
 			.addQueryParameter("q", query)
@@ -1214,6 +1290,7 @@ class MangaTranslationService @Inject constructor(
 		private val ASH_GRAY_RESTORE_REGEX = Regex("\\bAshgray\\b", RegexOption.IGNORE_CASE)
 		private val ILK_I_YI_REGEX = Regex("[iİ]lk'?[iİ]'?y[iİ]")
 		private val AH_KAHRAMAN_REGEX = Regex("\\bAH KAHRAMAN\\b", RegexOption.IGNORE_CASE)
+		private val TR_HIM_INTERJECTION_REGEX = Regex("^h[ıi]m+([!?.…]*)(?=\\s|$)", RegexOption.IGNORE_CASE)
 		private val CONSTITUTION_WORD_REGEX = Regex("constitution", RegexOption.IGNORE_CASE)
 		private val CONSTITUTION_CONTEXT_REGEX = Regex(
 			"(?:body|martial|unique|special|amplif|talent|spirit|qi|innate|divine|devil|heavenly|immortal|supreme|ancient|dragon|demon|phoenix|chaos|primordial|cultivat|meridian|dantian|physique|bloodline|yin|yang|aura|mana|soul|core|ether|elemental|thunder|flame|ice|sword)",
@@ -1253,7 +1330,7 @@ class MangaTranslationService @Inject constructor(
 			RegexOption.IGNORE_CASE,
 		)
 		private val VOCAL_FILLER_TOKEN_REGEX = Regex(
-			"^(?:[aáà]+h+|[uúù]+h+|[oóò]+h+|e+h+|h+m+m*|m+h+|h+u+h+|(?:ha)+h*|(?:he)+h*|(?:ho)+h*|kya+h*|wa+h+|eek+|hmph+|mmmph+|pff+t*|tsk+|tch+|ugh+|agh+|argh+|urgh+|ergh+|ow+|aw+|oof+)[!~.?…]*$",
+			"^(?:[aáà]+h+|[uúù]+h+|[oóò]+h+|e+h+|h+m+m*|m+h+|h+u+h+|(?:ha)+h*|(?:he){2,}h*|(?:ho)+h*|kya+h*|wa+h+|eek+|hmph+|mmmph+|pff+t*|tsk+|tch+|ugh+|agh+|argh+|urgh+|ergh+|ow+|aw+|oof+)[!~.?…]*$",
 			RegexOption.IGNORE_CASE,
 		)
 		private val EXTRA_PURE_SFX_STEMS = hashSetOf(
@@ -1269,7 +1346,7 @@ class MangaTranslationService @Inject constructor(
 			"howl", "roar", "hiss", "buzz", "beep", "ding", "dong", "pling", "plink", "plop", "splat",
 			"sploosh", "squelch", "squish", "thwip", "twang", "bonk", "boing", "phew", "wheeze", "sniffle",
 			"achoo", "hic", "zzz", "bwahaha", "muahaha", "mwahaha", "kekeke", "kukuku", "blush",
-			"snicker", "cackle", "gulp", "sigh", "groan", "grunt", "snort", "pant",
+			"snicker", "cackle", "gulp", "groan", "grunt", "snort", "pant",
 			// Korean / Japanese romanized SFX
 			"kwang", "kwaang", "kung", "kuung", "dugeun", "dukgeun", "jjeoreong", "puk", "peok", "ssuk",
 			"geuk", "kkeuk", "heok", "heuk", "deolkeok", "chirik", "sarak", "ttuk", "jjak", "gogo", "gogogo",
@@ -1915,6 +1992,20 @@ class MangaTranslationService @Inject constructor(
 			return false
 		}
 
+		private fun processedIsVocalSighTranslation(
+			originalCleanText: String,
+			processed: String,
+		): Boolean {
+			val origCore = originalCleanText.trim().trimEnd('.', '…', '!', '?', ' ').lowercase(Locale.ROOT)
+			if (origCore != "sigh") return false
+			val procTokens = SFX_TOKEN_SPLIT_REGEX.split(processed.trim())
+				.map { it.trim().lowercase(Locale.ROOT).replace("\u0307", "") }
+				.filter { it.isNotEmpty() }
+			return procTokens.isNotEmpty() && procTokens.all { tok ->
+				tok !in EXTRA_PURE_SFX_STEMS && VOCAL_FILLER_TOKEN_REGEX.matches(tok)
+			}
+		}
+
 		internal fun isPureSfxOrNoise(
 			text: String,
 			kindHint: TextBlockKind = TextBlockKind.DIALOGUE,
@@ -2062,6 +2153,35 @@ class MangaTranslationService @Inject constructor(
 						if (isAllCaps) "BÜNYE" else "Bünye"
 					}
 				}
+
+				val origTrimStart = originalText.trimStart()
+				if (s.startsWith('.') &&
+					!s.startsWith("..") &&
+					s.length >= 2 &&
+					s[1].isLetter() &&
+					!origTrimStart.startsWith(".com", ignoreCase = true) &&
+					!origTrimStart.startsWith(".net", ignoreCase = true) &&
+					!origTrimStart.startsWith(".org", ignoreCase = true)
+				) {
+					s = "..." + s.substring(1).trimStart()
+				}
+				val origTrimEnd = originalText.trimEnd()
+				if ((origTrimEnd.endsWith("...") || origTrimEnd.endsWith("…")) &&
+					s.endsWith("..") &&
+					!s.endsWith("...")
+				) {
+					s = s.dropLast(2) + "..."
+				}
+				val origAlphaStart = origTrimStart.lowercase(Locale.ROOT)
+				if (origAlphaStart.startsWith("hm") || origAlphaStart.startsWith("hnn") || origAlphaStart.startsWith("hnh")) {
+					s = TR_HIM_INTERJECTION_REGEX.replace(s) { m -> "Hmm${m.groupValues[1]}" }
+				}
+				val origTrimmed = originalText.trim()
+				val origCoreLower = origTrimmed.trimEnd('.', '…', '!', '?', ' ').lowercase(Locale.ROOT)
+				if (origCoreLower == "sigh" && normalizeForCompare(s) == "sigh") {
+					val suffix = origTrimmed.substring(origTrimmed.indexOfFirst { it == '.' || it == '…' }.takeIf { it >= 0 } ?: origTrimmed.length)
+					s = "İç çekiş${suffix.ifEmpty { "..." }}"
+				}
 			}
 
 			return s.replace(HORIZONTAL_SPACE_REGEX, " ").trim()
@@ -2097,8 +2217,8 @@ class MangaTranslationService @Inject constructor(
 			}
 
 			val shouldDropAsSfx = settings.skipPureSfx && (
-				isPureSfxOrNoise(processed, kind) ||
-					isPureSfxOrNoise(originalCleanText, kind) ||
+				isPureSfxOrNoise(originalCleanText, kind) ||
+					(isPureSfxOrNoise(processed, kind) && !processedIsVocalSighTranslation(originalCleanText, processed)) ||
 					(kind == TextBlockKind.SFX && !isMeaningfulDialogueText(originalCleanText, processed))
 				)
 
@@ -2252,6 +2372,80 @@ class MangaTranslationService @Inject constructor(
 				FOREIGN_STOPWORD_FOR_TR_REGEX.containsMatchIn(text) ||
 				text.any(::isCjkOrHangul)
 		}
+
+		private val RESIDUAL_ENGLISH_CLAUSE_SPLIT_REGEX = Regex("""(?<=[.!?])\s+|\n+|(?=\b[1-9]\d?[.)]\s+\p{L})""")
+		private val RESIDUAL_ENGLISH_CLAUSE_WORD_REGEX = Regex(
+			"""\b(?:the|and|to|for|with|from|that|this|these|those|you|your|have|had|will|would|could|should|button|press|activate|other|person|look|more|than|time|limit|given|apply|vary|depending|subject|effect|user|save|performed|setup|then|during|unreasonable|suggestion|front|behind|before|after|when|where|while|ends|party|into|only|about|what|which|hypnosis)\b""",
+			RegexOption.IGNORE_CASE,
+		)
+		private val CLAUSE_WORD_TOKEN_REGEX = Regex("""[A-Za-zÇĞİÖŞÜçğıöşü]+""")
+		private val NORMALIZED_CLAUSE_SPLIT_REGEX = Regex("""(?<=[.!?])\s+|(?=\b[1-9]\d?\.\s+[A-Z])""")
+
+		internal fun looksLikeAsciiEnglishSource(text: String): Boolean {
+			val clean = text.trim()
+			if (clean.isEmpty()) return false
+			val letters = clean.filter { it.isLetter() }
+			if (letters.isEmpty()) return false
+			val asciiLetters = letters.count { it in 'A'..'Z' || it in 'a'..'z' }
+			if (asciiLetters < letters.length * 0.85) return false
+			if (NON_ENGLISH_EUROPEAN_DIACRITICS_REGEX.containsMatchIn(clean)) return false
+			if (NON_ENGLISH_LATIN_STOPWORD_REGEX.containsMatchIn(clean) && !ENGLISH_HINT_STOPWORD_REGEX.containsMatchIn(clean)) {
+				return false
+			}
+			return true
+		}
+
+		internal fun resolveEffectiveGoogleSourceCode(
+			query: String,
+			sourceLang: OcrSourceLanguage,
+		): String {
+			if (sourceLang != OcrSourceLanguage.AUTO) {
+				return sourceLang.toGoogleSourceCode()
+			}
+			val strippedMarkers = GOOGLE_MARKER_REGEX.replace(query, " ").trim()
+			return if (looksLikeAsciiEnglishSource(strippedMarkers) &&
+				(ENGLISH_HINT_STOPWORD_REGEX.containsMatchIn(strippedMarkers) ||
+					strippedMarkers.count { it == ' ' } <= 4)
+			) {
+				"en"
+			} else {
+				sourceLang.toGoogleSourceCode()
+			}
+		}
+
+		internal fun hasUntranslatedEnglishClause(
+			translatedText: String,
+			originalCleanText: String,
+			targetLang: String = "tr",
+		): Boolean {
+			if (targetLang.equals("en", ignoreCase = true)) return false
+			if (!looksLikeAsciiEnglishSource(originalCleanText)) return false
+			val clauses = translatedText.trim()
+				.split(RESIDUAL_ENGLISH_CLAUSE_SPLIT_REGEX)
+				.map { it.trim() }
+				.filter { it.isNotEmpty() }
+				.ifEmpty { listOf(translatedText.trim()) }
+
+			for (clause in clauses) {
+				val hasUniqueTurkishChars = clause.any { it in STRICT_TURKISH_CHARS || it == 'ö' || it == 'Ö' || it == 'ü' || it == 'Ü' }
+				if (hasUniqueTurkishChars) continue
+				if (TURKISH_STOPWORD_REGEX.containsMatchIn(clause)) continue
+
+				val words = CLAUSE_WORD_TOKEN_REGEX.findAll(clause).map { it.value }.toList()
+				if (words.size < 3) continue
+				val englishHits = RESIDUAL_ENGLISH_CLAUSE_WORD_REGEX.findAll(clause).count()
+				if (englishHits >= 3 || (words.size >= 3 && englishHits >= 2 && words.all { w -> w.all { c -> c in 'A'..'Z' || c in 'a'..'z' } })) {
+					return true
+				}
+			}
+			return false
+		}
+
+		internal fun splitNormalizedEnglishClauses(normalized: String): List<String> =
+			normalized.trim()
+				.split(NORMALIZED_CLAUSE_SPLIT_REGEX)
+				.map { it.trim() }
+				.filter { it.isNotEmpty() }
 
 		internal fun normalizeBubbleInput(raw: String): String {
 			if (raw.isBlank()) return ""

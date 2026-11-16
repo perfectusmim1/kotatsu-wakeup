@@ -688,7 +688,7 @@ class PaddleOcrEngine @Inject constructor(
 				var replacedIdx = -1
 				for (idx in detected.indices.reversed()) {
 					val existing = detected[idx]
-					if (iouRect(existing, cand) > 0.42f || ioMinRect(existing, cand) > 0.60f) {
+					if (shouldSuppressDetRegionOverlap(existing, cand)) {
 						val existingWins = when {
 							existing.edgeClipped && !cand.edgeClipped -> false
 							!existing.edgeClipped && cand.edgeClipped -> true
@@ -900,6 +900,68 @@ class PaddleOcrEngine @Inject constructor(
 				}
 			}
 
+			suspend fun runTightTiltedProbe(tiltDeg: Float): Pair<String, Float> {
+				val boxW = cw + 6f
+				val boxH = (if (useTiltedUnwarp) min(region.obbH + 4f, ch * 0.72f) else ch * 0.70f).coerceAtLeast(24f)
+				val rawTw = ((REC_H * boxW) / boxH).roundToInt()
+				val tw = rawTw.coerceIn(16, REC_MAX_W)
+				val outW = ((tw + 7) / 8) * 8
+				val recTotal = 3 * REC_H * outW
+				if (recFloatArray.size < recTotal) {
+					recFloatArray = FloatArray(recTotal)
+					recDirectBuf = allocateDirectFloatBuffer(recTotal)
+				}
+				recFloatArray.fill(0f, 0, recTotal)
+				val recBuf = checkNotNull(recDirectBuf)
+				val cxPage = (region.x0 + region.x1) * 0.5f - cropX0
+				val cyPage = (region.y0 + region.y1) * 0.5f - cropY0
+				sampleRotatedAngleToBgrTensor(
+					pixels = cropPixels,
+					imgW = cropW,
+					imgH = cropH,
+					cx = cxPage,
+					cy = cyPage,
+					boxW = boxW,
+					boxH = boxH,
+					angleDeg = tiltDeg,
+					tw = tw,
+					th = REC_H,
+					outW = outW,
+					mean = REC_MEAN,
+					std = REC_STD,
+					out = recFloatArray,
+				)
+				recBuf.clear()
+				recBuf.put(recFloatArray, 0, recTotal)
+				recBuf.rewind()
+				recBuf.limit(recTotal)
+				return OnnxTensor.createTensor(
+					env,
+					recBuf,
+					longArrayOf(1L, 3L, REC_H.toLong(), outW.toLong()),
+				).use { recTensor ->
+					recSession.run(Collections.singletonMap(recInputName, recTensor)).use { recResult ->
+						val outTensor = recResult[0] as OnnxTensor
+						val outShape = (outTensor.info as TensorInfo).shape
+						if (outShape.size < 3) {
+							"" to 0f
+						} else {
+							val steps = outShape[1].toInt()
+							val classes = outShape[2].toInt()
+							val logitsCount = steps * classes
+							if (recLogitsArray.size < logitsCount) {
+								recLogitsArray = FloatArray(logitsCount)
+							}
+							outTensor.floatBuffer.apply {
+								rewind()
+								get(recLogitsArray, 0, logitsCount)
+							}
+							ctcDecode(recLogitsArray, steps, classes, dictionary)
+						}
+					}
+				}
+			}
+
 			val primaryMode = when {
 				useTiltedUnwarp -> CropOrientation.TILTED_OBB
 				isVerticalShape && (allowVerticalRotation || ch >= cw * 2.3f) -> CropOrientation.ROTATE_90_CCW
@@ -913,7 +975,10 @@ class PaddleOcrEngine @Inject constructor(
 				val candText = candPair.first.trim()
 				val candConf = candPair.second
 				val candScore = scoreCandidate(candText, candConf)
-				if (candScore > bestScore * 1.05f || (bestScore < 0f && candScore > 0f)) {
+				val candLetters = TextBlockFilters.countLetters(candText)
+				val bestLetters = TextBlockFilters.countLetters(bestText)
+				val thresholdMult = if (candLetters > bestLetters && candConf >= 88f) 1.01f else 1.05f
+				if (candScore > bestScore * thresholdMult || (bestScore < 0f && candScore > 0f)) {
 					bestText = candText
 					bestConf = candConf
 					bestMode = mode
@@ -921,9 +986,26 @@ class PaddleOcrEngine @Inject constructor(
 				}
 			}
 
-			if (useTiltedUnwarp && (bestConf < 68f || bestScore < 0f)) {
+			if (useTiltedUnwarp && abs(region.angleDeg) <= 22f && (bestConf < 97.5f || bestScore < 0f)) {
+				val horizCand = runOrientation(cropPixels, CropOrientation.HORIZONTAL)
+				val hText = horizCand.first.trim()
+				val hConf = horizCand.second
+				val hScore = scoreCandidate(hText, hConf)
+				if (hText.isNotEmpty() && hScore > bestScore && (bestConf < minConfidence || hConf >= 75f)) {
+					bestText = hText
+					bestConf = hConf
+					bestMode = CropOrientation.HORIZONTAL
+					bestScore = hScore
+				}
+			} else if (useTiltedUnwarp && (bestConf < 68f || bestScore < 0f)) {
 				val axisFallback = if (ch >= cw * 1.55f) CropOrientation.ROTATE_90_CCW else CropOrientation.HORIZONTAL
 				acceptFallback(runOrientation(cropPixels, axisFallback), axisFallback)
+			}
+			if (!isVerticalShape && cw >= ch * 2.8f && ch >= 36f && bestConf < 96.5f) {
+				acceptFallback(runTightTiltedProbe(-5f), CropOrientation.TILTED_OBB)
+				if (bestConf < 97.5f) {
+					acceptFallback(runTightTiltedProbe(5f), CropOrientation.TILTED_OBB)
+				}
 			}
 			if (isVerticalShape && (bestConf < 82f || bestScore < 0f)) {
 				if (bestMode != CropOrientation.ROTATE_90_CCW) {
@@ -990,34 +1072,25 @@ class PaddleOcrEngine @Inject constructor(
 		val sorted = collectedLines.sortedByDescending { it.confidence * sqrt(it.text.length.coerceAtLeast(1).toFloat()) }
 		val kept = ArrayList<RawOcrLine>(sorted.size)
 		for (line in sorted) {
+			val lineArea = line.width * line.height
 			val duplicate = kept.any { existing ->
 				val lineIoMin = ioMin(existing, line)
-				iou(existing, line) > 0.40f ||
-					lineIoMin > 0.58f ||
-					(lineIoMin > 0.35f && textsOverlapNearDuplicate(existing.text, line.text))
+				val lineIou = iou(existing, line)
+				val minH = min(existing.height, line.height).coerceAtLeast(1f)
+				val maxH = max(existing.height, line.height).coerceAtLeast(1f)
+				val existArea = existing.width * existing.height
+				val comparableScale = min(existArea, lineArea) >= max(existArea, lineArea) * 0.22f
+				val sameRowBand = abs(existing.centerY - line.centerY) < minH * 0.48f && maxH <= minH * 1.85f
+				val isTextOverlap = textsOverlapNearDuplicate(existing.text, line.text)
+				val isVertCol = (existing.height >= existing.width * 1.45f || line.height >= line.width * 1.45f) && comparableScale
+				lineIou > 0.50f ||
+					(lineIoMin > 0.60f && ((sameRowBand && comparableScale) || isTextOverlap || isVertCol)) ||
+					(lineIoMin > 0.35f && isTextOverlap)
 			}
 			if (duplicate) continue
 			kept.add(line)
 		}
 		return kept
-	}
-
-	private fun iouRect(a: DetRegion, b: DetRegion): Float {
-		val ix = min(a.x1, b.x1) - max(a.x0, b.x0)
-		val iy = min(a.y1, b.y1) - max(a.y0, b.y0)
-		if (ix <= 0f || iy <= 0f) return 0f
-		val inter = ix * iy
-		val areaA = a.width * a.height
-		val areaB = b.width * b.height
-		return inter / max(1f, areaA + areaB - inter)
-	}
-
-	private fun ioMinRect(a: DetRegion, b: DetRegion): Float {
-		val ix = min(a.x1, b.x1) - max(a.x0, b.x0)
-		val iy = min(a.y1, b.y1) - max(a.y0, b.y0)
-		if (ix <= 0f || iy <= 0f) return 0f
-		val inter = ix * iy
-		return inter / max(1f, min(a.area, b.area))
 	}
 
 	private fun sampleRotatedAngleToBgrTensor(
@@ -1601,6 +1674,43 @@ class PaddleOcrEngine @Inject constructor(
 			return selected
 		}
 
+		internal fun iouRect(a: DetRegion, b: DetRegion): Float {
+			val ix = min(a.x1, b.x1) - max(a.x0, b.x0)
+			val iy = min(a.y1, b.y1) - max(a.y0, b.y0)
+			if (ix <= 0f || iy <= 0f) return 0f
+			val inter = ix * iy
+			val areaA = a.width * a.height
+			val areaB = b.width * b.height
+			return inter / max(1f, areaA + areaB - inter)
+		}
+
+		internal fun ioMinRect(a: DetRegion, b: DetRegion): Float {
+			val ix = min(a.x1, b.x1) - max(a.x0, b.x0)
+			val iy = min(a.y1, b.y1) - max(a.y0, b.y0)
+			if (ix <= 0f || iy <= 0f) return 0f
+			val inter = ix * iy
+			return inter / max(1f, min(a.area, b.area))
+		}
+
+		internal fun shouldSuppressDetRegionOverlap(existing: DetRegion, cand: DetRegion): Boolean {
+			val minH = min(existing.height, cand.height).coerceAtLeast(1f)
+			val maxH = max(existing.height, cand.height).coerceAtLeast(1f)
+			val vOv = min(existing.y1, cand.y1) - max(existing.y0, cand.y0)
+			val sameRowBand = abs(existing.cy - cand.cy) < minH * 0.48f ||
+				(maxH <= minH * 1.85f && vOv > minH * 0.68f)
+			val hasVert = (existing.height >= existing.width * 1.45f || cand.height >= cand.width * 1.45f) &&
+				maxH <= minH * 2.2f
+			val edgeMismatch = existing.edgeClipped != cand.edgeClipped &&
+				abs(existing.cy - cand.cy) <= maxH * 0.65f &&
+				maxH <= minH * 2.8f
+			val comparableScale = min(existing.area, cand.area) >= max(existing.area, cand.area) * 0.22f
+			val rectIou = iouRect(existing, cand)
+			val rectIoMin = ioMinRect(existing, cand)
+			return rectIou > 0.52f ||
+				((sameRowBand || hasVert || edgeMismatch) &&
+					(rectIou > 0.42f || (rectIoMin > 0.60f && (comparableScale || edgeMismatch))))
+		}
+
 		private val WHITESPACE_REGEX = Regex("""\s+""")
 		private val ENDS_WITH_ASCII_ALPHA_REGEX = Regex("""[a-zA-Z]$""")
 		private val STARTS_WITH_ASCII_ALPHA_REGEX = Regex("""^[a-zA-Z]""")
@@ -1951,6 +2061,10 @@ class PaddleOcrEngine @Inject constructor(
 				max(bgT, bgB) >= 75f &&
 				max(bgT, bgB) < 220f
 			if (abs(bgT - bgB) >= 75f && !fakeOutlineCollar) return true
+			// Distinct bright speech-bubble interior (>=242) vs scene/outdoor art (<=212) must not merge
+			if (max(bgT, bgB) >= 242f && min(bgT, bgB) <= 212f && abs(bgT - bgB) >= 34f && !fakeOutlineCollar) {
+				return true
+			}
 
 			val ovX0 = max(0, floor(max(top.x0, bot.x0)).toInt())
 			val ovX1 = min(width - 1, ceil(min(top.x1, bot.x1)).toInt())
@@ -2144,10 +2258,71 @@ class PaddleOcrEngine @Inject constructor(
 				return false
 			}
 
+			val rowX0 = FloatArray(lines.size) { lines[it].x0 }
+			val rowX1 = FloatArray(lines.size) { lines[it].x1 }
+			for (i in lines.indices) {
+				val a = lines[i]
+				for (j in i + 1 until lines.size) {
+					val b = lines[j]
+					val minH = min(a.height, b.height)
+					val maxH = max(a.height, b.height)
+					val vOv = min(a.y1, b.y1) - max(a.y0, b.y0)
+					val hGap = max(a.x0, b.x0) - min(a.x1, b.x1)
+					val sameRowOverlapOk = hGap >= -minH * 0.35f ||
+						(vOv >= minH * 0.62f && hGap >= -min(a.width, b.width) * 0.55f)
+					if (
+						vOv >= minH * 0.52f &&
+						sameRowOverlapOk &&
+						(hGap <= maxH * 0.45f ||
+							(validPixels != null && collarLums != null && hGap <= maxH * 0.95f && abs(collarLums[i] - collarLums[j]) < 22f)) &&
+						maxH / max(1f, minH) <= 1.65f &&
+						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
+					) {
+						val u0 = min(rowX0[i], rowX0[j])
+						val u1 = max(rowX1[i], rowX1[j])
+						rowX0[i] = u0; rowX0[j] = u0
+						rowX1[i] = u1; rowX1[j] = u1
+					}
+				}
+			}
+
+			fun hasCentralDarkOcclusionBetween(left: RawOcrLine, right: RawOcrLine, colL: Float, colR: Float): Boolean {
+				val px = validPixels ?: return false
+				val collarMax = max(colL, colR)
+				if (collarMax < 165f) return false
+				val gx0 = ceil(left.x1).toInt().coerceIn(0, imgWidth - 1)
+				val gx1 = floor(right.x0).toInt().coerceIn(0, imgWidth - 1)
+				val spanX = gx1 - gx0
+				if (spanX < 28) return false
+				val midX0 = gx0 + spanX / 5
+				val midX1 = gx1 - spanX / 5
+				val oy0 = floor(max(left.y0, right.y0)).toInt().coerceIn(0, imgHeight - 1)
+				val oy1 = ceil(min(left.y1, right.y1)).toInt().coerceIn(0, imgHeight - 1)
+				if (oy1 <= oy0 || midX1 <= midX0) return false
+				var samples = 0
+				var occluded = 0
+				val stepX = max(1, (midX1 - midX0) / 14)
+				val stepY = max(1, (oy1 - oy0) / 8)
+				var y = oy0
+				while (y <= oy1) {
+					val rOff = y * imgWidth
+					var x = midX0
+					while (x <= midX1) {
+						samples++
+						val pLum = argbLum(px[rOff + x])
+						if (pLum <= 125f || collarMax - pLum >= 35f) occluded++
+						x += stepX
+					}
+					y += stepY
+				}
+				return samples >= 12 && occluded.toFloat() / samples >= 0.32f
+			}
+
 			fun spansSeparateSideBySideColumns(wideIdx: Int, colIdx: Int): Boolean {
-				val wBox = lines[wideIdx]
 				val cBox = lines[colIdx]
 				val ch = cBox.height
+				val wX0 = rowX0[wideIdx]
+				val wX1 = rowX1[wideIdx]
 				for (k in lines.indices) {
 					if (k == wideIdx || k == colIdx) continue
 					val oBox = lines[k]
@@ -2155,12 +2330,50 @@ class PaddleOcrEngine @Inject constructor(
 					val vOv = min(cBox.y1, oBox.y1) - max(cBox.y0, oBox.y0)
 					val hGap = max(cBox.x0, oBox.x0) - min(cBox.x1, oBox.x1)
 					if (vOv >= min(ch, oh) * 0.4f && hGap > max(ch, oh) * 0.55f) {
-						val ov1 = min(wBox.x1, cBox.x1) - max(wBox.x0, cBox.x0)
-						val ov2 = min(wBox.x1, oBox.x1) - max(wBox.x0, oBox.x0)
+						val ov1 = min(wX1, cBox.x1) - max(wX0, cBox.x0)
+						val ov2 = min(wX1, oBox.x1) - max(wX0, oBox.x0)
 						if (ov1 > 0f && ov2 > 0f) return true
 					}
 				}
 				return false
+			}
+
+			val occludedSideIndices = HashSet<Int>()
+			if (validPixels != null && collarLums != null) {
+				for (i in lines.indices) {
+					val a = lines[i]
+					for (j in i + 1 until lines.size) {
+						val b = lines[j]
+						val vOv = min(a.y1, b.y1) - max(a.y0, b.y0)
+						val minH = min(a.height, b.height)
+						val maxH = max(a.height, b.height)
+						if (vOv < minH * 0.40f || maxH / max(1f, minH) > 1.55f) continue
+						val left = if (a.x0 <= b.x0) a else b
+						val right = if (a.x0 <= b.x0) b else a
+						val lIdx = if (a.x0 <= b.x0) i else j
+						val rIdx = if (a.x0 <= b.x0) j else i
+						val hGap = right.x0 - left.x1
+						if (hGap > maxH * 0.55f &&
+							hasCentralDarkOcclusionBetween(left, right, collarLums[lIdx], collarLums[rIdx])
+						) {
+							val rowTopY = min(left.y0, right.y0)
+							val hasUpperBridgedRow = lines.indices.any { u ->
+								if (u == lIdx || u == rIdx) return@any false
+								val uBox = lines[u]
+								val vDist = rowTopY - uBox.y1
+								vDist in (-maxH * 0.2f)..(maxH * 4.5f) &&
+									max(uBox.height, maxH) / max(1f, min(uBox.height, minH)) <= 1.65f &&
+									rowX0[u] < left.x1 &&
+									rowX1[u] > right.x0 &&
+									(rowX1[u] - rowX0[u]) > (right.x0 - left.x1)
+							}
+							if (hasUpperBridgedRow) {
+								occludedSideIndices.add(lIdx)
+								occludedSideIndices.add(rIdx)
+							}
+						}
+					}
+				}
 			}
 
 			val parent = IntArray(lines.size) { it }
@@ -2213,8 +2426,13 @@ class PaddleOcrEngine @Inject constructor(
 					} else if (
 						!vertA && !vertB &&
 						vOverlap >= minH * 0.52f &&
-						hGap >= -minH * 0.35f &&
-						hGap <= maxH * 0.45f &&
+						(hGap >= -minH * 0.35f ||
+							(vOverlap >= minH * 0.62f && hGap >= -min(wa, wb) * 0.55f)) &&
+						(hGap <= maxH * 0.45f ||
+							(validPixels != null &&
+								collarLums != null &&
+								hGap <= maxH * 0.95f &&
+								abs(collarLums[i] - collarLums[j]) < 22f)) &&
 						maxH / max(1f, minH) <= 1.65f &&
 						!(hasIndependentVerticalPartner(i, j) && hasIndependentVerticalPartner(j, i)) &&
 						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
@@ -2237,9 +2455,10 @@ class PaddleOcrEngine @Inject constructor(
 					}
 					if (
 						ha >= hb * 1.16f &&
-						wordsA <= 3 &&
-						(wordsB >= 5 || wb >= wa * 1.42f) &&
-						TextBlockFilters.isSystemBoxHeader(textA)
+						((wordsA <= 3 &&
+							(wordsB >= 5 || wb >= wa * 1.42f) &&
+							TextBlockFilters.isSystemBoxHeader(textA)) ||
+							(textA.startsWith('[') && textA.endsWith(']') && !textB.startsWith('[')))
 					) {
 						continue
 					}
@@ -2299,9 +2518,14 @@ class PaddleOcrEngine @Inject constructor(
 					}
 
 					if (heightRatio <= 2.85f) {
+						val narrowUnderWideOffset =
+							min(wa, wb) < max(wa, wb) * 0.55f &&
+								centerDist > max(wa, wb) * 0.20f
 						val stronglyAligned =
-							(overlap > narrow * 0.36f && centerDist < maxH * 1.55f) ||
-								(overlap > narrow * 0.6f && centerDist < max(wa, wb) * 0.45f)
+							!narrowUnderWideOffset && (
+								(overlap > narrow * 0.36f && centerDist < maxH * 1.55f) ||
+									(overlap > narrow * 0.6f && centerDist < max(wa, wb) * 0.45f)
+								)
 						if (stronglyAligned && vGap >= -minH * 0.55f && vGap <= maxH * 1.45f) {
 							parent[find(j)] = find(i)
 						}
@@ -2310,13 +2534,16 @@ class PaddleOcrEngine @Inject constructor(
 			}
 
 			val groups = LinkedHashMap<Int, ArrayList<RawOcrLine>>()
+			val groupOrigIndices = LinkedHashMap<Int, ArrayList<Int>>()
 			for (i in lines.indices) {
 				val root = find(i)
 				groups.getOrPut(root) { ArrayList() }.add(lines[i])
+				groupOrigIndices.getOrPut(root) { ArrayList() }.add(i)
 			}
 
 			val sortedGroups = ArrayList<Pair<Float, OcrBubbleGroup>>(groups.size)
-			for (group in groups.values) {
+			for ((root, group) in groups) {
+				val origIdxList = groupOrigIndices[root].orEmpty()
 				val isVerticalCjkGroup = group.all { it.height > it.width * 1.4f } &&
 					group.any { TextBlockFilters.hasCjkOrHangulOrArabic(it.text) }
 				if (isVerticalCjkGroup) {
@@ -2358,24 +2585,37 @@ class PaddleOcrEngine @Inject constructor(
 						val minH = min(hp, hi)
 						val vOv = min(prev.y1, item.y1) - max(prev.y0, item.y0)
 						val hGap = item.x0 - prev.x1
+						val sameRowOverlapOk = hGap >= -minH * 0.4f ||
+							(vOv >= minH * 0.62f && hGap >= -min(prev.width, item.width) * 0.55f)
 						if (
 							vOv >= minH * 0.52f &&
 							abs(prev.centerY - item.centerY) < minH * 0.45f &&
-							hGap >= -minH * 0.4f &&
-							hGap <= minH * 0.65f &&
+							sameRowOverlapOk &&
+							hGap <= max(hp, hi) * 0.95f &&
 							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, prev, item))
 						) {
+							val prevTrim = prev.text.trim()
+							var itemTrim = item.text.trim()
+							var trimmedOverlapPrefix = false
+							if (hGap < -4f) {
+								val firstTok = itemTrim.substringBefore(' ', "")
+								if (firstTok.length == 1 && firstTok[0].isLetter() && itemTrim.length > 2 && prevTrim.endsWith(firstTok, ignoreCase = true)) {
+									itemTrim = itemTrim.substring(1).trimStart()
+									trimmedOverlapPrefix = true
+								}
+							}
 							val joiner = if (
+								!trimmedOverlapPrefix &&
 								hGap <= max(1.5f, minH * 0.12f) &&
-								ENDS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(prev.text) &&
-								STARTS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(item.text)
+								ENDS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(prevTrim) &&
+								STARTS_WITH_ASCII_ALPHA_REGEX.containsMatchIn(itemTrim)
 							) {
 								""
 							} else {
 								" "
 							}
 							mergedRows[mergedRows.lastIndex] = RawOcrLine(
-								text = "${prev.text}$joiner${item.text}".trim(),
+								text = "$prevTrim$joiner$itemTrim".trim(),
 								confidence = max(prev.confidence, item.confidence),
 								x0 = min(prev.x0, item.x0),
 								y0 = min(prev.y0, item.y0),
@@ -2444,6 +2684,50 @@ class PaddleOcrEngine @Inject constructor(
 
 				val bw = x1 - x0
 				val bh = y1 - y0
+				val avgConf = if (lineModels.isEmpty()) 0.5f else lineModels.sumOf { it.confidence.toDouble() }.toFloat() / lineModels.size
+				if (validPixels != null &&
+					occludedSideIndices.isNotEmpty() &&
+					origIdxList.isNotEmpty() &&
+					origIdxList.any { it in occludedSideIndices } &&
+					origIdxList.all { idx ->
+						val t = lines[idx].text.trim().trimEnd('.', ',')
+						val oneToken = t.isNotEmpty() && !t.contains(' ') && t.none { ch -> ch == '?' || ch == '!' || ch == '.' }
+						val nearOccluded = idx in occludedSideIndices || origIdxList.any { oi ->
+							oi in occludedSideIndices && min(lines[idx].x1, lines[oi].x1) > max(lines[idx].x0, lines[oi].x0)
+						}
+						oneToken && nearOccluded
+					}
+				) {
+					continue
+				}
+				if (validPixels != null &&
+					!isVerticalCjkGroup &&
+					(isLikelyNonBubblePseudoWord(
+						pixels = validPixels,
+						imgW = imgWidth,
+						imgH = imgHeight,
+						x0 = x0,
+						y0 = y0,
+						x1 = x1,
+						y1 = y1,
+						mergedLineCount = mergedRows.size,
+						text = text,
+						avgConf = avgConf,
+					) || isLikelyQrOrPatternNoise(
+						pixels = validPixels,
+						imgW = imgWidth,
+						imgH = imgHeight,
+						x0 = x0,
+						y0 = y0,
+						x1 = x1,
+						y1 = y1,
+						lines = mergedRows,
+						text = text,
+						avgConf = avgConf,
+					))
+				) {
+					continue
+				}
 				val isVertical = bh > bw * 1.4f && mergedRows.size == 1 && TextBlockFilters.hasCjkOrHangulOrArabic(text)
 				val kindHint = if (TextBlockFilters.isPureSoundEffect(text)) TextBlockKind.SFX else TextBlockKind.DIALOGUE
 
@@ -2505,5 +2789,164 @@ class PaddleOcrEngine @Inject constructor(
 				pair.second.copy(id = "b$index")
 			}
 		}
+
+		private fun isUniformCollarBubble(
+			pixels: IntArray,
+			imgW: Int,
+			imgH: Int,
+			x0: Float,
+			y0: Float,
+			x1: Float,
+			y1: Float,
+		): Boolean {
+			val bx0 = (floor(x0).toInt() - 4).coerceIn(0, imgW - 1)
+			val bx1 = (ceil(x1).toInt() + 4).coerceIn(0, imgW - 1)
+			val by0 = (floor(y0).toInt() - 4).coerceIn(0, imgH - 1)
+			val by1 = (ceil(y1).toInt() + 4).coerceIn(0, imgH - 1)
+			if (bx1 - bx0 < 8 || by1 - by0 < 8) return false
+
+			val borderLums = ArrayList<Float>(48)
+			val stepX = max(1, (bx1 - bx0) / 14)
+			var x = bx0
+			while (x <= bx1) {
+				borderLums.add(argbLum(pixels[by0 * imgW + x]))
+				borderLums.add(argbLum(pixels[by1 * imgW + x]))
+				x += stepX
+			}
+			val stepY = max(1, (by1 - by0) / 6)
+			var y = by0 + stepY
+			while (y < by1) {
+				borderLums.add(argbLum(pixels[y * imgW + bx0]))
+				borderLums.add(argbLum(pixels[y * imgW + bx1]))
+				y += stepY
+			}
+			if (borderLums.size < 8) return false
+			borderLums.sort()
+			val median = borderLums[borderLums.size / 2]
+			val spread = borderLums.last() - borderLums.first()
+			val uniformRatio = borderLums.count { abs(it - median) <= 18f }.toFloat() / borderLums.size
+			return spread <= 48f && uniformRatio >= 0.72f
+		}
+
+		internal fun isLikelyQrOrPatternNoise(
+			pixels: IntArray,
+			imgW: Int,
+			imgH: Int,
+			x0: Float,
+			y0: Float,
+			x1: Float,
+			y1: Float,
+			lines: List<RawOcrLine>,
+			text: String,
+			avgConf: Float,
+		): Boolean {
+			if (lines.isEmpty() || TextBlockFilters.hasCjkOrHangulOrArabic(text)) return false
+			val trimmed = text.trim()
+			if (trimmed.none { it.isLetter() }) return false
+			val hasPunctuation = trimmed.any { it == '?' || it == '!' || it == '.' || it == ',' }
+			if (isUniformCollarBubble(pixels, imgW, imgH, x0, y0, x1, y1)) return false
+
+			val bx0 = floor(x0).toInt().coerceIn(0, imgW - 1)
+			val bx1 = ceil(x1).toInt().coerceIn(bx0, imgW - 1)
+			val by0 = floor(y0).toInt().coerceIn(0, imgH - 1)
+			val by1 = ceil(y1).toInt().coerceIn(by0, imgH - 1)
+			val bw = bx1 - bx0 + 1
+			val bh = by1 - by0 + 1
+
+			// High-contrast QR/finder square grid detection (checkerboard transitions without real sentences)
+			if (!hasPunctuation && bw >= 28 && bh >= 28 && (avgConf < 0.76f || lines.none { it.confidence >= 80f })) {
+				var totalSamples = 0
+				var binarySamples = 0
+				var horizTransitions = 0
+				var rowCount = 0
+				val stepY = max(1, bh / 12)
+				val stepX = max(1, bw / 24)
+				var py = by0
+				while (py <= by1) {
+					val rOff = py * imgW
+					var prevDark: Boolean? = null
+					var px = bx0
+					while (px <= bx1) {
+						val lum = argbLum(pixels[rOff + px])
+						totalSamples++
+						if (lum < 110f || lum > 215f) binarySamples++
+						val isDark = lum < 140f
+						if (prevDark != null && isDark != prevDark) horizTransitions++
+						prevDark = isDark
+						px += stepX
+					}
+					rowCount++
+					py += stepY
+				}
+				val bwRatio = binarySamples.toFloat() / max(1, totalSamples)
+				val avgTrans = horizTransitions.toFloat() / max(1, rowCount)
+				if (bwRatio >= 0.62f && avgTrans >= 4.2f) return true
+			}
+
+			// Artwork / stylised Korean title-logo gibberish on non-bubble art (e.g. "Lt T8o gaSOFLAEF")
+			if (!hasPunctuation && avgConf < 0.80f && lines.none { it.confidence >= 92f }) {
+				val tokens = trimmed.split(WHITESPACE_REGEX)
+				val hasGibberishToken = tokens.any { tok ->
+					val hasDigitInsideLetters = tok.length >= 3 && tok.any { it.isDigit() } && tok.any { it.isLetter() }
+					val hasLowerBeforeCaps = tok.length >= 4 &&
+						tok.indexOfFirst { it.isLowerCase() } in 0..1 &&
+						tok.count { it.isUpperCase() } >= 3
+					hasDigitInsideLetters || hasLowerBeforeCaps
+				}
+				if (hasGibberishToken) return true
+			}
+
+			// Multi-token / signboard low-confidence texture pareidolia without punctuation
+			return lines.size <= 2 &&
+				!hasPunctuation &&
+				avgConf < 0.62f &&
+				lines.none { it.confidence >= 68f }
+		}
+
+		internal fun isLikelyNonBubblePseudoWord(
+			pixels: IntArray,
+			imgW: Int,
+			imgH: Int,
+			x0: Float,
+			y0: Float,
+			x1: Float,
+			y1: Float,
+			mergedLineCount: Int,
+			text: String,
+			avgConf: Float,
+		): Boolean {
+			if (mergedLineCount != 1) return false
+			val trimmed = text.trim()
+			if (trimmed.isEmpty() || ' ' in trimmed) return false
+			if ('?' in trimmed || '!' in trimmed || '[' in trimmed || ']' in trimmed) return false
+			if (TextBlockFilters.hasCjkOrHangulOrArabic(trimmed)) return false
+			if (trimmed.any { it.isDigit() }) return false
+			val alpha = buildString {
+				for (ch in trimmed) {
+					if (ch.isLetter()) append(ch.lowercaseChar())
+				}
+			}
+			if (alpha.length !in 2..11) return false
+			if (alpha in KNOWN_ISOLATED_ENGLISH_TOKENS) return false
+			if (alpha.length >= 5 && (alpha.endsWith("ing") || alpha.endsWith("tion") || alpha.endsWith("ment") || alpha.endsWith("ness") || alpha.endsWith("able"))) {
+				return false
+			}
+
+			if (isUniformCollarBubble(pixels, imgW, imgH, x0, y0, x1, y1)) return false
+
+			return avgConf < 0.94f || alpha.length <= 4
+		}
+
+		private val KNOWN_ISOLATED_ENGLISH_TOKENS = hashSetOf(
+			"no", "yes", "ok", "okay", "oh", "ah", "eh", "uh", "um", "hm", "hmm", "hmmm", "hnnh", "hnh",
+			"huh", "he", "she", "it", "we", "they", "you", "me", "my", "hi", "hey", "bye", "yo",
+			"wait", "stop", "run", "help", "why", "who", "what", "how", "when", "where", "well",
+			"sure", "fine", "still", "really", "sorry", "please", "thanks", "thank", "hello",
+			"miracle", "sigh", "hoho", "hehe", "haha", "ahem", "aahem", "ding", "beep", "excuse",
+			"master", "chief", "doctor", "nurse", "right", "next", "later", "more", "less", "none",
+			"done", "gone", "back", "down", "here", "there", "look", "listen", "stay", "come", "go",
+			"dead", "alive", "alone", "scared", "crazy", "insane", "weird", "strange", "quiet",
+			"junk", "code", "tip", "note", "mail", "site", "info", "stats", "status", "name", "open",
+		)
 	}
 }

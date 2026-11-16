@@ -114,7 +114,7 @@ object TextBlockFilters {
 		"kekeke", "kukuku", "agh", "aghh", "aghhh", "ugh", "ughh", "ughhh", "argh", "urgh",
 		"ergh", "mmph", "mmmph", "mph", "hmph", "hmmph", "huff", "pant", "phew", "tsk",
 		"tch", "pff", "pfft", "bleh", "gack", "guh", "blub", "glub", "aaah", "aaaah",
-		"sigh", "groan", "grunt", "snort", "snicker",
+		"groan", "grunt", "snort", "snicker",
 		// Korece / Japonca romanize saf ses efektleri
 		"kwang", "kwaang", "kung", "kuung", "kkung", "kukung", "kukuung", "dugeun", "dukgeun",
 		"dugeundugeun", "dudun", "dudung", "jjeoreong", "puk", "peok", "ssuk", "geuk", "kkeuk",
@@ -142,19 +142,19 @@ object TextBlockFilters {
 	)
 
 	private val CREDIT_LINE_REGEX = Regex(
-		"""(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|scanlation|fansub|fansube|kurohana|asurascans|asuras?\s*scans?|asuragd\w*|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|webtoon\s+ip\s+holder|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|tapas|lezhin|recruiting|discord|patreon|paypal|ko-?fi|buymeacoffee|join\s+(?:our|us)|support\s+us|read\s+(?:it\s+)?(?:at|on|first)|chapter\s*\d+|çevirmen|çeviri|editör|dizgi|temizleme)(?![\p{L}\p{N}_])|^dsns$|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)(?:\s*[:\-]\s*|\s+)[a-z0-9_]{2,14}$""",
+		"""(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|scanlation|fansub|fansube|kurohana|asurascans|asuras?\s*scans?|asuragd\w*|omegascans?|omega\s*scans?|amega\s*scans?|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|webtoon\s+ip\s+holder|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|tapas|lezhin|recruiting|discord|patreon|paypal|ko-?fi|buymeacoffee|join\s+(?:our|us)|support\s+us|read\s+(?:early|it)?\s*(?:at|on|first)|other\s+series\s+we\s+(?:do|translate|scan|work\s+on)|chapter\s*\d+|çevirmen|çeviri|editör|dizgi|temizleme)(?![\p{L}\p{N}_])|^dsns$|(?:^|\s)(?:tl|pr|ed|cl|rd|ts|qc|ktl|tlc)(?:\s*[:\-]\s*|\s+)(?:staff|[a-z0-9_]{2,14})$""",
 		RegexOption.IGNORE_CASE,
 	)
 
 	private val STANDALONE_SCANLATION_ROLE_REGEX = Regex(
-		"""^(?:tl|pr|cl|rd|ts|qc|ktl|tlc|tl/pr|cl/rd|ts/qc)\s*[:\-]?$""",
+		"""^(?:tl|pr|ed|cl|rd|ts|qc|ktl|tlc|tl/pr|cl/rd|ts/qc)\s*[:\-]?$""",
 		RegexOption.IGNORE_CASE,
 	)
 
 	private val CREDIT_HANDLE_TOKEN_REGEX = Regex("""^[A-Z0-9_]{2,16}$""")
 
 	private val INDIVIDUAL_PROMO_CREDIT_REGEX = Regex(
-		"""(?:https?://|www\.|discord\.gg|(?<![\p{L}\p{N}_])(?:discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|scanlation|fansub|fansube|kurohana|asurascans|asuras?\s*scans?|asuragd\w*|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|webtoon\s+ip\s+holder|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|lezhin)(?![\p{L}\p{N}_])|^dsns$|^rgb$|(?<![\p{L}\p{N}_])(?:join\s+(?:our|us)|support\s+us|follow\s+us|read\s+(?:it\s+)?(?:at|on|first))(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|çevirmen|çeviri|editör|dizgi|temizleme)\s*[:\-]|(?:^|\s)(?:tl|pr|cl|rd|ts|qc|ktl|tlc)\s*[:\-]\s*\S)""",
+		"""(?:https?://|www\.|discord\.gg|(?<![\p{L}\p{N}_])(?:discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|scanlation|fansub|fansube|kurohana|asurascans|asuras?\s*scans?|asuragd\w*|omegascans?|omega\s*scans?|amega\s*scans?|reaperscans|reaper\s*scans|flamescans|flame\s*scans|flame[\s-]*chan|reaper[\s-]*chan|asura[\s-]*chan|luminousscans|vortexscans|drakescans|manhuaplus|manhuaus|hivetoons|realmscans|leviathanscans|reset\s*scans|rizz\s*comic|rizz\s*fables|cosmic\s*scans|night\s*scans|void\s*scans|disaster\s*scans|surya\s*scans|templescans?|temple\s*scans?|thunderscans?|thunder\s*scans?|philiascans?|philia\s*scans?|arven\s*comics|nex[o0c]*mic|[gc]radex[\s.\-]*(?:tan|tay)trums?|taytrums?|webtoon\s*xyz|webtoon\s+ip\s+holder|kunmanga|manganato|mangakakalot|zinmanga|1stkissmanga|manhwaclub|manhwafreak|tappytoon|toomics|lezhin)(?![\p{L}\p{N}_])|^dsns$|^rgb$|(?<![\p{L}\p{N}_])(?:join\s+(?:our|us)|support\s+us|follow\s+us|read\s+(?:early|it)?\s*(?:at|on|first)|other\s+series\s+we\s+(?:do|translate|scan|work\s+on))(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:translator|translation|proofreader|proofreading|cleaner|cleaning|redrawer|redraw|typesetter|typesetting|quality\s*checker|editor|raw\s*provider|çevirmen|çeviri|editör|dizgi|temizleme)\s*[:\-]|(?<![\p{L}\p{N}_])(?:writer|artist|author|translator|proofreader|cleaner|redrawer|typesetter|quality\s*checker|editor|raw\s*provider)\s*\||\|\s*(?:translator|proofreader|cleaner|redrawer|typesetter|quality\s*checker|editor|raw\s*provider)\b|(?:^|\s)(?:tl|pr|ed|cl|rd|ts|qc|ktl|tlc)\s*(?:staff|[:\-]\s*\S))""",
 		RegexOption.IGNORE_CASE,
 	)
 
@@ -164,9 +164,17 @@ object TextBlockFilters {
 	)
 
 	private val STRONG_PROMO_REGEX = Regex(
-		"""(?:https?://|www\.|discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|join\s+(?:our|us)|asurascans|asuras?\s*scans?|asuragd\w*|reaperscans|reaper\s*scans|flamescans|flame\s*scans|disaster\s*scans|surya\s*scans|\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|me|to|xyz|club|online|site)\b)""",
+		"""(?:https?://|www\.|discord|patreon|paypal|ko-?fi|buymeacoffee|recruiting|join\s+(?:our|us)|other\s+series\s+we\s+(?:do|translate|scan|work\s+on)|asurascans|asuras?\s*scans?|asuragd\w*|omegascans?|omega\s*scans?|amega\s*scans?|reaperscans|reaper\s*scans|flamescans|flame\s*scans|disaster\s*scans|surya\s*scans|\b[a-z0-9-]{2,}\.(?:com|net|org|gg|io|me|to|xyz|club|online|site)\b)""",
 		RegexOption.IGNORE_CASE,
 	)
+
+	private val FOOTER_PROMO_SECTION_HEADING_REGEX = Regex(
+		"""(?:other\s+series\s+we\s+(?:do|translate|scan|work\s+on)|check\s+out\s+our\s+other|more\s+(?:chapters|series)\s+(?:at|on))""",
+		RegexOption.IGNORE_CASE,
+	)
+
+	private val LEADING_SINGLE_DOT_UPPER_REGEX = Regex("""^\.([A-Z]\p{L}+.*)$""")
+	private val STRAY_LOWER_CONSONANT_PREFIX_REGEX = Regex("""^([b-hj-z])\s+([A-Z]\p{L}+.*)$""")
 
 	private val KNOWN_RPG_STAT_KEY_REGEX = Regex(
 		"""^(?:name|isim|ad|level|lvl|lv|seviye|race|type|t[üu]r|class|s[ıi]n[ıi]f|rank|r[üu]tbe|title|unvan|hp|mp|sp|xp|exp|health|can|mana|b[üu]y[üu]|stamina|dayan[ıi]kl[ıi]l[ıi]k|atk|attack|sald[ıi]r[ıi]|def|defense|savunma|str|strength|g[üu][çc]|agi|agility|[çc]eviklik|dex|int|intelligence|zeka|vit|vitality|luk|luck|[şs]ans|speed|h[ıi]z|weapon|silah|armor|z[ıi]rh|skill|skills|yetenek|yetenekler|ability|abilities|owner|sahip|master|stat|stats|status|durum|power|g[üu][çc]\s*puan[ıi]|evolution(?:\s*points?)?|evrim(?:\s*puan[ıi])?|points?|tier|grade|element|attribute|effect|passive|active|reward|[öo]d[üu]l|quest|g[öo]rev|mission|condition|ko[şs]ul|age|ya[şs]|gender|cinsiyet|affiliation|clan|klan|sect|tarikat|realm|diyar|stage|a[şs]ama|cultivation|trait|traits|buff|debuff|equipment|ekipman|item|e[şs]ya|description|a[çc][ıi]klama|durability|host|system)$""",
@@ -216,7 +224,14 @@ object TextBlockFilters {
 		result = SPANISH_QLE_REGEX.replace(result, "QUE")
 		result = SPANISH_QLIEN_REGEX.replace(result, "QUIEN")
 		result = SPANISH_MLCH_REGEX.replace(result) { m -> "Much${m.groupValues[1]}" }
-		return WHITESPACE_REGEX.replace(result, " ").trim()
+		result = WHITESPACE_REGEX.replace(result, " ").trim()
+		STRAY_LOWER_CONSONANT_PREFIX_REGEX.matchEntire(result)?.let { m ->
+			result = m.groupValues[2]
+		}
+		LEADING_SINGLE_DOT_UPPER_REGEX.matchEntire(result)?.let { m ->
+			result = "...${m.groupValues[1]}"
+		}
+		return result
 	}
 
 	internal fun joinHyphenatedWords(text: String): String =
@@ -302,6 +317,11 @@ object TextBlockFilters {
 
 		if (line.confidence < effectiveMinConf) return false
 		if (letters == 0) return false
+		if (!multiScript && !isBracketedTag && alphaOnly.length == 1 && !text.contains('?') && !text.contains('!') &&
+			(alphaOnly != "I" || line.height >= 90f)
+		) {
+			return false
+		}
 		if (letters < 2 && !multiScript && !SINGLE_LATIN_WORD_REGEX.matches(text) && !(isBracketedTag && junk == 0)) {
 			return false
 		}
@@ -442,6 +462,9 @@ object TextBlockFilters {
 		val trimmed = text.trim()
 		if (trimmed.isEmpty()) return true
 		if (countLetters(trimmed) == 0) return true
+		if (trimmed.length == 1 && trimmed[0].isLetter() && trimmed[0].code < 128 && trimmed[0].uppercaseChar() != 'I') {
+			return true
+		}
 		if (
 			filterPromoAndCredits && (
 				URL_LINE_REGEX.containsMatchIn(trimmed) ||
@@ -462,6 +485,17 @@ object TextBlockFilters {
 		val promo = bubbles.count { isCreditOrPromoText(it.text) }
 		if (promo == 0) return false
 		if (promo == bubbles.size) return true
+
+		// Never discard an entire story strip just because it carries an embedded scanlation banner
+		// when clear non-credit multi-word story dialogue appears in the middle/story area.
+		val hasStoryDialogue = bubbles.any { b ->
+			!isCreditOrPromoText(b.text) &&
+				!STANDALONE_SCANLATION_ROLE_REGEX.matches(b.text.trim()) &&
+				b.box.yMax > 175f &&
+				b.box.yMin < 825f &&
+				b.text.trim().split(WHITESPACE_REGEX).size >= 4
+		}
+		if (hasStoryDialogue) return false
 
 		val hasStrongPromo = bubbles.any { STRONG_PROMO_REGEX.containsMatchIn(it.text) }
 		val creditRolesCount = bubbles.count {
@@ -499,12 +533,63 @@ object TextBlockFilters {
 		if (filterPromoAndCredits && isCreditsOrPromoPage(bubbles)) {
 			return emptyList()
 		}
-		return bubbles.filterNot { bubble ->
-			shouldSkipBlock(
-				text = bubble.text,
-				skipPureSfx = skipPureSfx,
-				filterPromoAndCredits = filterPromoAndCredits,
-			)
+		val promoBannerExcludedIds = if (filterPromoAndCredits && bubbles.size >= 4) {
+			findEmbeddedPromoBannerBubbleIds(bubbles)
+		} else {
+			emptySet()
 		}
+		return bubbles.filterNot { bubble ->
+			bubble.id in promoBannerExcludedIds ||
+				shouldSkipBlock(
+					text = bubble.text,
+					skipPureSfx = skipPureSfx,
+					filterPromoAndCredits = filterPromoAndCredits,
+				)
+		}
+	}
+
+	private fun findEmbeddedPromoBannerBubbleIds(bubbles: List<OcrBubbleGroup>): Set<String> {
+		val topPromoAnchors = bubbles.filter { b ->
+			b.box.yMax <= 165f &&
+				(isCreditOrPromoText(b.text) ||
+					STANDALONE_SCANLATION_ROLE_REGEX.matches(b.text.trim()) ||
+					STRONG_PROMO_REGEX.containsMatchIn(b.text))
+		}
+		val bottomPromoAnchors = bubbles.filter { b ->
+			b.box.yMin >= 835f &&
+				(isCreditOrPromoText(b.text) ||
+					STANDALONE_SCANLATION_ROLE_REGEX.matches(b.text.trim()) ||
+					STRONG_PROMO_REGEX.containsMatchIn(b.text))
+		}
+		val excluded = HashSet<String>()
+		if (topPromoAnchors.size >= 2 && topPromoAnchors.any { STRONG_PROMO_REGEX.containsMatchIn(it.text) }) {
+			val minY = topPromoAnchors.minOf { it.box.yMin } - 8f
+			val maxY = topPromoAnchors.maxOf { it.box.yMax } + 10f
+			for (b in bubbles) {
+				if (b.box.yMin >= minY && b.box.yMax <= maxY) {
+					excluded.add(b.id)
+				}
+			}
+		}
+		if (bottomPromoAnchors.size >= 2 && bottomPromoAnchors.any { STRONG_PROMO_REGEX.containsMatchIn(it.text) }) {
+			val minY = bottomPromoAnchors.minOf { it.box.yMin } - 10f
+			val maxY = bottomPromoAnchors.maxOf { it.box.yMax } + 8f
+			for (b in bubbles) {
+				if (b.box.yMin >= minY && b.box.yMax <= maxY) {
+					excluded.add(b.id)
+				}
+			}
+		}
+		val footerHeading = bubbles.firstOrNull { b ->
+			b.box.yMin >= 450f && FOOTER_PROMO_SECTION_HEADING_REGEX.containsMatchIn(b.text)
+		}
+		if (footerHeading != null) {
+			for (b in bubbles) {
+				if (b.box.yMin >= footerHeading.box.yMin - 6f) {
+					excluded.add(b.id)
+				}
+			}
+		}
+		return excluded
 	}
 }

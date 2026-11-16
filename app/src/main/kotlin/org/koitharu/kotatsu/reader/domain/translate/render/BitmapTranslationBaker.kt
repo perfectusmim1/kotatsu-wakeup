@@ -156,7 +156,7 @@ class BitmapTranslationBaker @Inject constructor(
 				totalHeightPx += lineFontPx * layout.lineHeightRatio
 			}
 			if (!blockSaved && rect.height() >= 14f && totalHeightPx > rect.height() && totalHeightPx > 0f) {
-				val fitScale = (rect.height() / totalHeightPx).coerceIn(0.58f, 1f)
+				val fitScale = (rect.height() / totalHeightPx).coerceIn(0.42f, 1f)
 				effectiveBaseFontPx = (effectiveBaseFontPx * fitScale).coerceAtLeast(6f)
 				totalHeightPx = 0f
 				for (line in lines) {
@@ -412,7 +412,29 @@ class BitmapTranslationBaker @Inject constructor(
 			)
 		}
 
-		val origRects = drawableIndices.map { idx -> toBlockRect(layouts[idx].refinedBox) }
+		fun toDrawnContentRect(layout: RefinedBlockLayout): BlockRect {
+			val r = toBlockRect(layout.refinedBox)
+			var totalH = 0f
+			var maxW = 0f
+			for (wl in layout.wrappedLines) {
+				totalH += (layout.fontPx * wl.scale).coerceAtLeast(6f) * layout.lineHeightRatio
+				if (wl.widthPx > maxW) maxW = wl.widthPx
+			}
+			val pad = max(4f, layout.fontPx * 0.25f)
+			if (totalH + pad > r.height) {
+				val cy = r.centerY
+				r.top = min(r.top, cy - (totalH + pad) * 0.5f)
+				r.bottom = max(r.bottom, cy + (totalH + pad) * 0.5f)
+			}
+			if (maxW + pad * 2f > r.width) {
+				val cx = r.centerX
+				r.left = min(r.left, cx - (maxW + pad * 2f) * 0.5f)
+				r.right = max(r.right, cx + (maxW + pad * 2f) * 0.5f)
+			}
+			return r
+		}
+
+		val origRects = drawableIndices.map { idx -> toDrawnContentRect(layouts[idx]) }
 		val resolvedRects = origRects.map { it.copy() }
 		val anchorRects = drawableIndices.map { idx -> toBlockRect(layouts[idx].bubble.box) }
 
@@ -521,7 +543,7 @@ class BitmapTranslationBaker @Inject constructor(
 			imgH: Float,
 		) {
 			if (rects.size <= 1 || rects.size != anchors.size) return
-			val gap = max(6f, min(imgW, imgH) * 0.005f)
+			val gap = max(8f, min(imgW, imgH) * 0.008f)
 			val minBoxW = 20f
 			val minBoxH = 12f
 			val boundMaxX = (imgW - 4f).coerceAtLeast(4f + minBoxW)

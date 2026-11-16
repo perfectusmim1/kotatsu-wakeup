@@ -1135,6 +1135,7 @@ class StyleExtractor @Inject constructor() {
 		val ringMedGf = ringMedG.toFloat()
 		val ringMedBf = ringMedB.toFloat()
 		val ringMedLum = PixelColorMath.luminance(ringMedRf, ringMedGf, ringMedBf)
+		val ringMedChroma = max(ringMedRf, max(ringMedGf, ringMedBf)) - min(ringMedRf, min(ringMedGf, ringMedBf))
 
 		fun hasSmoothCleanNeighbor(pIdx: Int, cr: Float, cg: Float, cb: Float): Boolean {
 			val py = pIdx / ww
@@ -1168,6 +1169,7 @@ class StyleExtractor @Inject constructor() {
 			val cg = cleaned[c3 + 1]
 			val cb = cleaned[c3 + 2]
 			val pLum = PixelColorMath.luminance(cr, cg, cb)
+			val pChroma = max(cr, max(cg, cb)) - min(cr, min(cg, cb))
 			val dRing = PixelColorMath.maxChannelDiff(cr, cg, cb, ringMedRf, ringMedGf, ringMedBf)
 			val darkAAFloor = when {
 				ringMedLum >= 165f -> 44f
@@ -1178,12 +1180,18 @@ class StyleExtractor @Inject constructor() {
 				ringMedLum >= 75f &&
 				pLum < ringMedLum - 28f &&
 				!hasSmoothCleanNeighbor(pIdx, cr, cg, cb)
-			val isUnmaskedGlowHalo = dRing >= 26f &&
-				ringMedLum < 160f &&
-				pLum > ringMedLum + 32f &&
+			val isUnmaskedGlowHalo = (dRing >= 16f &&
+				ringMedLum < 238f &&
+				pLum >= max(240f, ringMedLum + 14f) &&
+				(!hasSmoothCleanNeighbor(pIdx, cr, cg, cb) || (ringMedChroma >= 7f && pChroma <= 12f))) ||
+				(dRing >= 26f && ringMedLum < 160f && pLum > ringMedLum + 32f && !hasSmoothCleanNeighbor(pIdx, cr, cg, cb))
+			val isUnmaskedChromaAA = ringMedLum >= 120f &&
+				dRing >= 22f &&
+				(pChroma - ringMedChroma >= 24f) &&
 				!hasSmoothCleanNeighbor(pIdx, cr, cg, cb)
 			if (isUnmaskedDarkHalo ||
 				isUnmaskedGlowHalo ||
+				isUnmaskedChromaAA ||
 				(dRing > 48f &&
 					pLum < darkAAFloor &&
 					ringMedLum >= 52f &&
@@ -1217,7 +1225,8 @@ class StyleExtractor @Inject constructor() {
 			} else {
 				min(95f, max(40f, ringMedLum - 35f))
 			}
-			val maxLook = if (bestIdx < 0 || baseLum < max(70f, ringMedLum - 15f)) 14 else 8
+			val startedOnWhiteGlow = ringMedLum < 238f && baseLum >= max(242f, ringMedLum + 12f)
+			val maxLook = if (bestIdx < 0 || baseLum < max(70f, ringMedLum - 15f) || startedOnWhiteGlow) 14 else 8
 			val maxTotalScan = 24
 			var cleanSteps = 0
 			for (s in 1..maxTotalScan) {
@@ -1241,11 +1250,14 @@ class StyleExtractor @Inject constructor() {
 					ringMedB > ringMedR + 12 &&
 						(cleaned[cc + 2] - cleaned[cc]) > refBlueDiff + 10f
 				val allowLumEscape = bestIdx < 0 || bestLum < suspiciousDarkCut
-				if ((allowLumEscape && candLum > bestLum + 10f) || bestIdx < 0 || candBlueMatch) {
+				val allowGlowEscape = startedOnWhiteGlow &&
+					(bestIdx < 0 || bestLum >= max(240f, ringMedLum + 12f)) &&
+					candLum < (if (bestIdx >= 0) bestLum else baseLum) - 8f
+				if ((allowLumEscape && candLum > bestLum + 10f) || allowGlowEscape || bestIdx < 0 || candBlueMatch) {
 					bestIdx = candIdx
 					bestLum = candLum
 					if (candLum >= baseLum + 26f && cleanSteps >= 5) break
-				} else if (bestIdx >= 0 && bestLum >= 165f && cleanSteps >= 2 && abs(candLum - bestLum) <= 8f) {
+				} else if (!startedOnWhiteGlow && bestIdx >= 0 && bestLum >= 165f && cleanSteps >= 2 && abs(candLum - bestLum) <= 8f) {
 					break
 				}
 			}
