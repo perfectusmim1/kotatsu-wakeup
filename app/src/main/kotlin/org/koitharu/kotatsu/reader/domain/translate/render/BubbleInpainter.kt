@@ -806,16 +806,20 @@ class BubbleInpainter @Inject constructor(
 				bgLumInit = PixelColorMath.luminance(bgR, bgG, bgB)
 			}
 
-			val hasWhiteHaloAroundDarkStrokes =
-				jetBlackCoreCount >= 24 &&
-					whiteTouchesDarkOutline >= 24 &&
-					whiteTouchesMid >= blackTouchesMid
+			val hasWhiteHaloAroundDarkStrokes = hasWhiteHaloAroundDarkStrokesOnScene(
+				bgLumInit = bgLumInit,
+				jetBlackCoreCount = jetBlackCoreCount,
+				whiteTouchesDarkOutline = whiteTouchesDarkOutline,
+				whiteTouchesMid = whiteTouchesMid,
+				blackTouchesMid = blackTouchesMid,
+				coreSamples = coreSamples,
+			)
 			var preferLightFirst =
-				!hasWhiteHaloAroundDarkStrokes &&
-					(bgLumInit < 55f ||
-						isWhiteFillDarkOutlineOnScene ||
-						hasWhiteFillDarkOutlineOnMidScene ||
-						(!isDarkHaloScene && bgLumInit < 160f && brighterCount > darkerCount * 2.2f && darkerCount < brighterCount * 0.35f))
+				bgLumInit < 55f ||
+					(!hasWhiteHaloAroundDarkStrokes &&
+						(isWhiteFillDarkOutlineOnScene ||
+							hasWhiteFillDarkOutlineOnMidScene ||
+							(!isDarkHaloScene && bgLumInit < 160f && brighterCount > darkerCount * 2.2f && darkerCount < brighterCount * 0.35f)))
 			val isBlueOrMidPanel = bgB > bgR + 20 || bgLumInit >= 50f
 			val isSingleOrDarkSfx =
 				preferLightFirst &&
@@ -1087,7 +1091,7 @@ class BubbleInpainter @Inject constructor(
 			}
 			if (pass.accepted.isEmpty() || pass.spanW < bw * 0.68f) {
 				val canTryAlt = if (preferLightFirst) {
-					darkerCount >= brighterCount * 0.25f || pass.accepted.isEmpty()
+					bgLumInit >= 40f && (darkerCount >= brighterCount * 0.25f || pass.accepted.isEmpty())
 				} else {
 					!hasWhiteHaloAroundDarkStrokes &&
 						(whiteCoreCount >= 6 || bgLumInit < 228f || darkerCount <= brighterCount * 3)
@@ -3433,6 +3437,20 @@ class BubbleInpainter @Inject constructor(
 			}
 			return false
 		}
+
+		internal fun hasWhiteHaloAroundDarkStrokesOnScene(
+			bgLumInit: Float,
+			jetBlackCoreCount: Int,
+			whiteTouchesDarkOutline: Int,
+			whiteTouchesMid: Int,
+			blackTouchesMid: Int,
+			coreSamples: Int,
+		): Boolean =
+			bgLumInit >= 75f &&
+				jetBlackCoreCount >= 24 &&
+				jetBlackCoreCount < max(25, (coreSamples * 0.45f).toInt()) &&
+				whiteTouchesDarkOutline >= 24 &&
+				whiteTouchesMid >= blackTouchesMid
 
 		internal fun shouldSuppressComponentForSibling(
 			ax0: Int,

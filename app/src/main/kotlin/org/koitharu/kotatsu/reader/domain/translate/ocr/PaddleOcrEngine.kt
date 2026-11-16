@@ -900,10 +900,14 @@ class PaddleOcrEngine @Inject constructor(
 				}
 			}
 
-			suspend fun runTightTiltedProbe(tiltDeg: Float): Pair<String, Float> {
-				val boxW = cw + 6f
-				val boxH = (if (useTiltedUnwarp) min(region.obbH + 4f, ch * 0.72f) else ch * 0.70f).coerceAtLeast(24f)
-				val rawTw = ((REC_H * boxW) / boxH).roundToInt()
+			suspend fun runRotatedRectRec(
+				cxOffset: Float,
+				cyOffset: Float,
+				boxW: Float,
+				boxH: Float,
+				angleDeg: Float,
+			): Pair<String, Float> {
+				val rawTw = ((REC_H * boxW) / boxH.coerceAtLeast(1f)).roundToInt()
 				val tw = rawTw.coerceIn(16, REC_MAX_W)
 				val outW = ((tw + 7) / 8) * 8
 				val recTotal = 3 * REC_H * outW
@@ -913,17 +917,15 @@ class PaddleOcrEngine @Inject constructor(
 				}
 				recFloatArray.fill(0f, 0, recTotal)
 				val recBuf = checkNotNull(recDirectBuf)
-				val cxPage = (region.x0 + region.x1) * 0.5f - cropX0
-				val cyPage = (region.y0 + region.y1) * 0.5f - cropY0
 				sampleRotatedAngleToBgrTensor(
 					pixels = cropPixels,
 					imgW = cropW,
 					imgH = cropH,
-					cx = cxPage,
-					cy = cyPage,
+					cx = cxOffset,
+					cy = cyOffset,
 					boxW = boxW,
 					boxH = boxH,
-					angleDeg = tiltDeg,
+					angleDeg = angleDeg,
 					tw = tw,
 					th = REC_H,
 					outW = outW,
@@ -960,6 +962,14 @@ class PaddleOcrEngine @Inject constructor(
 						}
 					}
 				}
+			}
+
+			suspend fun runTightTiltedProbe(tiltDeg: Float): Pair<String, Float> {
+				val boxW = cw + 6f
+				val boxH = (if (useTiltedUnwarp) min(region.obbH + 4f, ch * 0.72f) else ch * 0.70f).coerceAtLeast(24f)
+				val cxPage = (region.x0 + region.x1) * 0.5f - cropX0
+				val cyPage = (region.y0 + region.y1) * 0.5f - cropY0
+				return runRotatedRectRec(cxPage, cyPage, boxW, boxH, tiltDeg)
 			}
 
 			val primaryMode = when {
@@ -1041,6 +1051,47 @@ class PaddleOcrEngine @Inject constructor(
 				if (eText.isNotEmpty() && (eScore > bestScore * 1.05f || (bestConf < minConfidence && eConf >= minConfidence && eScore > 0f))) {
 					bestText = eText
 					bestConf = eConf
+				}
+			}
+
+			// If a wide tilted OBB merges two closely stacked lines (e.g. tilted phone screen UI text),
+			// probe upper and lower halves along the rotated perpendicular axis so neither line gets squished.
+			if (useTiltedUnwarp &&
+				region.obbH >= 46f &&
+				region.obbW >= region.obbH * 1.8f &&
+				(bestConf < 85f || bestScore < 0f)
+			) {
+				val rad = Math.toRadians(region.angleDeg.toDouble())
+				val vx = -sin(rad).toFloat()
+				val vy = cos(rad).toFloat()
+				val shift = region.obbH * 0.22f
+				val subH = (region.obbH * 0.54f).coerceAtLeast(24f)
+				val subW = region.obbW + (region.obbH * 0.14f).coerceIn(2f, 5f) * 2f
+				val baseCx = region.cx - cropX0
+				val baseCy = region.cy - cropY0
+				val (rawTopText, topConf) = runRotatedRectRec(baseCx - shift * vx, baseCy - shift * vy, subW, subH, region.angleDeg)
+				val (rawBotText, botConf) = runRotatedRectRec(baseCx + shift * vx, baseCy + shift * vy, subW, subH, region.angleDeg)
+				val topText = rawTopText.trim()
+				val botText = rawBotText.trim()
+				val avgSplitConf = (topConf + botConf) * 0.5f
+				val splitScore = scoreCandidate(topText, topConf) + scoreCandidate(botText, botConf)
+				if (topConf >= minConfidence &&
+					botConf >= minConfidence &&
+					TextBlockFilters.countLetters(topText) >= 3 &&
+					TextBlockFilters.countLetters(botText) >= 3 &&
+					!textsOverlapNearDuplicate(topText, botText) &&
+					avgSplitConf >= max(78f, bestConf + 10f) &&
+					splitScore > bestScore
+				) {
+					val rx0 = region.x0.roundToInt().toFloat()
+					val ry0 = region.y0.roundToInt().toFloat()
+					val rx1 = region.x1.roundToInt().toFloat()
+					val ry1 = region.y1.roundToInt().toFloat()
+					val splitTopY1 = (region.y0 + ch * 0.62f).roundToInt().toFloat()
+					val splitBotY0 = (region.y0 + ch * 0.38f).roundToInt().toFloat()
+					collectedLines.add(RawOcrLine(topText, topConf, rx0, ry0, rx1, splitTopY1))
+					collectedLines.add(RawOcrLine(botText, botConf, rx0, splitBotY0, rx1, ry1))
+					continue
 				}
 			}
 

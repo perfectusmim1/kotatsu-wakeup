@@ -414,4 +414,32 @@ class Ch1TranslationRegressionTest {
 			),
 		)
 	}
+
+	@Test
+	fun pureBlackWhiteTextDoesNotTriggerWhiteHaloAroundDarkStrokes() {
+		// Page 1 "[SAFE AND COMPLACENT]" / "[KEEPING A LOW PROFILE]" / "MY NAME IS MAENG DOYOON"
+		// have bgLumInit == 0f with large jetBlackCoreCount and anti-aliased mid-tone touches.
+		// White halo detection must NEVER treat pure-black background as dark strokes.
+		assertFalse(
+			BubbleInpainter.hasWhiteHaloAroundDarkStrokesOnScene(
+				bgLumInit = 0f,
+				jetBlackCoreCount = 10705,
+				whiteTouchesDarkOutline = 2117,
+				whiteTouchesMid = 1190,
+				blackTouchesMid = 1186,
+				coreSamples = 17500,
+			),
+		)
+		// Mid-tone scene with dark text + white halo ("I'm really okay." / "ME?") MUST trigger true.
+		assertTrue(
+			BubbleInpainter.hasWhiteHaloAroundDarkStrokesOnScene(
+				bgLumInit = 120f,
+				jetBlackCoreCount = 1877,
+				whiteTouchesDarkOutline = 536,
+				whiteTouchesMid = 668,
+				blackTouchesMid = 284,
+				coreSamples = 6540,
+			),
+		)
+	}
 }
