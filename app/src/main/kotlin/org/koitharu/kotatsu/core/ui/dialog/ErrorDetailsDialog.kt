@@ -9,10 +9,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.github.AppUpdateRepository
+import org.koitharu.kotatsu.core.model.MangaSource
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.ui.AlertDialogFragment
 import org.koitharu.kotatsu.core.util.ext.copyToClipboard
+import org.koitharu.kotatsu.core.util.ext.findSource
 import org.koitharu.kotatsu.core.util.ext.getCauseUrl
 import org.koitharu.kotatsu.core.util.ext.isHttpUrl
 import org.koitharu.kotatsu.core.util.ext.isReportable
@@ -82,9 +85,13 @@ class ErrorDetailsDialog : AlertDialogFragment<DialogErrorDetailsBinding>(), Vie
 	}
 
 	override fun onClick(v: View) {
+		val resolvedSource = arguments?.getString(AppRouter.KEY_SOURCE)
+			?.let(::MangaSource)
+			?.takeUnless { it == UnknownMangaSource }
+			?: exception.findSource()
 		router.openBrowser(
 			url = exception.getCauseUrl() ?: return,
-			source = null,
+			source = resolvedSource,
 			title = null,
 		)
 	}

@@ -92,13 +92,14 @@ class ChaptersLoader @Inject constructor(
 		isNext: Boolean,
 		trimPages: Boolean = true,
 		readingChapterId: Long? = null,
+		mayStartVerification: Boolean = false,
 	): Boolean {
 		val chapters = manga.allChapters
 		val predicate: (MangaChapter) -> Boolean = { it.id == currentId }
 		val index = if (isNext) chapters.indexOfFirst(predicate) else chapters.indexOfLast(predicate)
 		if (index == -1) return false
 		val newChapter = chapters.getOrNull(if (isNext) index + 1 else index - 1) ?: return false
-		val newPages = loadChapter(newChapter.id, mayStartVerification = false)
+		val newPages = loadChapter(newChapter.id, mayStartVerification = mayStartVerification)
 		mutex.withLock {
 			synchronized(chapterPages) {
 				if (trimPages && chapterPages.chaptersSize > 1 && chapterPages.size > PAGES_TRIM_THRESHOLD) {

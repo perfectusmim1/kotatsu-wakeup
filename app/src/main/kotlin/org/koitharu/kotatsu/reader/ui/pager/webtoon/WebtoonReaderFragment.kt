@@ -50,6 +50,7 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 	private var recyclerLifecycleDispatcher: RecyclerViewLifecycleDispatcher? = null
 	private var canGoPrev = true
 	private var canGoNext = true
+	private var isUpdatingItems = false
 
 	override fun onCreateViewBinding(
 		inflater: LayoutInflater,
@@ -135,7 +136,9 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 		firstVisiblePosition: Int,
 		lastVisiblePosition: Int,
 	) {
-		viewModel.onCurrentPageChanged(firstVisiblePosition, lastVisiblePosition)
+		if (!isUpdatingItems) {
+			viewModel.onCurrentPageChanged(firstVisiblePosition, lastVisiblePosition)
+		}
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
@@ -145,60 +148,114 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 		var anchorPos = RecyclerView.NO_POSITION
 		var anchorPage: ReaderPage? = null
 		var anchorTop = 0
+		val fallbackState = if (pendingState == null) viewModel.getCurrentState() else null
 		if (pendingState == null && rv != null && lm != null && adapter.hasItems) {
 			anchorPos = lm.findFirstVisibleItemPosition()
 			if (anchorPos != RecyclerView.NO_POSITION) {
 				anchorPage = adapter.getItemOrNull(anchorPos)
 				anchorTop = lm.findViewByPosition(anchorPos)?.top ?: 0
+			} else if (fallbackState != null) {
+				anchorPage = (0 until adapter.itemCount)
+					.asSequence()
+					.mapNotNull { adapter.getItemOrNull(it) }
+					.firstOrNull { it.chapterId == fallbackState.chapterId && it.index == fallbackState.page }
 			}
 		}
-		val setItems = launch {
-			adapter.setItems(pages)
-			yield()
-			viewBinding?.recyclerView?.let { recycler ->
-				recyclerLifecycleDispatcher?.invalidate(recycler)
-			}
-		}
-		if (pendingState != null) {
-			val position = pages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
-			setItems.join()
-			if (position != -1) {
-				with(requireViewBinding().recyclerView) {
-					stopScroll()
-					val gap = if (pendingState.scroll > 0 && position > 0 && viewModel.isWebtoonGapsEnabled.value) {
-						resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
-					} else {
-						0
-					}
-					val layoutManager = layoutManager as? LinearLayoutManager
-					if (gap != 0 && layoutManager != null) {
-						layoutManager.scrollToPositionWithOffset(position, -gap)
-					} else {
-						firstVisibleItemPosition = position
-					}
-					post {
-						(findViewHolderForAdapterPosition(position) as? WebtoonHolder)
-							?.restoreScroll(pendingState.scroll)
-						notifyScrollChanged()
-					}
+		var notifyPosition = -1
+		isUpdatingItems = true
+		try {
+			val setItems = launch {
+				adapter.setItems(pages)
+				yield()
+				viewBinding?.recyclerView?.let { recycler ->
+					recyclerLifecycleDispatcher?.invalidate(recycler)
 				}
-				viewModel.onCurrentPageChanged(position, position)
+			}
+			if (pendingState != null) {
+				val position = pages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
+				setItems.join()
+				if (position != -1) {
+					with(requireViewBinding().recyclerView) {
+						stopScroll()
+						val gap = if (pendingState.scroll > 0 && position > 0 && viewModel.isWebtoonGapsEnabled.value) {
+							resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
+						} else {
+							0
+						}
+						val layoutManager = layoutManager as? LinearLayoutManager
+						if (gap != 0 && layoutManager != null) {
+							layoutManager.scrollToPositionWithOffset(position, -gap)
+						} else {
+							firstVisibleItemPosition = position
+						}
+						post {
+							(findViewHolderForAdapterPosition(position) as? WebtoonHolder)
+								?.restoreScroll(pendingState.scroll)
+							notifyScrollChanged()
+						}
+					}
+					notifyPosition = position
+				} else {
+					Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
+						.show()
+				}
 			} else {
-				Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
-					.show()
-			}
-		} else {
-			setItems.join()
-			val savedAnchor = anchorPage
-			if (savedAnchor != null && rv != null && lm != null) {
-				val newPosition = pages.indexOfFirst {
-					it.id == savedAnchor.id && it.chapterId == savedAnchor.chapterId
+				setItems.join()
+				if (rv != null && lm != null) {
+					val savedAnchor = anchorPage
+					if (savedAnchor != null) {
+						val newPosition = pages.indexOfFirst {
+							it.id == savedAnchor.id && it.chapterId == savedAnchor.chapterId
+						}.takeIf { it != -1 }
+							?: pages.indexOfPosition(savedAnchor.chapterId, savedAnchor.index)
+							?: -1
+						if (newPosition != -1 && (newPosition != anchorPos || anchorPos == RecyclerView.NO_POSITION)) {
+							if (anchorPos == RecyclerView.NO_POSITION && fallbackState != null && fallbackState.scroll > 0) {
+								val gap = if (newPosition > 0 && viewModel.isWebtoonGapsEnabled.value) {
+									resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
+								} else {
+									0
+								}
+								lm.scrollToPositionWithOffset(newPosition, -gap)
+								rv.post {
+									(rv.findViewHolderForAdapterPosition(newPosition) as? WebtoonHolder)
+										?.restoreScroll(fallbackState.scroll)
+									rv.notifyScrollChanged()
+								}
+							} else {
+								lm.scrollToPositionWithOffset(newPosition, anchorTop)
+								rv.updateChildrenScroll()
+							}
+							notifyPosition = newPosition
+						}
+					} else if (fallbackState != null) {
+						val newPosition = pages.indexOfPosition(fallbackState.chapterId, fallbackState.page) ?: -1
+						if (newPosition != -1) {
+							val gap = if (fallbackState.scroll > 0 && newPosition > 0 && viewModel.isWebtoonGapsEnabled.value) {
+								resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
+							} else {
+								0
+							}
+							if (gap != 0) {
+								lm.scrollToPositionWithOffset(newPosition, -gap)
+							} else {
+								rv.firstVisibleItemPosition = newPosition
+							}
+							rv.post {
+								(rv.findViewHolderForAdapterPosition(newPosition) as? WebtoonHolder)
+									?.restoreScroll(fallbackState.scroll)
+								rv.notifyScrollChanged()
+							}
+							notifyPosition = newPosition
+						}
+					}
 				}
-				if (newPosition != -1 && newPosition != anchorPos) {
-					lm.scrollToPositionWithOffset(newPosition, anchorTop)
-					rv.updateChildrenScroll()
-				}
 			}
+		} finally {
+			isUpdatingItems = false
+		}
+		if (notifyPosition != -1) {
+			viewModel.onCurrentPageChanged(notifyPosition, notifyPosition)
 		}
 	}
 

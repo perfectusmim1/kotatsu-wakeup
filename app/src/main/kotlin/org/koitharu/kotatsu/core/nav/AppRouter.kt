@@ -36,6 +36,7 @@ import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.image.CoilMemoryCacheKey
 import org.koitharu.kotatsu.core.model.FavouriteCategory
 import org.koitharu.kotatsu.core.model.MangaSourceInfo
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.model.appUrl
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isBroken
@@ -473,10 +474,11 @@ class AppRouter private constructor(
         }.show()
     }
 
-    fun showErrorDialog(error: Throwable, url: String? = null) {
-        ErrorDetailsDialog().withArgs(2) {
+    fun showErrorDialog(error: Throwable, url: String? = null, source: MangaSource? = null) {
+        ErrorDetailsDialog().withArgs(3) {
             putSerializable(KEY_ERROR, error)
             putString(KEY_URL, url)
+            putString(KEY_SOURCE, source?.takeUnless { it == UnknownMangaSource }?.name)
         }.show()
     }
 

@@ -66,6 +66,7 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		intent?.getBooleanExtra(EXTRA_ESCALATED_FROM_HIDDEN, false) == true
 	}
 	private var resultNotified = false
+	private var browserSessionCompletedMarked = false
 	private var escalationRequested = false
 	private var mangaSource: MangaSource = UnknownMangaSource
 	private var repository: ParserMangaRepository? = null
@@ -195,8 +196,7 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 			val webViewUserAgent = viewBinding.webView.settings.userAgentString?.nullIfEmpty()
 			val urls = listOfNotNull(intent?.dataString, viewBinding.webView.url).distinct()
 			CookieManager.getInstance().flush()
-			val targetSource = mangaSource.takeUnless { it == UnknownMangaSource }
-				?: intent?.getStringExtra(AppRouter.KEY_SOURCE)?.let(::MangaSource)
+			val targetSource = resolveTargetSource()
 			if (targetSource != null) {
 				if (!webViewUserAgent.isNullOrEmpty()) {
 					runCatching {
@@ -205,7 +205,7 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 						it.printStackTraceDebug()
 					}
 				}
-				captchaHandler.markBrowserSessionCompleted(targetSource)
+				markTargetBrowserSessionCompleted(targetSource)
 			}
 			processLifecycleScope.launch {
 				persistCookiesAndUserAgent(urls, webViewUserAgent)
@@ -228,18 +228,20 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		// the result reaches every screen that's still awaiting it. Do NOT report failure if we are
 		// handing off to visible CloudFlareActivity.
 		if (!escalationRequested && !resultNotified) {
-			val targetSource = mangaSource.takeUnless { it == UnknownMangaSource }
-				?: intent?.getStringExtra(AppRouter.KEY_SOURCE)?.let(::MangaSource)
+			val targetSource = resolveTargetSource()
 			if (targetSource != null) {
 				if (isAutoResolve) {
 					resultNotified = true
+					if (pendingResult == RESULT_OK) {
+						markTargetBrowserSessionCompleted(targetSource)
+					}
 					captchaAutoResolveCoordinator.notifyResolveResult(
 						targetSource,
 						pendingResult == RESULT_OK,
 					)
 				} else if (pendingResult == RESULT_OK) {
 					resultNotified = true
-					captchaHandler.markBrowserSessionCompleted(targetSource)
+					markTargetBrowserSessionCompleted(targetSource)
 					captchaAutoResolveCoordinator.notifyManualResolveSuccess(targetSource)
 				}
 			}
@@ -483,23 +485,34 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		if (pendingResult == RESULT_OK || escalationRequested) return
 		pendingResult = RESULT_OK
 		resolveJob?.cancel()
+		val targetSource = resolveTargetSource()
+		if (targetSource != null) {
+			markTargetBrowserSessionCompleted(targetSource)
+		}
 		val webViewUserAgent = viewBinding.webView.settings.userAgentString?.nullIfEmpty()
 		val urls = listOfNotNull(intent?.dataString, viewBinding.webView.url).distinct()
 		lifecycleScope.launch {
 			// Sync both WebView cookies and the exact WebView User-Agent before closing the Activity
 			// so the retrying OkHttp request presents the same clearance + UA pair.
 			persistCookiesAndUserAgent(urls, webViewUserAgent)
-			val source = intent?.getStringExtra(AppRouter.KEY_SOURCE)
-			if (source != null) {
-				val resolvedSource = MangaSource(source)
+			if (targetSource != null) {
 				runCatchingCancellable {
-					captchaHandler.discard(resolvedSource)
+					captchaHandler.discard(targetSource)
 				}.onFailure {
 					it.printStackTraceDebug()
 				}
-				captchaHandler.markBrowserSessionCompleted(resolvedSource)
 			}
 			finishAfterTransition()
+		}
+	}
+
+	private fun resolveTargetSource(): MangaSource? = mangaSource.takeUnless { it == UnknownMangaSource }
+		?: intent?.getStringExtra(AppRouter.KEY_SOURCE)?.let(::MangaSource)?.takeUnless { it == UnknownMangaSource }
+
+	private fun markTargetBrowserSessionCompleted(targetSource: MangaSource) {
+		if (!browserSessionCompletedMarked) {
+			browserSessionCompletedMarked = true
+			captchaHandler.markBrowserSessionCompleted(targetSource)
 		}
 	}
 

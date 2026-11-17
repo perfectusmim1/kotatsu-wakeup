@@ -9,9 +9,14 @@ import androidx.activity.viewModels
 import androidx.appcompat.view.ActionMode
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
+import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseActivity
@@ -33,6 +38,7 @@ import org.koitharu.kotatsu.list.ui.model.ListHeader
 import org.koitharu.kotatsu.list.ui.model.MangaListModel
 import org.koitharu.kotatsu.list.ui.size.DynamicItemSizeResolver
 import org.koitharu.kotatsu.parsers.model.Manga
+import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.model.MangaTag
 import org.koitharu.kotatsu.search.domain.SearchKind
 import org.koitharu.kotatsu.search.ui.multi.adapter.SearchAdapter
@@ -49,6 +55,8 @@ class SearchActivity :
 
 	private val viewModel by viewModels<SearchViewModel>()
 	private lateinit var selectionController: ListSelectionController
+	private val pendingRefreshSources = LinkedHashSet<MangaSource>()
+	private var wasPaused = false
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -67,6 +75,9 @@ class SearchActivity :
 		}
 
 		val itemClickListener = OnListItemClickListener<SearchResultsListModel> { item, view ->
+			item.source.unwrap().takeUnless { it == UnknownMangaSource }?.let {
+				pendingRefreshSources.add(it)
+			}
 			if (item.listFilter == null) {
 				router.openSearch(item.source, viewModel.query)
 			} else {
@@ -84,6 +95,7 @@ class SearchActivity :
 		val adapter = SearchAdapter(
 			listener = this,
 			itemClickListener = itemClickListener,
+			onErrorClick = ::onErrorClick,
 			sizeResolver = sizeResolver,
 			selectionDecoration = selectionDecoration,
 		)
@@ -98,6 +110,45 @@ class SearchActivity :
 
 		viewModel.list.observe(this, adapter)
 		viewModel.onError.observeEvent(this, SnackbarErrorObserver(viewBinding.recyclerView, null))
+	}
+
+	override fun onPause() {
+		wasPaused = true
+		super.onPause()
+	}
+
+	override fun onResume() {
+		super.onResume()
+		if (wasPaused) {
+			wasPaused = false
+			val clicked = pendingRefreshSources.toSet()
+			pendingRefreshSources.clear()
+			viewModel.refreshSourcesOnResume(clicked)
+		}
+	}
+
+	private fun onErrorClick(item: SearchResultsListModel) {
+		val error = item.error ?: return
+		val source = item.source.unwrap()
+		if (ExceptionResolver.canResolve(error)) {
+			if (source != UnknownMangaSource) {
+				pendingRefreshSources.add(source)
+			}
+			lifecycleScope.launch {
+				val isResolved = exceptionResolver.resolve(
+					e = error,
+					tryAutoResolve = false,
+					source = source.takeUnless { it == UnknownMangaSource },
+				)
+				if (isResolved && source != UnknownMangaSource) {
+					pendingRefreshSources.remove(source)
+					viewModel.refreshSingleSource(source)
+				}
+			}
+		} else if (source != UnknownMangaSource) {
+			pendingRefreshSources.add(source)
+			router.openSearch(item.source, viewModel.query)
+		}
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {

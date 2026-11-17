@@ -25,6 +25,7 @@ import org.koitharu.kotatsu.browser.cloudflare.CloudFlareHiddenActivity
 import org.koitharu.kotatsu.core.LocalizedAppContext
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
+import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.DefaultActivityLifecycleCallbacks
@@ -43,6 +44,7 @@ import javax.inject.Singleton
 class CaptchaAutoResolveCoordinator @Inject constructor(
 	@LocalizedAppContext private val context: Context,
 	private val webViewExecutorLazy: Lazy<WebViewExecutor>,
+	private val captchaHandlerLazy: Lazy<CaptchaHandler>,
 ) : DefaultActivityLifecycleCallbacks, DefaultLifecycleObserver {
 
 	private val stateMutex = Mutex()
@@ -92,8 +94,9 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	}
 
 	fun markEscalatingToInteractive(source: MangaSource) {
+		val key = source.unwrap()
 		activeSession
-			?.takeIf { it.source == source }
+			?.takeIf { it.source == key }
 			?.isInteractive = true
 		hiddenActivityRef = null
 		reorderPending.set(false)
@@ -101,20 +104,24 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 
 	/** Called by the current solver Activity when it finishes or is manually cancelled. */
 	fun notifyResolveResult(source: MangaSource, success: Boolean) {
+		val key = source.unwrap()
 		activeSession
-			?.takeIf { it.source == source }
+			?.takeIf { it.source == key }
 			?.activityResult
 			?.complete(success)
 	}
 
 	fun notifyManualResolveSuccess(source: MangaSource) {
-		recentFailureAt.remove(source)
-		recentSuccess.remove(source)
+		val key = source.unwrap()
+		recentFailureAt.remove(key)
+		recentSuccess.remove(key)
 		activeSession
-			?.takeIf { it.source == source }
+			?.takeIf { it.source == key }
 			?.activityResult
 			?.complete(true)
 	}
+
+	fun lastResolvedAt(source: MangaSource): Long = recentSuccess[source.unwrap()]?.timestampMs ?: 0L
 
 	fun isResolveActive(source: MangaSource): Boolean = activeSession != null
 
@@ -141,7 +148,8 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 			} catch (e: Exception) {
 				val cf = e.findCloudFlareException()
 				if (cf !is CloudFlareProtectedException || !mayStartVerification) throw e
-				val lastSuccess = recentSuccess[cf.source]
+				val cfSource = cf.source.unwrap()
+				val lastSuccess = recentSuccess[cfSource]
 				if (!didVerify && !staleRetryUsed && lastSuccess != null && attemptStartedAt < lastSuccess.timestampMs) {
 					// Another caller solved Cloudflare while this in-flight request was still running;
 					// allow one clean retry with the newly persisted cookies/UA before treating it as failed.
@@ -151,7 +159,7 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 				if (didVerify) {
 					// Verification reported success and this request is *still* Cloudflare-protected.
 					// Another identical session cannot fix that, so stop asking for one.
-					notifyVerificationIneffective(cf.source)
+					notifyVerificationIneffective(cfSource)
 					throw e
 				}
 				if (retryCount++ >= MAX_REQUEST_RETRIES || !resolveIfEnabled(cf)) throw e
@@ -170,24 +178,26 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	 * forever: the challenge page opens fully every time and the loop still never ends.
 	 */
 	fun notifyVerificationIneffective(source: MangaSource) {
-		Log.w(TAG, "Verification succeeded but $source is still protected; suppressing auto-resolve")
-		recentSuccess.remove(source)
-		recentFailureAt[source] = System.currentTimeMillis()
+		val key = source.unwrap()
+		Log.w(TAG, "Verification succeeded but $key is still protected; suppressing auto-resolve")
+		recentSuccess.remove(key)
+		recentFailureAt[key] = System.currentTimeMillis()
 	}
 
 	/** Resolves [exception] only when automatic solving is enabled for its source. */
 	suspend fun resolveIfEnabled(exception: CloudFlareProtectedException): Boolean {
-		if (SourceSettings(context, exception.source).isCaptchaAutoResolveDisabled) return false
+		val key = exception.source.unwrap()
+		if (SourceSettings(context, key).isCaptchaAutoResolveDisabled) return false
 		val now = System.currentTimeMillis()
 		// A source whose challenge just failed must not spawn a solver Activity for every following
 		// request: one unsolvable challenge would otherwise become an app-wide verification loop, with
 		// the tracker and every open screen re-launching it back to back. Report "not resolved" instead
 		// so the caller falls back to the ordinary captcha state, which offers a single manual "Solve".
-		val lastFailure = recentFailureAt[exception.source]
+		val lastFailure = recentFailureAt[key]
 		if (lastFailure != null && now - lastFailure < RECENT_FAILURE_COOLDOWN_MS) {
 			return false
 		}
-		val lastSuccess = recentSuccess[exception.source]
+		val lastSuccess = recentSuccess[key]
 		if (lastSuccess != null && now - lastSuccess.timestampMs < RECENT_SUCCESS_COOLDOWN_MS) {
 			val incomingHost = extractNormalizedHost(exception.url)
 			if (
@@ -196,20 +206,21 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 				incomingHost == lastSuccess.host ||
 				exception.url == lastSuccess.url
 			) {
-				notifyVerificationIneffective(exception.source)
+				notifyVerificationIneffective(key)
 				return false
 			}
 		}
-		return resolve(exception.source, exception)
+		return resolve(key, exception)
 	}
 
 	/** Joins the current global session or atomically creates the only allowed solver session. */
 	suspend fun resolve(source: MangaSource, exception: CloudFlareProtectedException): Boolean {
-		if (source == UnknownMangaSource) return false
+		val key = source.unwrap()
+		if (key == UnknownMangaSource) return false
 		val claim = stateMutex.withLock {
 			activeSession?.let { return@withLock SessionClaim(it, isOwner = false) }
 			val session = ResolveSession(
-				source = source,
+				source = key,
 				exception = exception,
 				activityResult = CompletableDeferred(),
 				result = CompletableDeferred(),
@@ -244,6 +255,7 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 					host = extractNormalizedHost(session.exception.url),
 				)
 				recentFailureAt.remove(session.source)
+				captchaHandlerLazy.get().markSourceResolved(session.source)
 			} else if (!session.isCancelledByBackground) {
 				// Backgrounding is the user's choice, not a verdict on the challenge, so it must not
 				// arm the cooldown.

@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.search.ui.multi
 import android.content.Context
 import androidx.annotation.StringRes
 import org.koitharu.kotatsu.core.model.getTitle
+import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.list.ui.ListModelDiffCallback
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.MangaListModel
@@ -26,7 +27,7 @@ data class SearchResultsListModel(
 	}
 
 	override fun areItemsTheSame(other: ListModel): Boolean {
-		return other is SearchResultsListModel && source == other.source && titleResId == other.titleResId
+		return other is SearchResultsListModel && source.unwrap() == other.source.unwrap() && titleResId == other.titleResId
 	}
 
 	override fun getChangePayload(previousState: ListModel): Any? {

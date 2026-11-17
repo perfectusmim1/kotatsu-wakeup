@@ -12,6 +12,7 @@ import org.koitharu.kotatsu.core.ui.list.AdapterDelegateClickListenerAdapter
 import org.koitharu.kotatsu.core.ui.list.OnListItemClickListener
 import org.koitharu.kotatsu.core.ui.list.decor.SpacingItemDecoration
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
+import org.koitharu.kotatsu.core.util.ext.getThemeDrawable
 import org.koitharu.kotatsu.core.util.ext.textAndVisible
 import org.koitharu.kotatsu.databinding.ItemListGroupBinding
 import org.koitharu.kotatsu.list.ui.MangaSelectionDecoration
@@ -28,6 +29,7 @@ fun searchResultsAD(
 	selectionDecoration: MangaSelectionDecoration,
 	listener: OnListItemClickListener<MangaListModel>,
 	itemClickListener: OnListItemClickListener<SearchResultsListModel>,
+	onErrorClick: ((SearchResultsListModel) -> Unit)? = null,
 ) = adapterDelegateViewBinding<SearchResultsListModel, ListModel, ItemListGroupBinding>(
 	{ layoutInflater, parent -> ItemListGroupBinding.inflate(layoutInflater, parent, false) },
 ) {
@@ -40,6 +42,18 @@ fun searchResultsAD(
 	binding.recyclerView.addItemDecoration(SpacingItemDecoration(spacing, withBottomPadding = true))
 	val eventListener = AdapterDelegateClickListenerAdapter(this, itemClickListener)
 	binding.buttonMore.setOnClickListener(eventListener)
+	binding.textViewError.isClickable = true
+	binding.textViewError.isFocusable = true
+	binding.textViewError.background = context.getThemeDrawable(android.R.attr.selectableItemBackground)
+	binding.textViewError.setOnClickListener { view ->
+		if (item.error != null) {
+			if (onErrorClick != null) {
+				onErrorClick(item)
+			} else {
+				itemClickListener.onItemClick(item, view)
+			}
+		}
+	}
 
 	bind {
 		binding.textViewTitle.text = item.getTitle(context)

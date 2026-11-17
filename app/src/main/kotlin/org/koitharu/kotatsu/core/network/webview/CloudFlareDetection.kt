@@ -20,6 +20,8 @@ internal const val CF_STATE_JS = """
 			var t = (document.title || '').toLowerCase();
 			if (t.indexOf('attention required') !== -1 || t.indexOf('access denied') !== -1 ||
 				t.indexOf('dikkat gerekli') !== -1 || t.indexOf('erişim reddedildi') !== -1) return 'error';
+			if (document.querySelector('[data-translate="blocked_why_headline"]') ||
+				(document.body && (document.body.textContent || '').indexOf('Sorry, you have been blocked') !== -1)) return 'error';
 			if (t.indexOf('just a moment') !== -1 || t.indexOf('un instant') !== -1 ||
 				t.indexOf('einen moment') !== -1 || t.indexOf('un momento') !== -1 ||
 				t.indexOf('один момент') !== -1 || t.indexOf('bir dakika') !== -1 ||

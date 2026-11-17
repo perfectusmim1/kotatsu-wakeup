@@ -87,7 +87,7 @@ class MangaLoaderContextImpl @Inject constructor(
         parser: MangaParser,
         url: String,
     ): Nothing {
-        if (parser.source.name == SOURCE_COMIX || parser.source.name == SOURCE_OKUTOON) {
+        if (parser.source.name in CLOUDFLARE_BROWSER_ACTION_SOURCES) {
             throw CloudFlareProtectedException(url, parser.source, parser.getRequestHeaders())
         }
         throw InteractiveActionRequiredException(parser.source, url)
@@ -215,8 +215,16 @@ class MangaLoaderContextImpl @Inject constructor(
     private companion object {
 
         /** By its name: which sources there are is no longer something the app is compiled with. */
-        const val SOURCE_COMIX = "COMIX"
-        const val SOURCE_OKUTOON = "OKUTOON"
+        val CLOUDFLARE_BROWSER_ACTION_SOURCES = setOf(
+            "COMIX",
+            "OKUTOON",
+            "YAOIMANGAONLINE",
+            "COMIKURO",
+            "KAGANE",
+            "MADARADEX",
+            "BATCAVE",
+            "MANGALIVRE",
+        )
     }
 
     override suspend fun getAuthValue(source: MangaSource, key: String): String? {

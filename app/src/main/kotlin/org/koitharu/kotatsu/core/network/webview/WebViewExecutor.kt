@@ -35,6 +35,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Cookie
 import okhttp3.Headers
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Protocol
@@ -47,6 +48,7 @@ import org.koitharu.kotatsu.browser.cloudflare.CloudFlareCallback
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareClient
 import org.koitharu.kotatsu.core.exceptions.CloudFlareException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.network.CommonHeaders
 import org.koitharu.kotatsu.core.network.cookies.AndroidCookieJar
@@ -80,6 +82,7 @@ class WebViewExecutor @Inject constructor(
 	private val cookieJar: MutableCookieJar,
 	private val foregroundActivityHolder: ForegroundActivityHolder,
 	private val mangaRepositoryFactoryProvider: Provider<MangaRepository.Factory>,
+	private val captchaHandlerProvider: Provider<CaptchaHandler>,
 ) {
 
 	private var webViewCached: WeakReference<WebView>? = null
@@ -89,15 +92,19 @@ class WebViewExecutor @Inject constructor(
 	// Avoids the "burst of failed images each triggers its own 12 s WebView attempt" cascade.
 	private val recentFailureUntil = ConcurrentHashMap<String, Long>()
 	private val recentSolvedHostAt = ConcurrentHashMap<String, Long>()
+	private val redirectedOriginByHost = ConcurrentHashMap<String, RedirectOrigin>()
 
-	fun hasRecentlySolvedHost(host: String?): Boolean {
-		val normalized = host?.lowercase() ?: return false
-		val solvedAt = recentSolvedHostAt[normalized] ?: return false
+	fun hasRecentlySolvedHost(host: String?): Boolean = lastSolvedHostAt(host) > 0L
+
+	fun lastSolvedHostAt(host: String?): Long {
+		val normalized = host?.lowercase() ?: return 0L
+		val solvedAt = recentSolvedHostAt[normalized] ?: return 0L
 		if (System.currentTimeMillis() - solvedAt <= SOLVED_HOST_TTL_MS) {
-			return true
+			return solvedAt
 		}
 		recentSolvedHostAt.remove(normalized)
-		return false
+		redirectedOriginByHost.remove(normalized)
+		return 0L
 	}
 
 	val defaultUserAgent: String? by lazy {
@@ -179,11 +186,16 @@ class WebViewExecutor @Inject constructor(
                     webView.webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                             val url = request?.url ?: return false
-                            val requestHost = url.host
-                            if (originalHost != null && requestHost != null && requestHost.contains(originalHost)) {
+                            val scheme = url.scheme?.lowercase()
+                            if (scheme != "http" && scheme != "https") {
+                                return true
+                            }
+                            val requestHost = url.host?.lowercase() ?: return true
+                            val origHost = originalHost?.lowercase()
+                            if (origHost != null && isAllowedEvaluateNavigation(origHost, requestHost, request.isForMainFrame)) {
                                 return false
                             }
-                            println("DEBUG: Blocked redirect to external domain: $url")
+                            Log.d(TAG, "Blocked redirect to external domain in evaluateJs: $url")
                             return true
                         }
 
@@ -324,6 +336,9 @@ class WebViewExecutor @Inject constructor(
 		if (resolved) {
 			cooldownHost?.let { recentSolvedHostAt[it] = System.currentTimeMillis() }
 			persistSolvedState(exception.source, syncedUrls, effectiveUserAgent)
+			if (exception.source != UnknownMangaSource) {
+				captchaHandlerProvider.get().markSourceResolved(exception.source)
+			}
 		}
 		if (cooldownHost != null) {
 			if (resolved) {
@@ -443,6 +458,7 @@ class WebViewExecutor @Inject constructor(
 			if (continuation.isActive) continuation.resume(result)
 		}
 		var consecutivePasses = 0
+		var consecutiveErrors = 0
 		// Cookie changes are intentionally ignored here. They occur between managed-challenge stages and
 		// accepting the first one destroys the WebView before Cloudflare has finished verification.
 		val check = object : Runnable {
@@ -450,14 +466,29 @@ class WebViewExecutor @Inject constructor(
 				if (!continuation.isActive) return
 				webView.evaluateJavascript(CF_STATE_JS) { raw ->
 					if (!continuation.isActive) return@evaluateJavascript
-					if (raw?.removeSurrounding("\"") == "ok") {
-						consecutivePasses++
-						if (consecutivePasses >= REQUIRED_STABLE_PASSES) {
-							resumeOnce(true)
-							return@evaluateJavascript
+					when (raw?.removeSurrounding("\"")) {
+						"ok" -> {
+							consecutiveErrors = 0
+							consecutivePasses++
+							if (consecutivePasses >= REQUIRED_STABLE_PASSES) {
+								resumeOnce(true)
+								return@evaluateJavascript
+							}
 						}
-					} else {
-						consecutivePasses = 0
+
+						"error" -> {
+							consecutivePasses = 0
+							consecutiveErrors++
+							if (consecutiveErrors >= REQUIRED_STABLE_ERRORS) {
+								resumeOnce(false)
+								return@evaluateJavascript
+							}
+						}
+
+						else -> {
+							consecutivePasses = 0
+							consecutiveErrors = 0
+						}
 					}
 					handler.removeCallbacks(this)
 					handler.postDelayed(this, CHALLENGE_POLL_INTERVAL_MS)
@@ -543,17 +574,40 @@ class WebViewExecutor @Inject constructor(
 
 				// Fast-path for recently solved hosts: reuse headless WebView without attaching any view
 				if (solvedFast) {
+					val redirectedOrigin = getRedirectedOrigin(host)
+					val fastRequest = if (redirectedOrigin != null) {
+						request.rewriteOrigin(redirectedOrigin.scheme, redirectedOrigin.host, redirectedOrigin.port)
+					} else {
+						request
+					}
+					val fastOriginUrl = fastRequest.url.newBuilder()
+						.encodedPath("/")
+						.query(null)
+						.fragment(null)
+						.build()
+						.toString()
 					val headless = obtainWebView()
 					try {
 						headless.webChromeClient = WebChromeClient()
 						headless.onResume()
 						alignedUserAgent?.let { headless.settings.userAgentString = it }
 						applyCloudFlareRequestedWithPolicy(headless.settings, stripRequestedWith)
-						ensureOriginContext(headless, originUrl)
-						val fastResponse = executeFetchInWebView(headless, request, targetSource, requestBodyBytes)
+						ensureOriginContext(headless, fastOriginUrl)
+						val fastResponse = executeFetchInWebView(headless, fastRequest, targetSource, requestBodyBytes)
 						if (fastResponse != null && !isCloudFlareChallengeResponse(fastResponse)) {
-							recentSolvedHostAt[host] = System.currentTimeMillis()
-							syncedUrls = listOfNotNull(originUrl, request.url.toString(), headless.url).distinct()
+							val nowMs = System.currentTimeMillis()
+							recentSolvedHostAt[host] = nowMs
+							val finalHost = fastResponse.request.url.host.lowercase()
+							if (finalHost != host) {
+								recentSolvedHostAt[finalHost] = nowMs
+							}
+							syncedUrls = listOfNotNull(
+								originUrl,
+								fastOriginUrl,
+								request.url.toString(),
+								fastRequest.url.toString(),
+								headless.url,
+							).distinct()
 							effectiveUserAgent = headless.settings.userAgentString
 								?.sanitizeHeaderValue()
 								?.trim()
@@ -562,6 +616,7 @@ class WebViewExecutor @Inject constructor(
 						}
 						fastResponse?.close()
 						recentSolvedHostAt.remove(host)
+						redirectedOriginByHost.remove(host)
 					} finally {
 						runCatching { headless.onPause() }
 						headless.webChromeClient = WebChromeClient()
@@ -612,26 +667,48 @@ class WebViewExecutor @Inject constructor(
 						return@withContext null
 					}
 
-					var bridged = executeFetchInWebView(webView, request, targetSource, requestBodyBytes)
+					val fetchRequest = alignRequestWithWebViewOrigin(request, webView.url?.toHttpUrlOrNull())
+					var bridged = executeFetchInWebView(webView, fetchRequest, targetSource, requestBodyBytes)
 					// If originUrl passed (e.g. cached homepage) but the actual POST/API endpoint still requires its own clearance,
 					// solve directly on the request URL once and retry fetch.
-					if ((bridged == null || isCloudFlareChallengeResponse(bridged)) && challengeUrl != request.url.toString()) {
+					if ((bridged == null || isCloudFlareChallengeResponse(bridged)) && challengeUrl != fetchRequest.url.toString()) {
 						bridged?.close()
 						val endpointPassed = loadAndPassChallenge(
 							webView = webView,
-							originUrl = request.url.toString(),
+							originUrl = fetchRequest.url.toString(),
 							source = resolvedSource,
 							timeoutMs = timeoutMs,
 						)
 						if (endpointPassed) {
-							bridged = executeFetchInWebView(webView, request, targetSource, requestBodyBytes)
+							val retryFetchRequest = alignRequestWithWebViewOrigin(fetchRequest, webView.url?.toHttpUrlOrNull())
+							bridged = executeFetchInWebView(webView, retryFetchRequest, targetSource, requestBodyBytes)
 						} else {
 							bridged = null
 						}
 					}
 					if (bridged != null && !isCloudFlareChallengeResponse(bridged)) {
-						recentSolvedHostAt[host] = System.currentTimeMillis()
-						syncedUrls = listOfNotNull(originUrl, request.url.toString(), webView.url).distinct()
+						val nowMs = System.currentTimeMillis()
+						recentSolvedHostAt[host] = nowMs
+						val finalUrl = bridged.request.url
+						val finalHost = finalUrl.host.lowercase()
+						if (finalHost != host) {
+							recentSolvedHostAt[finalHost] = nowMs
+							redirectedOriginByHost[host] = RedirectOrigin(
+								scheme = finalUrl.scheme,
+								host = finalUrl.host,
+								port = finalUrl.port,
+								recordedAtMs = nowMs,
+							)
+						} else {
+							redirectedOriginByHost.remove(host)
+						}
+						syncedUrls = listOfNotNull(
+							originUrl,
+							request.url.toString(),
+							fetchRequest.url.toString(),
+							finalUrl.toString(),
+							webView.url,
+						).distinct()
 						effectiveUserAgent = webView.settings.userAgentString
 							?.sanitizeHeaderValue()
 							?.trim()
@@ -664,6 +741,7 @@ class WebViewExecutor @Inject constructor(
 		if (response != null) {
 			if (resolvedSource != UnknownMangaSource) {
 				persistSolvedState(resolvedSource, syncedUrls, effectiveUserAgent)
+				captchaHandlerProvider.get().markSourceResolved(resolvedSource)
 			}
 			recentFailureUntil.remove(host)
 		} else if (allowChallenge) {
@@ -923,6 +1001,7 @@ class WebViewExecutor @Inject constructor(
 						window.__cfBridgeResult = JSON.stringify({
 							status: resp.status,
 							statusText: resp.statusText || '',
+							url: resp.url || '',
 							headers: hdrs,
 							bodyBase64: btoa(chunks.join(''))
 						});
@@ -978,8 +1057,13 @@ class WebViewExecutor @Inject constructor(
 			}
 		}
 		val decodedBytes = Base64.decode(json.optString("bodyBase64", ""), Base64.DEFAULT)
+		val finalRequest = json.optString("url", "")
+			.toHttpUrlOrNull()
+			?.takeIf { it != request.url }
+			?.let { resolvedUrl -> request.newBuilder().url(resolvedUrl).build() }
+			?: request
 		return Response.Builder()
-			.request(request)
+			.request(finalRequest)
 			.protocol(Protocol.HTTP_1_1)
 			.code(status)
 			.message(statusText)
@@ -993,14 +1077,42 @@ class WebViewExecutor @Inject constructor(
 		return runCatching { JSONObject("{\"v\":$raw}").getString("v") }.getOrNull()
 	}
 
+	private fun alignRequestWithWebViewOrigin(request: Request, webUrl: HttpUrl?): Request {
+		webUrl ?: return request
+		if (
+			webUrl.scheme == request.url.scheme &&
+			webUrl.host.equals(request.url.host, ignoreCase = true) &&
+			webUrl.port == request.url.port
+		) {
+			return request
+		}
+		return request.rewriteOrigin(webUrl.scheme, webUrl.host, webUrl.port)
+	}
+
+	private fun Request.rewriteOrigin(scheme: String, host: String, port: Int): Request {
+		val newUrl = url.newBuilder()
+			.scheme(scheme)
+			.host(host)
+			.port(port)
+			.build()
+		return newBuilder().url(newUrl).build()
+	}
+
+	private fun getRedirectedOrigin(host: String): RedirectOrigin? {
+		val entry = redirectedOriginByHost[host] ?: return null
+		if (System.currentTimeMillis() - entry.recordedAtMs <= SOLVED_HOST_TTL_MS) {
+			return entry
+		}
+		redirectedOriginByHost.remove(host)
+		return null
+	}
+
 	private fun isCloudFlareChallengeResponse(response: Response): Boolean {
-		if (response.code != 403 && response.code != 503) return false
+		if (response.code != 403 && response.code != 503 && response.code != 429) return false
 		val cfMitigated = response.header("cf-mitigated")
 		if (cfMitigated.equals("challenge", ignoreCase = true)) return true
-		val bodyPreview = runCatching { response.peekBody(8192L).string() }.getOrDefault("")
-		return bodyPreview.contains("challenge-error-title") ||
-			bodyPreview.contains("challenge-error-text") ||
-			bodyPreview.contains("Just a moment...")
+		val bodyPreview = runCatching { response.peekBody(32768L).string() }.getOrDefault("")
+		return isCloudFlareChallengeBody(bodyPreview)
 	}
 
 	private fun needsCloudFlareInterception(source: MangaSource): Boolean = runCatching {
@@ -1071,11 +1183,19 @@ class WebViewExecutor @Inject constructor(
 		clearHistory()
 	}
 
+	private data class RedirectOrigin(
+		val scheme: String,
+		val host: String,
+		val port: Int,
+		val recordedAtMs: Long,
+	)
+
 	private companion object {
 
 		const val TAG = "WebViewExecutor"
 		const val CHALLENGE_POLL_INTERVAL_MS = 350L
 		const val REQUIRED_STABLE_PASSES = 2
+		const val REQUIRED_STABLE_ERRORS = 4
 		const val BRIDGE_CHALLENGE_TIMEOUT_MS = 20_000L
 		const val BRIDGE_FETCH_TIMEOUT_MS = 15_000L
 		const val SOLVED_HOST_TTL_MS = 120_000L

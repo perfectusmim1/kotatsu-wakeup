@@ -49,6 +49,7 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 	lateinit var pageLoader: PageLoader
 
 	private var pagerLifecycleDispatcher: PagerLifecycleDispatcher? = null
+	private var isUpdatingItems = false
 
 	override fun onCreateViewBinding(
 		inflater: LayoutInflater,
@@ -62,7 +63,11 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 		super.onViewBindingCreated(binding, savedInstanceState)
 		with(binding.pager) {
 			onInitPager(this)
-			doOnPageChanged(::notifyPageChanged)
+			doOnPageChanged { position ->
+				if (!isUpdatingItems) {
+					notifyPageChanged(position)
+				}
+			}
 			setOnGenericMotionListener(this@BasePagerReaderFragment)
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 				recyclerView?.defaultFocusHighlightEnabled = false
@@ -118,23 +123,53 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
-		val items = launch {
-			requireAdapter().setItems(pages)
-			yield()
-			pagerLifecycleDispatcher?.postInvalidate()
-		}
-		if (pendingState != null) {
-			val position = pages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
-			items.join()
-			if (position != -1) {
-				requireViewBinding().pager.setCurrentItem(position, false)
-				notifyPageChanged(position)
-			} else {
-				Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
-					.show()
-			}
+		val adapter = requireAdapter()
+		val pager = viewBinding?.pager
+		val anchorPage = if (pendingState == null && pager != null && adapter.hasItems) {
+			adapter.getItemOrNull(pager.currentItem)
 		} else {
-			items.join()
+			null
+		}
+		val fallbackState = if (pendingState == null) viewModel.getCurrentState() else null
+		var restoredPosition = -1
+		isUpdatingItems = true
+		try {
+			val items = launch {
+				adapter.setItems(pages)
+				yield()
+				pagerLifecycleDispatcher?.postInvalidate()
+			}
+			if (pendingState != null) {
+				val position = pages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
+				items.join()
+				if (position != -1) {
+					requireViewBinding().pager.setCurrentItem(position, false)
+					restoredPosition = position
+				} else {
+					Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
+						.show()
+				}
+			} else {
+				items.join()
+				val targetPosition = anchorPage?.let { anchor ->
+					pages.indexOfFirst { it.id == anchor.id && it.chapterId == anchor.chapterId }
+						.takeIf { it != -1 }
+						?: pages.indexOfPosition(anchor.chapterId, anchor.index)
+				} ?: fallbackState?.let { state ->
+					pages.indexOfPosition(state.chapterId, state.page)
+				} ?: -1
+				if (targetPosition != -1 && pager != null) {
+					if (pager.currentItem != targetPosition) {
+						pager.setCurrentItem(targetPosition, false)
+					}
+					restoredPosition = targetPosition
+				}
+			}
+		} finally {
+			isUpdatingItems = false
+		}
+		if (restoredPosition != -1) {
+			notifyPageChanged(restoredPosition)
 		}
 	}
 

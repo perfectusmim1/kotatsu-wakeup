@@ -49,13 +49,17 @@ import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.comments.SourceCommentsSheet
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.exceptions.resolve.DialogErrorObserver
 import org.koitharu.kotatsu.core.exceptions.resolve.SnackbarErrorObserver
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ReaderMode
 import org.koitharu.kotatsu.core.ui.BaseFullscreenActivity
+import org.koitharu.kotatsu.core.ui.dialog.ErrorDetailsDialog
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
@@ -120,6 +124,12 @@ class ReaderActivity :
     @Inject
     lateinit var screenOrientationHelper: ScreenOrientationHelper
 
+    @Inject
+    lateinit var captchaHandler: CaptchaHandler
+
+    @Inject
+    lateinit var captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator
+
     private val idlingDetector = IdlingDetector(TimeUnit.SECONDS.toMillis(10), this)
 
     private val viewModel: ReaderViewModel by viewModels()
@@ -144,9 +154,12 @@ class ReaderActivity :
     private var isChapterLoadingToast: Boolean = false
     private var currentTranslationBanner: PageTranslationState? = null
     private var isShowingStatusToast: Boolean = false
+    private var lastHandledBrowserVersion: Long = 0L
+    private var wasPaused: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lastHandledBrowserVersion = captchaHandler.currentBrowserCompletionVersion()
         setContentView(ActivityReaderBinding.inflate(layoutInflater))
         readerManager = ReaderManager(supportFragmentManager, viewBinding.container, settings)
         einkFlashView = createEInkFlashView()
@@ -187,7 +200,11 @@ class ReaderActivity :
             resolver = exceptionResolver,
             onResolved = { isResolved ->
                 if (isResolved) {
-                    viewModel.reload()
+                    lastHandledBrowserVersion = maxOf(
+                        lastHandledBrowserVersion,
+                        captchaHandler.currentBrowserCompletionVersion(),
+                    )
+                    viewModel.retryLastFailedOperation()
                 } else if (viewModel.content.value.pages.isEmpty()) {
                     dispatchNavigateUp()
                 }
@@ -200,7 +217,15 @@ class ReaderActivity :
             host = viewBinding.container,
             fragment = null,
             resolver = exceptionResolver,
-            onResolved = null,
+            onResolved = { isResolved ->
+                if (isResolved) {
+                    lastHandledBrowserVersion = maxOf(
+                        lastHandledBrowserVersion,
+                        captchaHandler.currentBrowserCompletionVersion(),
+                    )
+                    viewModel.retryLastFailedOperation()
+                }
+            },
         )
         viewModel.onError.observeEvent(this) { error ->
             errorSnackbar.emit(error)
@@ -265,9 +290,47 @@ class ReaderActivity :
         idlingDetector.onUserInteraction()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (wasPaused) {
+            wasPaused = false
+            handleResumeFromBrowser()
+        }
+    }
+
     override fun onPause() {
+        wasPaused = true
         super.onPause()
         viewModel.onPause()
+    }
+
+    private fun handleResumeFromBrowser() {
+        val source = viewModel.getCurrentSource()
+        val currentGlobalVersion = captchaHandler.currentBrowserCompletionVersion()
+        val latestSourceVersion = source?.let { captchaHandler.latestBrowserCompletionVersion(it) } ?: 0L
+        val hasGlobalBrowserCompletion = currentGlobalVersion > lastHandledBrowserVersion
+        val hasSourceBrowserCompletion = source != null && latestSourceVersion > lastHandledBrowserVersion
+        if (hasGlobalBrowserCompletion || hasSourceBrowserCompletion) {
+            lastHandledBrowserVersion = maxOf(currentGlobalVersion, latestSourceVersion)
+        }
+        val hasBrowserCompletion = hasGlobalBrowserCompletion || hasSourceBrowserCompletion
+        val hasSolvedSinceFailure = source != null && viewModel.hasFailedSince(captchaHandler.lastResolvedAt(source))
+        val hasFailedBeforeBrowser = viewModel.hasFailedBeforeBrowserVersion(currentGlobalVersion)
+        if (!hasBrowserCompletion && !hasSolvedSinceFailure && !hasFailedBeforeBrowser) {
+            return
+        }
+        lifecycleScope.launch {
+            if (source != null) {
+                captchaHandler.discard(source)
+                captchaAutoResolveCoordinator.notifyManualResolveSuccess(source)
+            }
+            if (!viewModel.isLoading.value && viewModel.shouldRetryOnResume()) {
+                supportFragmentManager.fragments
+                    .filterIsInstance<ErrorDetailsDialog>()
+                    .forEach { it.dismissAllowingStateLoss() }
+                viewModel.retryLastFailedOperation()
+            }
+        }
     }
 
     override fun onStop() {

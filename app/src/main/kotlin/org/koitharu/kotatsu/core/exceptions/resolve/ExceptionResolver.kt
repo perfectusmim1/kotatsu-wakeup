@@ -20,10 +20,12 @@ import org.koitharu.kotatsu.core.exceptions.EmptyMangaException
 import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
 import org.koitharu.kotatsu.core.exceptions.ProxyConfigException
 import org.koitharu.kotatsu.core.exceptions.UnsupportedSourceException
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
+import org.koitharu.kotatsu.core.util.ext.findSource
 import org.koitharu.kotatsu.core.util.ext.isHttpUrl
 import org.koitharu.kotatsu.core.util.ext.restartApplication
 import org.koitharu.kotatsu.details.ui.pager.EmptyMangaReason
@@ -54,6 +56,9 @@ class ExceptionResolver private constructor(
     private val browserActionContract = host.registerForActivityResult(BrowserActivity.Contract()) {
         handleActivityResult(BrowserActivity.TAG, true)
     }
+    private val browserOpenContract = host.registerForActivityResult(BrowserActivity.UrlContract()) {
+        handleActivityResult(TAG_BROWSER_OPEN, it)
+    }
     private val sourceAuthContract = host.registerForActivityResult(SourceAuthActivity.Contract()) {
         handleActivityResult(SourceAuthActivity.TAG, it)
     }
@@ -61,11 +66,16 @@ class ExceptionResolver private constructor(
         handleActivityResult(CloudFlareActivity.TAG, it)
     }
 
-    fun showErrorDetails(e: Throwable, url: String? = null) {
-        host.router.showErrorDialog(e, url)
+    fun showErrorDetails(e: Throwable, url: String? = null, source: MangaSource? = null) {
+        host.router.showErrorDialog(e, url, e.findSource() ?: source)
     }
 
-    suspend fun resolve(e: Throwable, tryAutoResolve: Boolean = true): Boolean = host.lifecycleScope.async {
+    suspend fun resolve(
+        e: Throwable,
+        tryAutoResolve: Boolean = true,
+        source: MangaSource? = null,
+    ): Boolean = host.lifecycleScope.async {
+        val resolvedSource = e.findSource() ?: source?.takeUnless { it == UnknownMangaSource }
         when (e) {
             is CloudFlareProtectedException -> resolveCF(e, tryAutoResolve)
             is AuthRequiredException -> resolveAuthException(e.source)
@@ -82,19 +92,28 @@ class ExceptionResolver private constructor(
                 false
             }
 
-            is NotFoundException -> {
-                openInBrowser(e.url)
+            is NotFoundException -> if (e.url.isHttpUrl()) {
+                openInBrowser(e.url, resolvedSource)
+            } else {
                 false
             }
 
             is EmptyMangaException -> {
                 when (e.reason) {
-                    EmptyMangaReason.NO_CHAPTERS -> openAlternatives(e.manga)
-                    EmptyMangaReason.LOADING_ERROR -> Unit
-                    EmptyMangaReason.RESTRICTED -> host.router.openBrowser(e.manga)
-                    else -> Unit
+                    EmptyMangaReason.NO_CHAPTERS -> {
+                        openAlternatives(e.manga)
+                        false
+                    }
+
+                    EmptyMangaReason.LOADING_ERROR -> false
+                    EmptyMangaReason.RESTRICTED -> openInBrowser(
+                        url = e.manga.publicUrl,
+                        source = e.manga.source.takeUnless { it == UnknownMangaSource } ?: resolvedSource,
+                        title = e.manga.title,
+                    )
+
+                    else -> false
                 }
-                false
             }
 
             is UnsupportedSourceException -> {
@@ -126,20 +145,25 @@ class ExceptionResolver private constructor(
     }
 
     private suspend fun resolveCF(e: CloudFlareProtectedException, tryAutoResolve: Boolean): Boolean {
-        if (captchaCoordinator.isResolveActive(e.source)) {
-            return captchaCoordinator.awaitActiveResolve(e.source) == true
+        val resolved = when {
+            captchaCoordinator.isResolveActive(e.source) -> captchaCoordinator.awaitActiveResolve(e.source) == true
+            tryAutoResolve -> {
+                // Delegated to the singleton coordinator: it owns the activity lifecycle (so the result is
+                // delivered even if this Fragment / Activity dies while CloudFlareActivity is still
+                // running) AND owns the user-facing toast (so duplicate calls that just await the
+                // in-flight resolve don't pile new toasts on top of the loading state).
+                captchaCoordinator.resolveIfEnabled(e)
+            }
+
+            else -> suspendCoroutine { cont ->
+                continuations[CloudFlareActivity.TAG] = cont
+                cloudflareContract.launch(e)
+            }
         }
-        if (tryAutoResolve) {
-            // Delegated to the singleton coordinator: it owns the activity lifecycle (so the result is
-            // delivered even if this Fragment / Activity dies while CloudFlareActivity is still
-            // running) AND owns the user-facing toast (so duplicate calls that just await the
-            // in-flight resolve don't pile new toasts on top of the loading state).
-            return captchaCoordinator.resolveIfEnabled(e)
+        if (resolved && e.source != UnknownMangaSource) {
+            captchaHandler.markSourceResolved(e.source)
         }
-        return suspendCoroutine { cont ->
-            continuations[CloudFlareActivity.TAG] = cont
-            cloudflareContract.launch(e)
-        }
+        return resolved
     }
 
     private suspend fun resolveAuthException(source: MangaSource): Boolean = suspendCoroutine { cont ->
@@ -147,8 +171,13 @@ class ExceptionResolver private constructor(
         sourceAuthContract.launch(source)
     }
 
-    private fun openInBrowser(url: String) {
-        host.router.openBrowser(url, null, null)
+    private suspend fun openInBrowser(
+        url: String,
+        source: MangaSource?,
+        title: String? = null,
+    ): Boolean = suspendCoroutine { cont ->
+        continuations[TAG_BROWSER_OPEN] = cont
+        browserOpenContract.launch(BrowserActivity.BrowserTarget(url, source, title))
     }
 
     private fun openAlternatives(manga: Manga) {
@@ -245,6 +274,8 @@ class ExceptionResolver private constructor(
     }
 
     companion object {
+
+        private const val TAG_BROWSER_OPEN = "browser_open"
 
         @StringRes
         fun getResolveStringId(e: Throwable) = when (e) {

@@ -20,6 +20,7 @@ import org.koitharu.kotatsu.search.ui.multi.SearchResultsListModel
 class SearchAdapter(
 	listener: MangaListListener,
 	itemClickListener: OnListItemClickListener<SearchResultsListModel>,
+	onErrorClick: ((SearchResultsListModel) -> Unit)? = null,
 	sizeResolver: ItemSizeResolver,
 	selectionDecoration: MangaSelectionDecoration,
 ) : BaseListAdapter<ListModel>(), FastScroller.SectionIndexer {
@@ -34,6 +35,7 @@ class SearchAdapter(
 				selectionDecoration = selectionDecoration,
 				listener = listener,
 				itemClickListener = itemClickListener,
+				onErrorClick = onErrorClick,
 			),
 		)
 		addDelegate(ListItemType.STATE_LOADING, loadingStateAD())

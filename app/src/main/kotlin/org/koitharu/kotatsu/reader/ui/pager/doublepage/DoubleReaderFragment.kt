@@ -40,6 +40,7 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 	lateinit var settings: AppSettings
 
 	private var recyclerLifecycleDispatcher: RecyclerViewLifecycleDispatcher? = null
+	private var isUpdatingItems = false
 
 	/**
 	 * Maps padded adapter positions to original (unpadded) page list positions.
@@ -81,6 +82,24 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
+		val adapter = requireAdapter()
+		val rv = viewBinding?.recyclerView
+		val lm = rv?.layoutManager as? LinearLayoutManager
+		val currentPos = if (pendingState == null && lm != null && adapter.hasItems) {
+			lm.findFirstCompletelyVisibleItemPosition()
+				.takeIf { it != RecyclerView.NO_POSITION }
+				?: lm.findFirstVisibleItemPosition()
+		} else {
+			RecyclerView.NO_POSITION
+		}
+		val anchorPage = if (pendingState == null && currentPos != RecyclerView.NO_POSITION) {
+			adapter.getItemOrNull(currentPos)?.takeIf { it.index >= 0 }
+				?: adapter.getItemOrNull(currentPos + 1)?.takeIf { it.index >= 0 }
+		} else {
+			null
+		}
+		val fallbackState = if (pendingState == null) viewModel.getCurrentState() else null
+
 		originalPageCount = pages.size
 		val paddedPages = pages.padForDoublePage(coverPage = settings.isReaderDoubleCoverPage)
 
@@ -95,26 +114,49 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 			}
 		}
 
-		val items = launch {
-			requireAdapter().setItems(paddedPages)
-			yield()
-			viewBinding?.recyclerView?.let { rv ->
-				recyclerLifecycleDispatcher?.invalidate(rv)
+		var restoredPosition = -1
+		isUpdatingItems = true
+		try {
+			val items = launch {
+				adapter.setItems(paddedPages)
+				yield()
+				viewBinding?.recyclerView?.let { recycler ->
+					recyclerLifecycleDispatcher?.invalidate(recycler)
+				}
 			}
-		}
-		if (pendingState != null) {
-			var position = paddedPages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
-			items.join()
-			if (position != -1) {
-				position = position.toPagePosition()
-				requireViewBinding().recyclerView.firstVisibleItemPosition = position
-				notifyPageChanged(position, position + 1)
+			if (pendingState != null) {
+				var position = paddedPages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
+				items.join()
+				if (position != -1) {
+					position = position.toPagePosition()
+					requireViewBinding().recyclerView.firstVisibleItemPosition = position
+					restoredPosition = position
+				} else {
+					Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
+						.show()
+				}
 			} else {
-				Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
-					.show()
+				items.join()
+				val targetRawPos = anchorPage?.let { anchor ->
+					paddedPages.indexOfFirst { it.id == anchor.id && it.chapterId == anchor.chapterId }
+						.takeIf { it != -1 }
+						?: paddedPages.indexOfPosition(anchor.chapterId, anchor.index)
+				} ?: fallbackState?.let { state ->
+					paddedPages.indexOfPosition(state.chapterId, state.page)
+				} ?: -1
+				if (targetRawPos != -1 && rv != null) {
+					val targetPosition = targetRawPos.toPagePosition()
+					if (rv.firstVisibleItemPosition != targetPosition) {
+						rv.firstVisibleItemPosition = targetPosition
+					}
+					restoredPosition = targetPosition
+				}
 			}
-		} else {
-			items.join()
+		} finally {
+			isUpdatingItems = false
+		}
+		if (restoredPosition != -1 && paddedPages.isNotEmpty()) {
+			notifyPageChanged(restoredPosition, (restoredPosition + 1).coerceAtMost(paddedPages.lastIndex))
 		}
 	}
 
@@ -188,6 +230,9 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 
 		override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
 			super.onScrolled(recyclerView, dx, dy)
+			if (isUpdatingItems) {
+				return
+			}
 			val lm = recyclerView.layoutManager as? LinearLayoutManager
 			if (lm == null) {
 				firstPos = RecyclerView.NO_POSITION

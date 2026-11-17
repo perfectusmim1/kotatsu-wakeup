@@ -64,3 +64,79 @@ internal fun applyCloudFlareRequestedWithPolicy(
 	WebSettingsCompat.setRequestedWithHeaderOriginAllowList(settings, emptySet())
 	return true
 }
+
+private val SECOND_LEVEL_TLDS = setOf("co", "com", "net", "org", "edu", "gov", "ac", "ne", "or")
+
+private val AD_TRACKER_HOST_KEYWORDS = arrayOf(
+	"doubleclick",
+	"googlesyndication",
+	"googleadservices",
+	"adservice",
+	"popads",
+	"popcash",
+	"exoclick",
+	"juicyads",
+	"trafficjunky",
+	"propellerads",
+	"adsterra",
+	"hilltopads",
+	"tsyndicate",
+	"taboola",
+	"outbrain",
+	"mgid",
+	"yandex",
+	"mc.yandex",
+	"a-ads",
+	"bet365",
+)
+
+internal fun isAllowedEvaluateNavigation(
+	originalHost: String,
+	requestHost: String,
+	isMainFrame: Boolean,
+): Boolean {
+	val orig = originalHost.lowercase()
+	val req = requestHost.lowercase()
+	if (req == orig || req.endsWith(".$orig") || orig.endsWith(".$req")) {
+		return true
+	}
+	if (req == "challenges.cloudflare.com" || req.endsWith(".cloudflare.com")) {
+		return true
+	}
+	val originalLabel = extractSecondLevelLabel(orig)
+	val requestLabel = extractSecondLevelLabel(req)
+	if (originalLabel != null && originalLabel == requestLabel) {
+		return true
+	}
+	return isMainFrame && !isBlockedAdOrTrackerHost(req)
+}
+
+internal fun extractSecondLevelLabel(host: String): String? {
+	val parts = host.lowercase()
+		.removePrefix("www.")
+		.removePrefix("m.")
+		.split('.')
+		.filter { it.isNotEmpty() }
+	if (parts.size < 2) return null
+	val penultimate = parts[parts.size - 2]
+	val index = if (parts.size >= 3 && penultimate in SECOND_LEVEL_TLDS) {
+		parts.size - 3
+	} else {
+		parts.size - 2
+	}
+	return parts.getOrNull(index)?.takeIf { it.length >= 2 }
+}
+
+internal fun isBlockedAdOrTrackerHost(host: String): Boolean {
+	val lower = host.lowercase()
+	return AD_TRACKER_HOST_KEYWORDS.any { lower.contains(it) }
+}
+
+internal fun isCloudFlareChallengeBody(bodyPreview: String): Boolean =
+	bodyPreview.contains("challenge-error-title") ||
+		bodyPreview.contains("challenge-error-text") ||
+		bodyPreview.contains("Just a moment...") ||
+		bodyPreview.contains("blocked_why_headline") ||
+		bodyPreview.contains("Sorry, you have been blocked") ||
+		bodyPreview.contains("cf-challenge-running") ||
+		bodyPreview.contains("/cdn-cgi/challenge-platform")

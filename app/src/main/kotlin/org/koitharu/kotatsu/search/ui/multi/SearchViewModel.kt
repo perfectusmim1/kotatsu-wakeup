@@ -14,19 +14,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.model.isNsfw
+import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.prefs.ListMode
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.append
+import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
+import org.koitharu.kotatsu.core.util.ext.getCauseUrl
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.toLocale
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -40,6 +48,7 @@ import org.koitharu.kotatsu.list.ui.model.EmptyState
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.LoadingFooter
 import org.koitharu.kotatsu.list.ui.model.LoadingState
+import org.koitharu.kotatsu.parsers.exception.NotFoundException
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.ParserMangaSource
 import org.koitharu.kotatsu.parsers.model.MangaSource
@@ -47,6 +56,8 @@ import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.search.domain.SearchKind
 import org.koitharu.kotatsu.search.domain.SearchV2Helper
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 private const val MAX_PARALLELISM = 4
@@ -61,6 +72,8 @@ class SearchViewModel @Inject constructor(
 	private val favouritesRepository: FavouritesRepository,
 	private val settings: AppSettings,
 	private val presetsRepository: SourcePresetsRepository,
+	private val captchaHandler: CaptchaHandler,
+	private val webViewExecutor: WebViewExecutor,
 ) : BaseViewModel() {
 
 	val query = savedStateHandle.get<String>(AppRouter.KEY_QUERY).orEmpty()
@@ -71,7 +84,13 @@ class SearchViewModel @Inject constructor(
 	private var hideEmpty = MutableStateFlow(false)
 	private val results = MutableStateFlow<List<SearchResultsListModel>>(emptyList())
 
-	private val displayBatches = java.util.concurrent.ConcurrentHashMap<String, Int>()
+	private val displayBatches = ConcurrentHashMap<String, Int>()
+	private val failedAtMs = ConcurrentHashMap<MangaSource, Long>()
+	private val failedBrowserVersion = ConcurrentHashMap<MangaSource, Long>()
+	private val failedHosts = ConcurrentHashMap<MangaSource, String>()
+	private val refreshingSources = ConcurrentHashMap.newKeySet<MangaSource>()
+	private val refreshJobs = ConcurrentHashMap.newKeySet<Job>()
+	private val searchGeneration = AtomicInteger(0)
 
 	private var searchJob: Job? = null
 
@@ -123,11 +142,103 @@ class SearchViewModel @Inject constructor(
 	}
 
 	fun retry() {
+		searchGeneration.incrementAndGet()
 		searchJob?.cancel()
+		refreshJobs.forEach { it.cancel() }
+		refreshJobs.clear()
+		refreshingSources.clear()
+		failedAtMs.clear()
+		failedBrowserVersion.clear()
+		failedHosts.clear()
 		results.value = emptyList()
 		displayBatches.clear()
 		includeDisabledSources.value = false
 		doSearch()
+	}
+
+	fun refreshSingleSource(source: MangaSource) {
+		val key = source.unwrap()
+		if (key == UnknownMangaSource) {
+			return
+		}
+		refreshSourcesInternal(listOf(source))
+	}
+
+	fun refreshSourcesOnResume(clickedSources: Set<MangaSource>) {
+		val clickedKeys = clickedSources.mapTo(HashSet()) { it.unwrap() }
+		val currentGlobalVersion = captchaHandler.currentBrowserCompletionVersion()
+		val toRefresh = results.value.filter { item ->
+			val error = item.error ?: return@filter false
+			val key = item.source.unwrap()
+			if (item.titleResId != 0 || key == UnknownMangaSource) {
+				return@filter false
+			}
+			val failedAt = failedAtMs[key] ?: 0L
+			val failedBrowserVer = failedBrowserVersion[key] ?: Long.MAX_VALUE
+			val host = failedHosts[key]
+			val hostSolvedAt = maxOf(
+				webViewExecutor.lastSolvedHostAt(host),
+				captchaHandler.lastHostResolvedAt(host),
+			)
+			val isBrowserGlobalEligible = currentGlobalVersion > failedBrowserVer && (
+				error.findCloudFlareException() != null ||
+					error is NotFoundException ||
+					error is InteractiveActionRequiredException
+				)
+			key in clickedKeys ||
+				(failedAt > 0L && captchaHandler.lastResolvedAt(key) >= failedAt) ||
+				captchaHandler.latestBrowserCompletionVersion(key) > failedBrowserVer ||
+				(failedAt > 0L && hostSolvedAt >= failedAt) ||
+				isBrowserGlobalEligible
+		}
+		if (toRefresh.isNotEmpty()) {
+			refreshSourcesInternal(toRefresh.map { it.source })
+		}
+	}
+
+	private fun refreshSourcesInternal(sources: List<MangaSource>) {
+		val eligible = sources.filter { refreshingSources.add(it.unwrap()) }
+		if (eligible.isEmpty()) {
+			return
+		}
+		val generation = searchGeneration.get()
+		var job: Job? = null
+		job = launchLoadingJob(Dispatchers.Default) {
+			try {
+				val semaphore = Semaphore(MAX_PARALLELISM)
+				eligible.map { source ->
+					launch {
+						val key = source.unwrap()
+						try {
+							semaphore.withPermit {
+								val updated = searchSource(source)
+								if (searchGeneration.get() == generation) {
+									replaceOrRemoveSourceResult(key, updated)
+								}
+							}
+						} finally {
+							refreshingSources.remove(key)
+						}
+					}
+				}.joinAll()
+			} finally {
+				eligible.forEach { refreshingSources.remove(it.unwrap()) }
+				job?.let { refreshJobs.remove(it) }
+			}
+		}
+		refreshJobs.add(job)
+	}
+
+	private fun replaceOrRemoveSourceResult(sourceKey: MangaSource, updated: SearchResultsListModel?) {
+		results.update { current ->
+			val index = current.indexOfFirst { it.titleResId == 0 && it.source.unwrap() == sourceKey }
+			when {
+				updated != null && index >= 0 -> current.toMutableList().apply { set(index, updated) }
+				updated != null -> current + updated
+				index >= 0 -> current.filterIndexed { i, _ -> i != index }
+				else -> current
+			}
+		}
 	}
 
 	fun setPinnedOnly(value: Boolean) {
@@ -186,44 +297,58 @@ class SearchViewModel @Inject constructor(
 
 	// impl
 
-	private suspend fun searchSource(source: MangaSource): SearchResultsListModel? = runCatchingCancellable {
-		val searchHelper = searchHelperFactory.create(source)
-		searchHelper(query, kind)
-	}.fold(
-		onSuccess = { result ->
-			if (result == null || result.manga.isEmpty()) {
-				null
-			} else {
-				val list = mangaListMapper.toListModelList(
-					manga = result.manga,
-					mode = ListMode.GRID,
-				)
-				SearchResultsListModel(
-					titleResId = 0,
-					source = source,
-					list = list,
-					error = null,
-					listFilter = result.listFilter,
-					sortOrder = result.sortOrder,
-				)
-			}
-		},
-		onFailure = { error ->
-			error.printStackTraceDebug()
-			if (source is ParserMangaSource && source.isBroken) {
-				null
-			} else {
-				SearchResultsListModel(
-					titleResId = 0,
-					source = source,
-					listFilter = null,
-					sortOrder = null,
-					list = emptyList(),
-					error = error,
-				)
-			}
-		},
-	)
+	private suspend fun searchSource(source: MangaSource): SearchResultsListModel? {
+		val key = source.unwrap()
+		return runCatchingCancellable {
+			val searchHelper = searchHelperFactory.create(source)
+			searchHelper(query, kind)
+		}.fold(
+			onSuccess = { result ->
+				failedAtMs.remove(key)
+				failedBrowserVersion.remove(key)
+				failedHosts.remove(key)
+				if (result == null || result.manga.isEmpty()) {
+					null
+				} else {
+					val list = mangaListMapper.toListModelList(
+						manga = result.manga,
+						mode = ListMode.GRID,
+					)
+					SearchResultsListModel(
+						titleResId = 0,
+						source = source,
+						list = list,
+						error = null,
+						listFilter = result.listFilter,
+						sortOrder = result.sortOrder,
+					)
+				}
+			},
+			onFailure = { error ->
+				error.printStackTraceDebug()
+				if (source is ParserMangaSource && source.isBroken) {
+					null
+				} else {
+					failedAtMs[key] = System.currentTimeMillis()
+					failedBrowserVersion[key] = captchaHandler.currentBrowserCompletionVersion()
+					val host = error.getCauseUrl()?.toHttpUrlOrNull()?.host?.lowercase()
+					if (host != null) {
+						failedHosts[key] = host
+					} else {
+						failedHosts.remove(key)
+					}
+					SearchResultsListModel(
+						titleResId = 0,
+						source = source,
+						listFilter = null,
+						sortOrder = null,
+						list = emptyList(),
+						error = error,
+					)
+				}
+			},
+		)
+	}
 
 	private suspend fun searchHistory(): SearchResultsListModel? = runCatchingCancellable {
 		historyRepository.search(query, kind, Int.MAX_VALUE)

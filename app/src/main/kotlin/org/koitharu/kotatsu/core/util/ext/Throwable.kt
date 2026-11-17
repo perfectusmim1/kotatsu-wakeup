@@ -36,6 +36,7 @@ import org.koitharu.kotatsu.core.exceptions.UnsupportedSourceException
 import org.koitharu.kotatsu.core.exceptions.WrapperIOException
 import org.koitharu.kotatsu.core.exceptions.WrongPasswordException
 import org.koitharu.kotatsu.core.exceptions.resolve.ExceptionResolver
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.parsers.ErrorMessages.FILTER_BOTH_LOCALE_GENRES_NOT_SUPPORTED
 import org.koitharu.kotatsu.parsers.ErrorMessages.FILTER_BOTH_STATES_GENRES_NOT_SUPPORTED
 import org.koitharu.kotatsu.parsers.ErrorMessages.FILTER_MULTIPLE_GENRES_NOT_SUPPORTED
@@ -46,6 +47,7 @@ import org.koitharu.kotatsu.parsers.exception.ContentUnavailableException
 import org.koitharu.kotatsu.parsers.exception.NotFoundException
 import org.koitharu.kotatsu.parsers.exception.ParseException
 import org.koitharu.kotatsu.parsers.exception.TooManyRequestExceptions
+import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.scrobbling.common.domain.ScrobblerAuthRequiredException
 import java.io.File
@@ -167,6 +169,19 @@ fun Throwable.findCloudFlareException(): CloudFlareException? =
     generateSequence(this) { it.cause?.takeIf { c -> c !== it } }
         .filterIsInstance<CloudFlareException>()
         .firstOrNull()
+
+fun Throwable.findSource(): MangaSource? = generateSequence(this) { it.cause?.takeIf { c -> c !== it } }
+    .mapNotNull { e ->
+        when (e) {
+            is CloudFlareException -> e.source
+            is AuthRequiredException -> e.source
+            is InteractiveActionRequiredException -> e.source
+            is EmptyMangaException -> e.manga.source
+            is UnsupportedSourceException -> e.manga?.source
+            else -> null
+        }?.takeUnless { it == UnknownMangaSource }
+    }
+    .firstOrNull()
 
 /**
  * `true` when the source answered "this title is gone": a 404, or a parser explicitly reporting the

@@ -43,6 +43,8 @@ import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.core.exceptions.EmptyMangaException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
+import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
+import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
 import org.koitharu.kotatsu.core.nav.AppRouter
@@ -59,6 +61,7 @@ import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
 import org.koitharu.kotatsu.core.util.ext.firstNotNull
 import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
+import org.koitharu.kotatsu.core.util.ext.findSource
 import org.koitharu.kotatsu.core.util.ext.getParcelableExtraCompat
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.requireValue
@@ -80,6 +83,7 @@ import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaChapter
 import org.koitharu.kotatsu.parsers.model.MangaPage
+import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -107,6 +111,7 @@ private const val NEIGHBOUR_WAIT_MS = 1500L
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
+    private val captchaHandler: CaptchaHandler,
     private val savedStateHandle: SavedStateHandle,
     private val dataRepository: MangaDataRepository,
     private val historyRepository: HistoryRepository,
@@ -147,6 +152,18 @@ class ReaderViewModel @Inject constructor(
 
     @Volatile
     private var lastActivePageIds: Set<Long> = emptySet()
+
+    @Volatile
+    private var pendingFailedLoad: PendingFailedLoad? = null
+
+    @Volatile
+    private var lastFailedError: Throwable? = null
+
+    @Volatile
+    private var failedAtMs: Long = 0L
+
+    @Volatile
+    private var failedBrowserVersion: Long = 0L
 
     init {
         mangaDetails.value = intent.manga?.let { MangaDetails(it) }
@@ -287,7 +304,42 @@ class ReaderViewModel @Inject constructor(
     fun reload() {
         loadingJob?.cancel()
         autoResolveAttempted = false
+        pendingFailedLoad = null
+        lastFailedError = null
         loadImpl()
+    }
+
+    fun getCurrentSource(): MangaSource? = (
+        getMangaOrNull()?.source
+            ?: intent.manga?.source
+            ?: lastFailedError?.findSource()
+        )?.takeUnless { it == UnknownMangaSource }
+
+    fun hasFailedSince(timestampMs: Long): Boolean =
+        lastFailedError != null && timestampMs > 0L && timestampMs >= failedAtMs
+
+    fun hasFailedBeforeBrowserVersion(version: Long): Boolean =
+        lastFailedError != null && version > failedBrowserVersion
+
+    fun shouldRetryOnResume(): Boolean =
+        pendingFailedLoad != null || lastFailedError != null || content.value.pages.isEmpty() || readingState.value == null
+
+    fun retryLastFailedOperation() {
+        when (val failed = pendingFailedLoad) {
+            is PendingFailedLoad.SwitchChapter -> {
+                pendingFailedLoad = null
+                lastFailedError = null
+                switchChapter(failed.chapterId, failed.page, failed.scroll)
+            }
+
+            is PendingFailedLoad.PrevNextChapter -> {
+                pendingFailedLoad = null
+                lastFailedError = null
+                loadPrevNextChapter(failed.currentId, failed.isNext)
+            }
+
+            PendingFailedLoad.Initial, null -> reload()
+        }
     }
 
     fun onNewIntent(newIntent: Intent) {
@@ -321,6 +373,8 @@ class ReaderViewModel @Inject constructor(
             selectedBranch.value = newBranch
             content.value = ReaderContent(emptyList(), null)
             autoResolveAttempted = false
+            pendingFailedLoad = null
+            lastFailedError = null
             loadImpl()
             return
         }
@@ -448,22 +502,36 @@ class ReaderViewModel @Inject constructor(
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
             prevStateJob?.cancelAndJoin()
+            pendingFailedLoad = null
+            lastFailedError = null
             val newState = ReaderState(id, page, scroll)
             val alreadyLoaded = chaptersLoader.hasPages(id) &&
                 content.value.pages.any { it.chapterId == id }
-            if (!alreadyLoaded) {
-                content.value = ReaderContent(emptyList(), null)
-                chaptersLoader.loadSingleChapter(id)
-            } else if (content.value.state == newState) {
-                contentLock.withLock {
-                    content.value = content.value.copy(state = null)
+            try {
+                if (!alreadyLoaded) {
+                    content.value = ReaderContent(emptyList(), null)
+                    chaptersLoader.loadSingleChapter(id)
+                } else if (content.value.state == newState) {
+                    contentLock.withLock {
+                        content.value = content.value.copy(state = null)
+                    }
+                    withContext(Dispatchers.Main) {}
                 }
-                withContext(Dispatchers.Main) {}
+                readingState.value = newState
+                notifyStateChanged()
+                publishPages(newState)
+                saveCurrentState(newState)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                e.printStackTraceDebug()
+                recordFailure(PendingFailedLoad.SwitchChapter(id, page, scroll), e)
+                if (content.value.pages.isEmpty()) {
+                    onLoadingError.call(e)
+                } else {
+                    errorEvent.call(e)
+                }
             }
-            readingState.value = newState
-            notifyStateChanged()
-            publishPages(newState)
-            saveCurrentState(newState)
         }
     }
 
@@ -473,29 +541,52 @@ class ReaderViewModel @Inject constructor(
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
             prevStateJob?.cancelAndJoin()
-            val prevState = readingState.requireValue()
-            val newChapterId = if (delta != 0) {
-                val allChapters = mangaDetails.requireValue().allChapters
-                var index = allChapters.indexOfFirst { x -> x.id == prevState.chapterId }
-                if (index < 0) {
-                    return@launchLoadingJob
+            pendingFailedLoad = null
+            lastFailedError = null
+            var targetChapterId: Long? = null
+            var targetPage = 0
+            var targetScroll = 0
+            try {
+                val prevState = readingState.requireValue()
+                val newChapterId = if (delta != 0) {
+                    val allChapters = mangaDetails.requireValue().allChapters
+                    var index = allChapters.indexOfFirst { x -> x.id == prevState.chapterId }
+                    if (index < 0) {
+                        return@launchLoadingJob
+                    }
+                    index += delta
+                    (allChapters.getOrNull(index) ?: return@launchLoadingJob).id
+                } else {
+                    prevState.chapterId
                 }
-                index += delta
-                (allChapters.getOrNull(index) ?: return@launchLoadingJob).id
-            } else {
-                prevState.chapterId
+                targetChapterId = newChapterId
+                targetPage = if (delta == 0) prevState.page else 0
+                targetScroll = if (delta == 0) prevState.scroll else 0
+                content.value = ReaderContent(emptyList(), null)
+                chaptersLoader.loadSingleChapter(newChapterId)
+                val newState = ReaderState(
+                    chapterId = newChapterId,
+                    page = targetPage,
+                    scroll = targetScroll,
+                )
+                readingState.value = newState
+                notifyStateChanged()
+                publishPages(newState)
+                saveCurrentState(newState)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                e.printStackTraceDebug()
+                val target = targetChapterId?.let {
+                    PendingFailedLoad.SwitchChapter(it, targetPage, targetScroll)
+                } ?: PendingFailedLoad.Initial
+                recordFailure(target, e)
+                if (content.value.pages.isEmpty()) {
+                    onLoadingError.call(e)
+                } else {
+                    errorEvent.call(e)
+                }
             }
-            content.value = ReaderContent(emptyList(), null)
-            chaptersLoader.loadSingleChapter(newChapterId)
-            val newState = ReaderState(
-                chapterId = newChapterId,
-                page = if (delta == 0) prevState.page else 0,
-                scroll = if (delta == 0) prevState.scroll else 0,
-            )
-            readingState.value = newState
-            notifyStateChanged()
-            publishPages(newState)
-            saveCurrentState(newState)
         }
     }
 
@@ -618,6 +709,7 @@ class ReaderViewModel @Inject constructor(
             var exception: Exception? = null
             var loadedDetails: MangaDetails? = null
             var failedCfChapterId: Long? = null
+            var hasPublishedInitialPages = false
             try {
                 intent.manga?.source?.let { captchaAutoResolveCoordinator.awaitActiveResolve(it) }
                 detailsLoadUseCase(intent, force = false)
@@ -671,7 +763,13 @@ class ReaderViewModel @Inject constructor(
                         }
                         mangaDetails.value = details.filterChapters(selectedBranch.value)
                         notifyStateChanged()
-                        publishPages(readingState.value)
+                        val pendingPublishState = if (hasPublishedInitialPages && content.value.pages.isNotEmpty()) {
+                            null
+                        } else {
+                            readingState.value
+                        }
+                        publishPages(pendingPublishState)
+                        hasPublishedInitialPages = true
 
                         // save state, once the pages are on their way: this rewrites the whole chapter list
                         if (!isIncognitoMode.firstNotNull()) {
@@ -708,9 +806,11 @@ class ReaderViewModel @Inject constructor(
 
                     else -> null
                 } ?: IllegalStateException("Unable to load manga. This should never happen. Please report")
+                recordFailure(PendingFailedLoad.Initial, loadingError)
                 onLoadingError.call(loadingError)
             } else exception?.let { e ->
                 // manga has been loaded but error occurred
+                recordFailure(PendingFailedLoad.Initial, e)
                 errorEvent.call(e)
             }
         }
@@ -726,6 +826,8 @@ class ReaderViewModel @Inject constructor(
         content.value = ReaderContent(snapshot, state)
         if (snapshot.isNotEmpty()) {
             autoResolveAttempted = false
+            pendingFailedLoad = null
+            lastFailedError = null
         }
         val resolvedState = state ?: readingState.value
         if (snapshot.isNotEmpty()) {
@@ -762,13 +864,28 @@ class ReaderViewModel @Inject constructor(
         val prevJob = loadingJob
         loadingJob = launchLoadingJob(Dispatchers.Default) {
             prevJob?.join()
-            chaptersLoader.loadPrevNextChapter(
-                manga = mangaDetails.requireValue(),
-                currentId = currentId,
-                isNext = isNext,
-                readingChapterId = readingState.value?.chapterId,
-            )
-            publishPages(null)
+            try {
+                val loaded = chaptersLoader.loadPrevNextChapter(
+                    manga = mangaDetails.requireValue(),
+                    currentId = currentId,
+                    isNext = isNext,
+                    readingChapterId = readingState.value?.chapterId,
+                    mayStartVerification = true,
+                )
+                if (loaded) {
+                    publishPages(null)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                e.printStackTraceDebug()
+                recordFailure(PendingFailedLoad.PrevNextChapter(currentId, isNext), e)
+                if (content.value.pages.isEmpty()) {
+                    onLoadingError.call(e)
+                } else {
+                    errorEvent.call(e)
+                }
+            }
         }
     }
 
@@ -948,10 +1065,23 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    private fun recordFailure(target: PendingFailedLoad, error: Throwable) {
+        pendingFailedLoad = target
+        lastFailedError = error
+        failedAtMs = System.currentTimeMillis()
+        failedBrowserVersion = captchaHandler.currentBrowserCompletionVersion()
+    }
+
     private fun Exception.mergeWith(other: Exception?): Exception = if (other == null) {
         this
     } else {
         other.addSuppressed(this)
         other
+    }
+
+    private sealed interface PendingFailedLoad {
+        data object Initial : PendingFailedLoad
+        data class SwitchChapter(val chapterId: Long, val page: Int, val scroll: Int) : PendingFailedLoad
+        data class PrevNextChapter(val currentId: Long, val isNext: Boolean) : PendingFailedLoad
     }
 }

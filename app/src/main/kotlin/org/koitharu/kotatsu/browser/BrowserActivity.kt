@@ -21,6 +21,7 @@ import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaHandler
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
+import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.network.cookies.AndroidCookieJar
@@ -31,6 +32,7 @@ import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.core.util.ext.processLifecycleScope
 import org.koitharu.kotatsu.core.util.ext.sanitizeHeaderValue
+import org.koitharu.kotatsu.explore.data.MangaSourcesRepository
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
@@ -47,6 +49,9 @@ class BrowserActivity : BaseBrowserActivity() {
 
 	@Inject
 	lateinit var captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator
+
+	@Inject
+	lateinit var sourcesRepository: MangaSourcesRepository
 
 	private var targetSource: MangaSource = UnknownMangaSource
 	private var sessionCompletedNotified = false
@@ -133,6 +138,9 @@ class BrowserActivity : BaseBrowserActivity() {
 		val urls = listOfNotNull(url, viewBinding.webView.url, intent?.dataString)
 			.filter { it.startsWith("http://") || it.startsWith("https://") }
 			.distinct()
+		if (urls.isNotEmpty()) {
+			captchaHandler.markHostsResolved(urls)
+		}
 		val source = targetSource.takeUnless { it == UnknownMangaSource }
 		if (source != null) {
 			if (!webViewUserAgent.isNullOrEmpty()) {
@@ -157,13 +165,65 @@ class BrowserActivity : BaseBrowserActivity() {
 				}
 			}
 		} else {
+			if (markSessionCompleted && !sessionCompletedNotified) {
+				sessionCompletedNotified = true
+				captchaHandler.markAnyBrowserSessionCompleted()
+			}
 			setResult(RESULT_OK)
 			if (urls.isNotEmpty()) {
-				processLifecycleScope.launch {
+				processLifecycleScope.launch(Dispatchers.Default) {
 					persistCookiesToJar(urls)
+					if (markSessionCompleted) {
+						matchSourcesByUrls(urls).forEach { matchedSource ->
+							if (!webViewUserAgent.isNullOrEmpty()) {
+								runCatching {
+									SourceSettings(this@BrowserActivity, matchedSource).cloudFlareUserAgent = webViewUserAgent
+								}.onFailure {
+									it.printStackTraceDebug()
+								}
+							}
+							captchaAutoResolveCoordinator.notifyManualResolveSuccess(matchedSource)
+							captchaHandler.markBrowserSessionCompleted(matchedSource)
+							runCatchingCancellable {
+								captchaHandler.discard(matchedSource)
+							}.onFailure {
+								it.printStackTraceDebug()
+							}
+						}
+					}
 				}
 			}
 		}
+	}
+
+	private suspend fun matchSourcesByUrls(urls: List<String>): List<MangaSource> {
+		val hosts = urls.mapNotNull { it.toHttpUrlOrNull()?.host?.lowercase() }.toSet()
+		if (hosts.isEmpty()) return emptyList()
+		val enabled = runCatchingCancellable { sourcesRepository.getEnabledSources() }.getOrDefault(emptyList())
+		val matched = ArrayList<MangaSource>(2)
+		for (source in enabled) {
+			val unwrapped = source.unwrap()
+			val repo = runCatching { mangaRepositoryFactory.create(unwrapped) as? ParserMangaRepository }.getOrNull()
+				?: continue
+			val candidateHosts = buildList {
+				add(repo.domain.lowercase())
+				repo.domains.forEach { add(it.lowercase()) }
+			}
+			val isMatch = hosts.any { visited ->
+				val strippedVisited = visited.removePrefix("www.")
+				candidateHosts.any { candidate ->
+					val strippedCandidate = candidate.removePrefix("www.")
+					visited == candidate ||
+						strippedVisited == strippedCandidate ||
+						visited.endsWith(".$strippedCandidate") ||
+						candidate.endsWith(".$strippedVisited")
+				}
+			}
+			if (isMatch) {
+				matched.add(unwrapped)
+			}
+		}
+		return matched
 	}
 
 	private suspend fun persistCookiesToJar(urls: List<String>) {
@@ -182,6 +242,23 @@ class BrowserActivity : BaseBrowserActivity() {
 				}
 			}
 		}
+	}
+
+	data class BrowserTarget(
+		val url: String,
+		val source: MangaSource?,
+		val title: String?,
+	)
+
+	class UrlContract : ActivityResultContract<BrowserTarget, Boolean>() {
+		override fun createIntent(context: Context, input: BrowserTarget): Intent = AppRouter.browserIntent(
+			context = context,
+			url = input.url,
+			source = input.source,
+			title = input.title,
+		)
+
+		override fun parseResult(resultCode: Int, intent: Intent?): Boolean = resultCode == RESULT_OK
 	}
 
 	class Contract : ActivityResultContract<InteractiveActionRequiredException, Unit>() {

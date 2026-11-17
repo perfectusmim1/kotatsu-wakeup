@@ -41,6 +41,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.LocalizedAppContext
 import org.koitharu.kotatsu.core.db.MangaDatabase
@@ -50,6 +51,7 @@ import org.koitharu.kotatsu.core.model.MangaSource
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
 import org.koitharu.kotatsu.core.model.getTitle
 import org.koitharu.kotatsu.core.model.isNsfw
+import org.koitharu.kotatsu.core.model.unwrap
 import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.parser.favicon.faviconUri
 import org.koitharu.kotatsu.core.prefs.SourceSettings
@@ -92,6 +94,7 @@ class CaptchaHandler @Inject constructor(
 	private val browserCompletions = ConcurrentHashMap<MangaSource, Long>()
 	private val dismissedAtMs = ConcurrentHashMap<MangaSource, Long>()
 	private val solvedAtMs = ConcurrentHashMap<MangaSource, Long>()
+	private val resolvedHostsAtMs = ConcurrentHashMap<String, Long>()
 
 	@CheckResult
 	suspend fun handle(exception: CloudFlareException, tryAutoResolve: Boolean = true): Boolean =
@@ -101,27 +104,75 @@ class CaptchaHandler @Inject constructor(
 		handleException(source, null, notify = true, tryAutoResolve = false)
 	}
 
-	fun markBrowserSessionCompleted(source: MangaSource) {
-		if (source != UnknownMangaSource) {
-			browserCompletions[source] = browserCompletionCounter.incrementAndGet()
-			solvedAtMs[source] = System.currentTimeMillis()
-			dismissedAtMs.remove(source)
+	fun markSourceResolved(source: MangaSource) {
+		val key = source.unwrap()
+		if (key == UnknownMangaSource) {
+			return
 		}
+		solvedAtMs[key] = System.currentTimeMillis()
+		dismissedAtMs.remove(key)
+		dismissInAppAlert(key, fromUser = false)
+	}
+
+	fun lastResolvedAt(source: MangaSource): Long {
+		val key = source.unwrap()
+		if (key == UnknownMangaSource) {
+			return 0L
+		}
+		return maxOf(
+			solvedAtMs[key] ?: 0L,
+			captchaAutoResolveCoordinator.lastResolvedAt(key),
+		)
+	}
+
+	fun markBrowserSessionCompleted(source: MangaSource) {
+		val key = source.unwrap()
+		if (key != UnknownMangaSource) {
+			browserCompletions[key] = browserCompletionCounter.incrementAndGet()
+			markSourceResolved(key)
+		} else {
+			markAnyBrowserSessionCompleted()
+		}
+	}
+
+	fun markAnyBrowserSessionCompleted() {
+		browserCompletionCounter.incrementAndGet()
+	}
+
+	fun markHostsResolved(urls: Collection<String>) {
+		val now = System.currentTimeMillis()
+		for (rawUrl in urls) {
+			val host = rawUrl.toHttpUrlOrNull()?.host?.lowercase() ?: continue
+			resolvedHostsAtMs[host] = now
+			val stripped = host.removePrefix("www.")
+			if (stripped != host) {
+				resolvedHostsAtMs[stripped] = now
+			}
+		}
+	}
+
+	fun lastHostResolvedAt(host: String?): Long {
+		val normalized = host?.lowercase() ?: return 0L
+		return maxOf(
+			resolvedHostsAtMs[normalized] ?: 0L,
+			resolvedHostsAtMs[normalized.removePrefix("www.")] ?: 0L,
+		)
 	}
 
 	fun currentBrowserCompletionVersion(): Long = browserCompletionCounter.get()
 
-	fun latestBrowserCompletionVersion(source: MangaSource): Long = browserCompletions[source] ?: 0L
+	fun latestBrowserCompletionVersion(source: MangaSource): Long = browserCompletions[source.unwrap()] ?: 0L
 
 	fun dismissInAppAlert(source: MangaSource, fromUser: Boolean = true) {
-		if (fromUser && source != UnknownMangaSource) {
-			dismissedAtMs[source] = System.currentTimeMillis()
+		val key = source.unwrap()
+		if (fromUser && key != UnknownMangaSource) {
+			dismissedAtMs[key] = System.currentTimeMillis()
 		}
 		_pendingAlerts.update { current ->
-			if (current.none { it.source == source }) {
+			if (current.none { it.source.unwrap() == key }) {
 				current
 			} else {
-				current.filterNot { it.source == source }
+				current.filterNot { it.source.unwrap() == key }
 			}
 		}
 	}
@@ -152,38 +203,40 @@ class CaptchaHandler @Inject constructor(
 		notify: Boolean,
 		tryAutoResolve: Boolean = true,
 	): Boolean = withContext(Dispatchers.Default) {
-		if (source == UnknownMangaSource) {
+		val normalizedSource = source.unwrap()
+		if (normalizedSource == UnknownMangaSource) {
 			return@withContext false
 		}
 		if (
 			tryAutoResolve &&
 			exception is CloudFlareProtectedException &&
-			!SourceSettings(context, source).isCaptchaAutoResolveDisabled &&
+			!SourceSettings(context, normalizedSource).isCaptchaAutoResolveDisabled &&
 			captchaAutoResolveCoordinator.resolveIfEnabled(exception)
 		) {
+			markSourceResolved(normalizedSource)
 			return@withContext true
 		}
 		if (exception !is CloudFlareProtectedException) {
-			dismissInAppAlert(source, fromUser = false)
-			dismissedAtMs.remove(source)
+			dismissInAppAlert(normalizedSource, fromUser = false)
+			dismissedAtMs.remove(normalizedSource)
 		}
 		mutex.withLock {
 			var removedException: CloudFlareProtectedException? = null
 			if (exception is CloudFlareProtectedException) {
-				exceptionMap[source] = exception
+				exceptionMap[normalizedSource] = exception
 			} else {
-				removedException = exceptionMap.remove(source)
+				removedException = exceptionMap.remove(normalizedSource)
 			}
 			val dao = databaseProvider.get().getSourcesDao()
-			dao.setCfState(source.name, exception?.state ?: CloudFlareHelper.PROTECTION_NOT_DETECTED)
+			dao.setCfState(normalizedSource.name, exception?.state ?: CloudFlareHelper.PROTECTION_NOT_DETECTED)
 
-			if (notify && exception is CloudFlareProtectedException && !SourceSettings(context, source).isCaptchaNotificationsDisabled) {
+			if (notify && exception is CloudFlareProtectedException && !SourceSettings(context, normalizedSource).isCaptchaNotificationsDisabled) {
 				val now = System.currentTimeMillis()
-				val recentlyDismissed = dismissedAtMs[source]?.let { now - it < DISMISS_COOLDOWN_MS } == true
+				val recentlyDismissed = dismissedAtMs[normalizedSource]?.let { now - it < DISMISS_COOLDOWN_MS } == true
 				val recentlySolvedBackground = !tryAutoResolve &&
-					solvedAtMs[source]?.let { now - it < POST_SOLVE_COIL_GRACE_MS } == true
+					solvedAtMs[normalizedSource]?.let { now - it < POST_SOLVE_COIL_GRACE_MS } == true
 				if (!recentlyDismissed && !recentlySolvedBackground) {
-					upsertInAppAlert(source, exception)
+					upsertInAppAlert(normalizedSource, exception)
 				}
 			}
 

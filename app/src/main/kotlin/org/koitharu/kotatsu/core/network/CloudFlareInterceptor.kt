@@ -19,12 +19,30 @@ class CloudFlareInterceptor(
 		val request = chain.request()
 		val response = chain.proceed(request)
 		return when (CloudFlareHelper.checkResponseForProtection(response)) {
-			CloudFlareHelper.PROTECTION_BLOCKED -> response.closeThrowing(
-				CloudFlareBlockedException(
-					url = request.url.toString(),
-					source = request.tag(MangaSource::class.java),
-				),
-			)
+			CloudFlareHelper.PROTECTION_BLOCKED -> {
+				val source = request.tag(MangaSource::class.java)
+				if (!isImageRequest(request) && source != null) {
+					val bridgedResponse = runCatching {
+						runBlocking {
+							webViewExecutorLazy.get().executeCloudFlareRequest(
+								request = request,
+								source = source,
+								allowChallenge = true,
+							)
+						}
+					}.getOrNull()
+					if (bridgedResponse != null) {
+						runCatching { response.close() }
+						return bridgedResponse
+					}
+				}
+				response.closeThrowing(
+					CloudFlareBlockedException(
+						url = request.url.toString(),
+						source = source,
+					),
+				)
+			}
 
 			CloudFlareHelper.PROTECTION_CAPTCHA -> {
 				val source = request.tag(MangaSource::class.java)
