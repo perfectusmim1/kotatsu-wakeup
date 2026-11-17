@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Настройки перевода</string>
+	<string name="translation_toggle">Переключить перевод</string>
+	<string name="translation_enable">Включить перевод</string>
+	<string name="translation_disable">Отключить перевод</string>
+	<string name="translation_active">Включён</string>
+	<string name="translation_off">Выкл.</string>
+	<string name="translation_provider">Провайдер перевода</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google Переводчик</string>
+	<string name="translation_source_lang">Язык оригинала (OCR)</string>
+	<string name="translation_target_lang">Целевой язык</string>
+	<string name="translation_api_keys">API-ключи Gemini</string>
+	<string name="translation_api_keys_hint">Разделяйте несколько ключей запятыми или переносом строки</string>
+	<string name="translation_api_keys_empty">API-ключ не задан</string>
+	<string name="translation_api_key_required">Добавьте API-ключ Gemini или переключитесь на Google Переводчик</string>
+	<string name="translation_auto_translate">Автоперевод страниц</string>
+	<string name="translation_skip_sfx">Пропускать звуковые эффекты</string>
+	<string name="translation_filter_promo">Пропускать промо и титры</string>
+	<string name="translation_ocr_ready">Модель OCR готова</string>
+	<string name="translation_ocr_auto_ready">Автоопределение OCR готово</string>
+	<string name="translation_ocr_not_downloaded">Модель OCR загружается при первом использовании</string>
+	<string name="translation_ocr_download">Скачать модель</string>
+	<string name="translation_ocr_downloading">Загрузка модели OCR… %1$d%%</string>
+	<string name="translation_ocr_running">Распознавание текста…</string>
+	<string name="translation_translating_text">Перевод…</string>
+	<string name="translation_rendering_page">Отрисовка страницы…</string>
+	<string name="translation_clear_cache">Очистить кэш перевода</string>
+	<string name="translation_cache_cleared">Кэш перевода очищен</string>
+	<string name="translation_cache_cleared_size">Очищено %1$s кэшированных переводов</string>
+	<string name="translation_error_generic">Ошибка перевода: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">Настроен %1$d активный ключ</item>
+		<item quantity="few">Настроено %1$d активных ключа</item>
+		<item quantity="many">Настроено %1$d активных ключей</item>
+		<item quantity="other">Настроено %1$d активных ключей</item>
+	</plurals>
+</resources>

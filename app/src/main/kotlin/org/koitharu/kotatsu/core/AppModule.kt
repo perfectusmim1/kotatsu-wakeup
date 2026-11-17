@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.core
 
 import android.app.Application
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.provider.SearchRecentSuggestions
 import android.text.Html
@@ -87,7 +88,22 @@ interface AppModule {
 		@LocalizedAppContext
 		fun provideLocalizedContext(
 			@ApplicationContext context: Context,
-		): Context = ContextCompat.getContextForLanguage(context)
+			settings: AppSettings,
+		): Context {
+			val base = ContextCompat.getContextForLanguage(context)
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+				return base
+			}
+			val locales = settings.appLocales
+			if (locales.isEmpty) {
+				return base
+			}
+			val primary = locales[0] ?: return base
+			val config = Configuration(base.resources.configuration).apply {
+				setLocale(primary)
+			}
+			return base.createConfigurationContext(config)
+		}
 
 		@Provides
 		@Singleton

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">تمت إضافة الإشارات المرجعية</string>
+	<string name="bookmarks_sort_newest">الأحدث إضافة</string>
+	<string name="bookmarks_sort_oldest">الأقدم إضافة</string>
+	<string name="bookmarks_sort_chapter">ترتيب الفصول</string>
+	<string name="search_bookmarks_hint">ابحث في السلسلة أو الفصل</string>
+	<string name="search_bookmarked_chapters_hint">ابحث في الفصول المحفوظة</string>
+	<string name="no_bookmarks_matching_query">لا توجد إشارات مطابقة</string>
+	<string name="no_bookmarks_matching_summary">لا توجد إشارات مرجعية تطابق الفلتر الحالي</string>
+	<string name="download_bookmarked_chapters">تنزيل الفصول المحفوظة</string>
+	<string name="download_bookmarked_only">الفصول المحفوظة فقط</string>
+	<string name="download_bookmarked_next_2">المحفوظة + الفصلان التاليان</string>
+	<string name="download_bookmarked_next_3">المحفوظة + 3 فصول تالية</string>
+	<string name="no_bookmarked_chapters_to_download">لا توجد فصول محفوظة للتنزيل</string>
+	<string name="migrate_bookmarks">نقل الإشارات المرجعية إلى مصدر آخر</string>
+	<string name="bookmark_migration_choose_series">اختر السلسلة للنقل</string>
+	<string name="bookmark_migration_searching">جارٍ البحث في المصادر المفعلة…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d مصادر · %3$d تطابق</string>
+	<string name="bookmark_migration_chapters_matched">تطابق %1$d/%2$d فصول</string>
+	<string name="bookmark_migration_total_chapters">%1$d فصول</string>
+	<string name="bookmark_migration_no_candidates">لم يتم العثور على مصادر متوافقة</string>
+	<string name="bookmark_migration_no_candidates_summary">لا يوجد مصدر مفعل يطابق هذه السلسلة وإشاراتها</string>
+	<string name="bookmark_migration_confirm">نقل %1$d إشارة من \"%2$s\" (%3$s) إلى \"%4$s\" (%5$s)؟\nتطابق %6$d من %7$d فصول.</string>
+	<string name="bookmark_migration_confirm_no_overlap">نقل %1$d إشارة من \"%2$s\" (%3$s) إلى \"%4$s\" (%5$s)؟\nسيتم تقريب الفصول حسب تقدم القراءة.</string>
+	<string name="bookmark_migration_success">تم نقل الإشارات المرجعية إلى %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">لا توجد إشارات مرجعية لهذه السلسلة</string>
+	<string name="bookmark_migration_rescan">إعادة الفحص</string>
+	<string name="bookmark_migration_unavailable_no_chapters">لا توجد فصول</string>
+	<string name="bookmarks_count_badge">%1$d إشارات</string>
+</resources>

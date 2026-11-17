@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Akun sumber</string>
+	<string name="source_accounts_summary">%1$d masuk · %2$d didukung</string>
+	<string name="source_accounts_summary_none">Tidak ada sesi aktif · %1$d didukung</string>
+	<string name="source_accounts_empty">Tidak ada sumber yang mendukung akun</string>
+	<string name="source_account_signed_in">Sudah masuk</string>
+	<string name="source_account_not_signed_in">Belum masuk</string>
+	<string name="source_account_switch">Ganti akun</string>
+	<string name="source_signed_out">Keluar</string>
+	<string name="sign_up">Daftar</string>
+	<string name="auth_verify">Verifikasi</string>
+	<string name="auth_refresh">Segarkan</string>
+	<string name="auth_not_verified_yet">Sesi belum diverifikasi. Selesaikan proses masuk dan coba lagi.</string>
+</resources>

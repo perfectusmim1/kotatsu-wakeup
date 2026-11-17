@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">소스 계정</string>
+	<string name="source_accounts_summary">%1$d개 로그인됨 · %2$d개 지원</string>
+	<string name="source_accounts_summary_none">활성 세션 없음 · %1$d개 지원</string>
+	<string name="source_accounts_empty">계정을 지원하는 소스가 없습니다</string>
+	<string name="source_account_signed_in">로그인됨</string>
+	<string name="source_account_not_signed_in">로그인 안 됨</string>
+	<string name="source_account_switch">계정 전환</string>
+	<string name="source_signed_out">로그아웃됨</string>
+	<string name="sign_up">회원가입</string>
+	<string name="auth_verify">확인</string>
+	<string name="auth_refresh">새로고침</string>
+	<string name="auth_not_verified_yet">세션이 아직 확인되지 않았습니다. 로그인을 완료한 후 다시 시도하세요.</string>
+</resources>

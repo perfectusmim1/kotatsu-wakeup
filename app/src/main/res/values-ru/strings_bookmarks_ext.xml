@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Закладки добавлены</string>
+	<string name="bookmarks_sort_newest">Сначала новые</string>
+	<string name="bookmarks_sort_oldest">Сначала старые</string>
+	<string name="bookmarks_sort_chapter">По порядку глав</string>
+	<string name="search_bookmarks_hint">Поиск серии или главы</string>
+	<string name="search_bookmarked_chapters_hint">Поиск по главам с закладками</string>
+	<string name="no_bookmarks_matching_query">Нет подходящих закладок</string>
+	<string name="no_bookmarks_matching_summary">Нет закладок, соответствующих фильтру</string>
+	<string name="download_bookmarked_chapters">Скачать главы с закладками</string>
+	<string name="download_bookmarked_only">Только главы с закладками</string>
+	<string name="download_bookmarked_next_2">С закладками + 2 следующие главы</string>
+	<string name="download_bookmarked_next_3">С закладками + 3 следующие главы</string>
+	<string name="no_bookmarked_chapters_to_download">Нет глав с закладками для скачивания</string>
+	<string name="migrate_bookmarks">Перенести закладки в другой источник</string>
+	<string name="bookmark_migration_choose_series">Выберите серию для переноса</string>
+	<string name="bookmark_migration_searching">Поиск по активным источникам…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d источников · %3$d совпадений</string>
+	<string name="bookmark_migration_chapters_matched">Совпало %1$d/%2$d глав</string>
+	<string name="bookmark_migration_total_chapters">%1$d глав</string>
+	<string name="bookmark_migration_no_candidates">Совместимые источники не найдены</string>
+	<string name="bookmark_migration_no_candidates_summary">Ни один включённый источник не совпал с этой серией и закладками</string>
+	<string name="bookmark_migration_confirm">Перенести %1$d закл. из \"%2$s\" (%3$s) в \"%4$s\" (%5$s)?\nСовпало %6$d из %7$d глав с закладками.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Перенести %1$d закл. из \"%2$s\" (%3$s) в \"%4$s\" (%5$s)?\nГлавы будут сопоставлены по прогрессу чтения.</string>
+	<string name="bookmark_migration_success">Закладки перенесены в %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Для этой серии нет закладок</string>
+	<string name="bookmark_migration_rescan">Искать снова</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Нет глав</string>
+	<string name="bookmarks_count_badge">Закладок: %1$d</string>
+</resources>

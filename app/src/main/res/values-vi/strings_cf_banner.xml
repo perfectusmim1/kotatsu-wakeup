@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">Cần xác minh cho %1$s</string>
+	<string name="cf_banner_multiple_required">Cần xác minh cho %1$s (+%2$d nguồn khác)</string>
+	<string name="cf_banner_solve">Giải quyết</string>
+	<string name="cf_banner_dismiss">Bỏ qua</string>
+</resources>

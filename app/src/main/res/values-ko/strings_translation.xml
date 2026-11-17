@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">번역 설정</string>
+	<string name="translation_toggle">번역 전환</string>
+	<string name="translation_enable">번역 켜기</string>
+	<string name="translation_disable">번역 끄기</string>
+	<string name="translation_active">켜짐</string>
+	<string name="translation_off">꺼짐</string>
+	<string name="translation_provider">번역 제공자</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google 번역</string>
+	<string name="translation_source_lang">원본 언어 (OCR)</string>
+	<string name="translation_target_lang">대상 언어</string>
+	<string name="translation_api_keys">Gemini API 키</string>
+	<string name="translation_api_keys_hint">여러 키는 쉼표 또는 줄바꿈으로 구분하세요</string>
+	<string name="translation_api_keys_empty">설정된 API 키 없음</string>
+	<string name="translation_api_key_required">Gemini API 키를 추가하거나 Google 번역으로 전환하세요</string>
+	<string name="translation_auto_translate">페이지 자동 번역</string>
+	<string name="translation_skip_sfx">효과음 건너뛰기</string>
+	<string name="translation_filter_promo">홍보 및 크레딧 페이지 건너뛰기</string>
+	<string name="translation_ocr_ready">OCR 모델 준비됨</string>
+	<string name="translation_ocr_auto_ready">자동 감지 OCR 준비됨</string>
+	<string name="translation_ocr_not_downloaded">첫 사용 시 OCR 모델이 다운로드됩니다</string>
+	<string name="translation_ocr_download">모델 다운로드</string>
+	<string name="translation_ocr_downloading">OCR 모델 다운로드 중… %1$d%%</string>
+	<string name="translation_ocr_running">텍스트 인식 중…</string>
+	<string name="translation_translating_text">번역 중…</string>
+	<string name="translation_rendering_page">페이지 렌더링 중…</string>
+	<string name="translation_clear_cache">번역 캐시 지우기</string>
+	<string name="translation_cache_cleared">번역 캐시를 지웠습니다</string>
+	<string name="translation_cache_cleared_size">캐시된 번역 %1$s 지워짐</string>
+	<string name="translation_error_generic">번역 실패: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="other">활성 키 %1$d개 설정됨</item>
+	</plurals>
+</resources>

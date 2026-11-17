@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Налаштування перекладу</string>
+	<string name="translation_toggle">Перемкнути переклад</string>
+	<string name="translation_enable">Увімкнути переклад</string>
+	<string name="translation_disable">Вимкнути переклад</string>
+	<string name="translation_active">Увімкнено</string>
+	<string name="translation_off">Вимк.</string>
+	<string name="translation_provider">Провайдер перекладу</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google Перекладач</string>
+	<string name="translation_source_lang">Мова оригіналу (OCR)</string>
+	<string name="translation_target_lang">Цільова мова</string>
+	<string name="translation_api_keys">API-ключі Gemini</string>
+	<string name="translation_api_keys_hint">Розділяйте кілька ключів комами або новим рядком</string>
+	<string name="translation_api_keys_empty">API-ключ не налаштовано</string>
+	<string name="translation_api_key_required">Додайте API-ключ Gemini або оберіть Google Перекладач</string>
+	<string name="translation_auto_translate">Автопереклад сторінок</string>
+	<string name="translation_skip_sfx">Пропускати звукові ефекти</string>
+	<string name="translation_filter_promo">Пропускати промо та титри</string>
+	<string name="translation_ocr_ready">Модель OCR готова</string>
+	<string name="translation_ocr_auto_ready">Автоматичний OCR готовий</string>
+	<string name="translation_ocr_not_downloaded">Модель OCR завантажиться під час першого використання</string>
+	<string name="translation_ocr_download">Завантажити модель</string>
+	<string name="translation_ocr_downloading">Завантаження моделі OCR… %1$d%%</string>
+	<string name="translation_ocr_running">Розпізнавання тексту…</string>
+	<string name="translation_translating_text">Переклад…</string>
+	<string name="translation_rendering_page">Відтворення сторінки…</string>
+	<string name="translation_clear_cache">Очистити кеш перекладу</string>
+	<string name="translation_cache_cleared">Кеш перекладу очищено</string>
+	<string name="translation_cache_cleared_size">Очищено %1$s кешованих перекладів</string>
+	<string name="translation_error_generic">Помилка перекладу: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">Налаштовано %1$d активний ключ</item>
+		<item quantity="few">Налаштовано %1$d активні ключі</item>
+		<item quantity="many">Налаштовано %1$d активних ключів</item>
+		<item quantity="other">Налаштовано %1$d активних ключів</item>
+	</plurals>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">أيقونة</string>
+	<string name="fav_icon_default">قلب</string>
+	<string name="fav_icon_star">نجمة</string>
+	<string name="fav_icon_fire">نار</string>
+	<string name="fav_icon_crown">تاج</string>
+	<string name="fav_icon_book">كتاب</string>
+	<string name="fav_icon_bookmark">إشارة مرجعية</string>
+	<string name="fav_icon_eye">عين</string>
+	<string name="fav_icon_bolt">برق</string>
+	<string name="fav_icon_clock">ساعة</string>
+	<string name="fav_icon_folder">مجلد</string>
+	<string name="fav_icon_check">صح</string>
+	<string name="fav_icon_sparkles">بريق</string>
+</resources>

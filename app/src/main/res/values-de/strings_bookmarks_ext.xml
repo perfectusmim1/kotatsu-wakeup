@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Lesezeichen hinzugefügt</string>
+	<string name="bookmarks_sort_newest">Neueste zuerst</string>
+	<string name="bookmarks_sort_oldest">Älteste zuerst</string>
+	<string name="bookmarks_sort_chapter">Kapitelreihenfolge</string>
+	<string name="search_bookmarks_hint">Serie oder Kapitel suchen</string>
+	<string name="search_bookmarked_chapters_hint">Lesezeichen-Kapitel suchen</string>
+	<string name="no_bookmarks_matching_query">Keine passenden Lesezeichen</string>
+	<string name="no_bookmarks_matching_summary">Keine Lesezeichen entsprechen deinem Filter</string>
+	<string name="download_bookmarked_chapters">Kapitel mit Lesezeichen laden</string>
+	<string name="download_bookmarked_only">Nur Kapitel mit Lesezeichen</string>
+	<string name="download_bookmarked_next_2">Mit Lesezeichen + nächste 2 Kapitel</string>
+	<string name="download_bookmarked_next_3">Mit Lesezeichen + nächste 3 Kapitel</string>
+	<string name="no_bookmarked_chapters_to_download">Keine Kapitel mit Lesezeichen zum Herunterladen</string>
+	<string name="migrate_bookmarks">Lesezeichen zu anderer Quelle übertragen</string>
+	<string name="bookmark_migration_choose_series">Serie zum Übertragen wählen</string>
+	<string name="bookmark_migration_searching">Aktive Quellen werden durchsucht…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d Quellen · %3$d Treffer</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d Kapitel gefunden</string>
+	<string name="bookmark_migration_total_chapters">%1$d Kapitel</string>
+	<string name="bookmark_migration_no_candidates">Keine kompatiblen Quellen gefunden</string>
+	<string name="bookmark_migration_no_candidates_summary">Keine aktive Quelle passt zu dieser Serie und ihren Lesezeichen</string>
+	<string name="bookmark_migration_confirm">%1$d Lesezeichen von \"%2$s\" (%3$s) zu \"%4$s\" (%5$s) übertragen?\n%6$d von %7$d Lesezeichen-Kapiteln gefunden.</string>
+	<string name="bookmark_migration_confirm_no_overlap">%1$d Lesezeichen von \"%2$s\" (%3$s) zu \"%4$s\" (%5$s) übertragen?\nKapitel werden nach Lesefortschritt zugeordnet.</string>
+	<string name="bookmark_migration_success">Lesezeichen zu %1$s übertragen</string>
+	<string name="bookmark_migration_no_bookmarks">Keine Lesezeichen für diese Serie gefunden</string>
+	<string name="bookmark_migration_rescan">Erneut suchen</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Keine Kapitel</string>
+	<string name="bookmarks_count_badge">%1$d Lesezeichen</string>
+</resources>

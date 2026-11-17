@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Nhập từ AniList</string>
+	<string name="anilist_import_mode_label">Đích nhập</string>
+	<string name="anilist_import_by_status">Theo trạng thái</string>
+	<string name="anilist_import_single_category">Một danh mục</string>
+	<string name="anilist_import_new_category">Danh mục mới</string>
+	<string name="anilist_import_new_category_hint">Tên danh mục</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Đang tải thư viện AniList…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Hoàn tất (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Đã nhập: %1$d · Đã có: %2$d · Chưa khớp: %3$d</string>
+	<string name="anilist_import_empty">Danh sách manga AniList của bạn trống.</string>
+	<string name="anilist_import_unmatched_title">Tiêu đề chưa khớp</string>
+	<string name="anilist_import_start">Bắt đầu nhập</string>
+	<string name="anilist_import_retry">Nhập lại</string>
+	<string name="anilist_import_error_no_sources">Hãy bật ít nhất một nguồn manga trước khi nhập.</string>
+</resources>

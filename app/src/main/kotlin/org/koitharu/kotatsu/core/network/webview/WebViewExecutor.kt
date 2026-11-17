@@ -1,11 +1,14 @@
 package org.koitharu.kotatsu.core.network.webview
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.AndroidRuntimeException
 import android.util.Base64
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
@@ -21,6 +24,7 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -82,6 +86,17 @@ class WebViewExecutor @Inject constructor(
 	// host -> epoch ms until which we skip new resolve attempts for that host (set after a recent failure).
 	// Avoids the "burst of failed images each triggers its own 12 s WebView attempt" cascade.
 	private val recentFailureUntil = ConcurrentHashMap<String, Long>()
+	private val recentSolvedHostAt = ConcurrentHashMap<String, Long>()
+
+	fun hasRecentlySolvedHost(host: String?): Boolean {
+		val normalized = host?.lowercase() ?: return false
+		val solvedAt = recentSolvedHostAt[normalized] ?: return false
+		if (System.currentTimeMillis() - solvedAt <= SOLVED_HOST_TTL_MS) {
+			return true
+		}
+		recentSolvedHostAt.remove(normalized)
+		return false
+	}
 
 	val defaultUserAgent: String? by lazy {
 		try {
@@ -242,8 +257,8 @@ class WebViewExecutor @Inject constructor(
 				val host: ViewGroup?
 				val isThrowaway: Boolean
 				if (activity != null) {
-					webView = WebView(activity).apply { configureForParser(null) }
-					host = attachToHost(webView, activity)
+					webView = TouchPassThroughWebView(activity).apply { configureForParser(null) }
+					host = attachToInvisibleHost(webView, activity)
 					isThrowaway = true
 				} else {
 					webView = obtainWebView()
@@ -264,12 +279,15 @@ class WebViewExecutor @Inject constructor(
 					val stripRequestedWith = needsCloudFlareInterception(exception.source)
 					applyCloudFlareRequestedWithPolicy(webView.settings, stripRequestedWith)
 					val resolved = withTimeoutOrNull(timeout) {
-						awaitVisibleLayout(webView)
-						webView.requestFocus()
-						suspendCancellableCoroutine { cont ->
-							webView.webViewClient = createCloudFlareClient(webView, exception, cont)
-							webView.loadUrl(exception.url)
+						if (host != null) {
+							awaitVisibleLayout(webView)
 						}
+						loadAndPassChallenge(
+							webView = webView,
+							originUrl = exception.url,
+							source = exception.source,
+							timeoutMs = timeout,
+						)
 					}
 					if (resolved == true) {
 						syncedUrls = listOfNotNull(exception.url, webView.url).distinct()
@@ -303,6 +321,7 @@ class WebViewExecutor @Inject constructor(
 			}
 		}
 		if (resolved) {
+			cooldownHost?.let { recentSolvedHostAt[it] = System.currentTimeMillis() }
 			persistSolvedState(exception.source, syncedUrls, effectiveUserAgent)
 		}
 		if (cooldownHost != null) {
@@ -469,16 +488,21 @@ class WebViewExecutor @Inject constructor(
 	}
 
 	/**
-	 * Executes an HTTP request inside an invisible WebView using `fetch()` so requests blocked by
-	 * OkHttp TLS/HTTP2 fingerprinting (even with a valid `cf_clearance`) succeed in the background
-	 * without opening a browser window.
+	 * Executes an HTTP request inside an invisible, touch-pass-through WebView using `fetch()` so
+	 * requests blocked by OkHttp TLS/HTTP2 fingerprinting (even with a valid `cf_clearance`) succeed
+	 * in the background without opening a browser window or blocking user input.
 	 */
 	suspend fun executeCloudFlareRequest(
 		request: Request,
 		source: MangaSource?,
+		allowChallenge: Boolean = true,
 		timeoutMs: Long = BRIDGE_CHALLENGE_TIMEOUT_MS,
 	): Response? {
 		val host = request.url.host.lowercase()
+		val isRecentlySolved = hasRecentlySolvedHost(host)
+		if (!allowChallenge && !isRecentlySolved) {
+			return null
+		}
 		val now = System.currentTimeMillis()
 		val skipUntil = recentFailureUntil[host]
 		if (skipUntil != null) {
@@ -504,14 +528,54 @@ class WebViewExecutor @Inject constructor(
 			if (skipAfterLock != null && skipAfterLock > System.currentTimeMillis()) {
 				return@withLock null
 			}
+			val solvedFast = hasRecentlySolvedHost(host)
+			if (!allowChallenge && !solvedFast) {
+				return@withLock null
+			}
 			runCatchingCancellable { proxyProvider.applyWebViewConfig() }.onFailure { it.printStackTraceDebug() }
 			withContext(Dispatchers.Main.immediate) {
+				val originUrl = "${request.url.scheme}://${request.url.host}/"
+				val requestUserAgent = request.header(CommonHeaders.USER_AGENT)
+					?: targetSource?.getUserAgent()
+				val alignedUserAgent = requestUserAgent?.let(::alignUserAgentWithEngine)
+				val stripRequestedWith = targetSource != null && needsCloudFlareInterception(targetSource)
+
+				// Fast-path for recently solved hosts: reuse headless WebView without attaching any view
+				if (solvedFast) {
+					val headless = obtainWebView()
+					try {
+						headless.webChromeClient = WebChromeClient()
+						headless.onResume()
+						alignedUserAgent?.let { headless.settings.userAgentString = it }
+						applyCloudFlareRequestedWithPolicy(headless.settings, stripRequestedWith)
+						ensureOriginContext(headless, originUrl)
+						val fastResponse = executeFetchInWebView(headless, request, requestBodyBytes)
+						if (fastResponse != null && !isCloudFlareChallengeResponse(fastResponse)) {
+							recentSolvedHostAt[host] = System.currentTimeMillis()
+							syncedUrls = listOfNotNull(originUrl, request.url.toString(), headless.url).distinct()
+							effectiveUserAgent = headless.settings.userAgentString
+								?.sanitizeHeaderValue()
+								?.trim()
+								?.nullIfEmpty()
+							return@withContext fastResponse
+						}
+						fastResponse?.close()
+						recentSolvedHostAt.remove(host)
+					} finally {
+						runCatching { headless.onPause() }
+						headless.webChromeClient = WebChromeClient()
+					}
+					if (!allowChallenge) {
+						return@withContext null
+					}
+				}
+
 				val activity = foregroundActivityHolder.current
 				val webView: WebView
 				val hostView: ViewGroup?
 				val isThrowaway: Boolean
 				if (activity != null) {
-					webView = WebView(activity).apply { configureForParser(null) }
+					webView = TouchPassThroughWebView(activity).apply { configureForParser(null) }
 					hostView = attachToInvisibleHost(webView, activity)
 					isThrowaway = true
 				} else {
@@ -522,20 +586,14 @@ class WebViewExecutor @Inject constructor(
 				try {
 					webView.webChromeClient = WebChromeClient()
 					webView.onResume()
-					val requestUserAgent = request.header(CommonHeaders.USER_AGENT)
-						?: targetSource?.getUserAgent()
-					val alignedUserAgent = requestUserAgent?.let(::alignUserAgentWithEngine)
 					alignedUserAgent?.let {
 						webView.settings.userAgentString = it
 					}
-					if (targetSource != null) {
-						applyCloudFlareRequestedWithPolicy(webView.settings, needsCloudFlareInterception(targetSource))
-					}
+					applyCloudFlareRequestedWithPolicy(webView.settings, stripRequestedWith)
 					if (hostView != null) {
 						awaitVisibleLayout(webView)
 					}
 
-					val originUrl = "${request.url.scheme}://${request.url.host}/"
 					val challengePassed = loadAndPassChallenge(
 						webView = webView,
 						originUrl = originUrl,
@@ -549,6 +607,7 @@ class WebViewExecutor @Inject constructor(
 
 					val bridged = executeFetchInWebView(webView, request, requestBodyBytes)
 					if (bridged != null && !isCloudFlareChallengeResponse(bridged)) {
+						recentSolvedHostAt[host] = System.currentTimeMillis()
 						syncedUrls = listOfNotNull(originUrl, request.url.toString(), webView.url).distinct()
 						effectiveUserAgent = webView.settings.userAgentString
 							?.sanitizeHeaderValue()
@@ -584,10 +643,28 @@ class WebViewExecutor @Inject constructor(
 				persistSolvedState(resolvedSource, syncedUrls, effectiveUserAgent)
 			}
 			recentFailureUntil.remove(host)
-		} else {
+		} else if (allowChallenge) {
 			recentFailureUntil[host] = System.currentTimeMillis() + FAILURE_COOLDOWN_MS
 		}
 		return response
+	}
+
+	@MainThread
+	private suspend fun ensureOriginContext(webView: WebView, originUrl: String) {
+		val currentUrl = webView.url
+		if (currentUrl != null && currentUrl.startsWith(originUrl, ignoreCase = true)) {
+			return
+		}
+		withTimeoutOrNull(2_000L) {
+			suspendCancellableCoroutine<Unit> { cont ->
+				webView.webViewClient = object : WebViewClient() {
+					override fun onPageFinished(view: WebView?, url: String?) {
+						if (cont.isActive) cont.resume(Unit)
+					}
+				}
+				webView.loadDataWithBaseURL(originUrl, "<!DOCTYPE html><html><body></body></html>", "text/html", "utf-8", null)
+			}
+		}
 	}
 
 	@MainThread
@@ -595,11 +672,13 @@ class WebViewExecutor @Inject constructor(
 		val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return null
 		runCatching {
 			(webView.parent as? ViewGroup)?.removeView(webView)
+			webView.setBackgroundColor(Color.TRANSPARENT)
 			webView.alpha = 0.01f
 			webView.visibility = View.VISIBLE
 			webView.isClickable = false
 			webView.isFocusable = false
 			webView.isFocusableInTouchMode = false
+			webView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
 			content.addView(
 				webView,
 				ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
@@ -623,13 +702,86 @@ class WebViewExecutor @Inject constructor(
 			source = source,
 			headers = Headers.headersOf(),
 		)
+		val startTime = System.currentTimeMillis()
 		val resolved = withTimeoutOrNull(timeoutMs) {
-			suspendCancellableCoroutine { cont ->
-				webView.webViewClient = createCloudFlareClient(webView, dummyException, cont)
-				webView.loadUrl(originUrl)
+			kotlinx.coroutines.coroutineScope {
+				val challengeDeferred = kotlinx.coroutines.CompletableDeferred<Boolean>()
+				val mainJob = launch(Dispatchers.Main.immediate) {
+					val res = suspendCancellableCoroutine<Boolean> { cont ->
+						webView.webViewClient = createCloudFlareClient(webView, dummyException, cont)
+						webView.loadUrl(originUrl)
+					}
+					challengeDeferred.complete(res)
+				}
+				val tapJob = launch(Dispatchers.Main.immediate) {
+					// Give managed JS/Turnstile challenges 6s to auto-complete before attempting a synthetic tap
+					delay(6_000L)
+					var attempts = 0
+					while (!challengeDeferred.isCompleted && attempts < 2) {
+						val elapsed = System.currentTimeMillis() - startTime
+						if (elapsed + 1_200L >= timeoutMs) break
+						val coords = probeTurnstileWidgetCenter(webView)
+						if (coords != null) {
+							attempts++
+							dispatchSyntheticTap(webView, coords.first, coords.second)
+							delay(2_000L)
+						} else {
+							delay(700L)
+						}
+					}
+				}
+				val result = challengeDeferred.await()
+				tapJob.cancel()
+				mainJob.cancel()
+				result
 			}
 		}
 		return resolved == true
+	}
+
+	@MainThread
+	private suspend fun probeTurnstileWidgetCenter(webView: WebView): Pair<Float, Float>? {
+		val raw = withTimeoutOrNull(400L) {
+			suspendCancellableCoroutine<String?> { cont ->
+				webView.evaluateJavascript(CF_TURNSTILE_TAP_PROBE_JS) { value ->
+					if (cont.isActive) cont.resume(value)
+				}
+			}
+		} ?: return null
+		val cleaned = unquoteJsString(raw) ?: return null
+		val parts = cleaned.split(',')
+		if (parts.size != 2) return null
+		val x = parts[0].toFloatOrNull() ?: return null
+		val y = parts[1].toFloatOrNull() ?: return null
+		val density = webView.resources.displayMetrics.density
+		return (x * density) to (y * density)
+	}
+
+	@MainThread
+	private fun dispatchSyntheticTap(webView: WebView, xPx: Float, yPx: Float) {
+		val touchWebView = webView as? TouchPassThroughWebView
+		val downTime = SystemClock.uptimeMillis()
+		val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx, 0)
+		val up = MotionEvent.obtain(downTime, downTime + 55L, MotionEvent.ACTION_UP, xPx, yPx, 0)
+		try {
+			if (touchWebView != null) {
+				touchWebView.dispatchSyntheticTouch(down)
+				touchWebView.dispatchSyntheticTouch(up)
+			} else {
+				webView.dispatchTouchEvent(down)
+				webView.dispatchTouchEvent(up)
+			}
+		} finally {
+			down.recycle()
+			up.recycle()
+		}
+	}
+
+	private class TouchPassThroughWebView(context: Context) : WebView(context) {
+		override fun dispatchTouchEvent(ev: MotionEvent?): Boolean = false
+		override fun onTouchEvent(event: MotionEvent?): Boolean = false
+		override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean = false
+		fun dispatchSyntheticTouch(ev: MotionEvent): Boolean = super.dispatchTouchEvent(ev)
 	}
 
 	@MainThread
@@ -837,10 +989,39 @@ class WebViewExecutor @Inject constructor(
 	private companion object {
 
 		const val TAG = "WebViewExecutor"
-		const val CHALLENGE_POLL_INTERVAL_MS = 700L
-		const val REQUIRED_STABLE_PASSES = 3
-		const val BRIDGE_CHALLENGE_TIMEOUT_MS = 12_000L
+		const val CHALLENGE_POLL_INTERVAL_MS = 350L
+		const val REQUIRED_STABLE_PASSES = 2
+		const val BRIDGE_CHALLENGE_TIMEOUT_MS = 15_000L
 		const val BRIDGE_FETCH_TIMEOUT_MS = 15_000L
+		const val SOLVED_HOST_TTL_MS = 120_000L
+
+		private const val CF_TURNSTILE_TAP_PROBE_JS = """
+			(function(){
+				try {
+					var cbs = document.querySelectorAll('input[type="checkbox"], [role="checkbox"], .ctp-checkbox-label');
+					for (var i = 0; i < cbs.length; i++) {
+						var r = cbs[i].getBoundingClientRect();
+						if (r.width > 0 && r.height > 0) {
+							return (r.left + r.width / 2) + ',' + (r.top + r.height / 2);
+						}
+					}
+					var frames = document.querySelectorAll('iframe');
+					for (var j = 0; j < frames.length; j++) {
+						var f = frames[j];
+						var src = (f.src || '').toLowerCase();
+						var title = (f.title || '').toLowerCase();
+						if (src.indexOf('challenges.cloudflare.com') !== -1 || src.indexOf('turnstile') !== -1 || title.indexOf('cloudflare') !== -1) {
+							var fr = f.getBoundingClientRect();
+							if (fr.width >= 100 && fr.height >= 40) {
+								// Checkbox inside Turnstile widget sits on the left (~28px from left edge, vertically centered)
+								return (fr.left + Math.min(32, fr.width * 0.15)) + ',' + (fr.top + fr.height / 2);
+							}
+						}
+					}
+					return null;
+				} catch (e) { return null; }
+			})()
+		"""
 
 		private val FORBIDDEN_FETCH_HEADERS = setOf(
 			"cookie",

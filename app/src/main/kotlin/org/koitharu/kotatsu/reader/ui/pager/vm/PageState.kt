@@ -16,6 +16,7 @@ sealed class PageState {
 		val source: ImageSource,
 		val isConverted: Boolean,
 		val mask: PageMask? = null,
+		val preserveViewState: Boolean = false,
 	) : PageState()
 
 	class Converting() : PageState()

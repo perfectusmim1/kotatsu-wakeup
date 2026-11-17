@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Ikona</string>
+	<string name="fav_icon_default">Serce</string>
+	<string name="fav_icon_star">Gwiazda</string>
+	<string name="fav_icon_fire">Ogień</string>
+	<string name="fav_icon_crown">Korona</string>
+	<string name="fav_icon_book">Książka</string>
+	<string name="fav_icon_bookmark">Zakładka</string>
+	<string name="fav_icon_eye">Oko</string>
+	<string name="fav_icon_bolt">Błyskawica</string>
+	<string name="fav_icon_clock">Zegar</string>
+	<string name="fav_icon_folder">Folder</string>
+	<string name="fav_icon_check">Znacznik</string>
+	<string name="fav_icon_sparkles">Iskry</string>
+</resources>

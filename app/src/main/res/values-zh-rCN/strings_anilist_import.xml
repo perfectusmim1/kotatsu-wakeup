@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">从 AniList 导入</string>
+	<string name="anilist_import_mode_label">导入目标</string>
+	<string name="anilist_import_by_status">按状态分类</string>
+	<string name="anilist_import_single_category">单一分类</string>
+	<string name="anilist_import_new_category">新建分类</string>
+	<string name="anilist_import_new_category_hint">分类名称</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">正在加载 AniList 书库…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">已完成 (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">已导入: %1$d · 已存在: %2$d · 未匹配: %3$d</string>
+	<string name="anilist_import_empty">你的 AniList 漫画列表为空。</string>
+	<string name="anilist_import_unmatched_title">未匹配的标题</string>
+	<string name="anilist_import_start">开始导入</string>
+	<string name="anilist_import_retry">重新导入</string>
+	<string name="anilist_import_error_no_sources">导入前请至少启用一个漫画图源。</string>
+</resources>

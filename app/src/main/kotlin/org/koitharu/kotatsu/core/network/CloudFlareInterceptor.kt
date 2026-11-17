@@ -28,9 +28,14 @@ class CloudFlareInterceptor(
 
 			CloudFlareHelper.PROTECTION_CAPTCHA -> {
 				val source = request.tag(MangaSource::class.java)
+				val allowChallenge = !isImageRequest(request)
 				val bridgedResponse = runCatching {
 					runBlocking {
-						webViewExecutorLazy.get().executeCloudFlareRequest(request, source)
+						webViewExecutorLazy.get().executeCloudFlareRequest(
+							request = request,
+							source = source,
+							allowChallenge = allowChallenge,
+						)
 					}
 				}.getOrNull()
 				if (bridgedResponse != null) {
@@ -48,6 +53,20 @@ class CloudFlareInterceptor(
 
 			else -> response
 		}
+	}
+
+	private fun isImageRequest(request: okhttp3.Request): Boolean {
+		val accept = request.header("Accept")
+		if (accept != null && accept.contains("image/", ignoreCase = true) && !accept.contains("text/html", ignoreCase = true)) {
+			return true
+		}
+		val path = request.url.encodedPath.lowercase()
+		return path.endsWith(".jpg") ||
+			path.endsWith(".jpeg") ||
+			path.endsWith(".png") ||
+			path.endsWith(".webp") ||
+			path.endsWith(".avif") ||
+			path.endsWith(".gif")
 	}
 
 	private fun Response.closeThrowing(error: IOException): Nothing {

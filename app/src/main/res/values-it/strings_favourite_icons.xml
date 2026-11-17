@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Icona</string>
+	<string name="fav_icon_default">Cuore</string>
+	<string name="fav_icon_star">Stella</string>
+	<string name="fav_icon_fire">Fuoco</string>
+	<string name="fav_icon_crown">Corona</string>
+	<string name="fav_icon_book">Libro</string>
+	<string name="fav_icon_bookmark">Segnalibro</string>
+	<string name="fav_icon_eye">Occhio</string>
+	<string name="fav_icon_bolt">Fulmine</string>
+	<string name="fav_icon_clock">Orologio</string>
+	<string name="fav_icon_folder">Cartella</string>
+	<string name="fav_icon_check">Spunta</string>
+	<string name="fav_icon_sparkles">Scintille</string>
+</resources>

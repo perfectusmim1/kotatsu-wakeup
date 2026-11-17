@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">북마크가 추가되었습니다</string>
+	<string name="bookmarks_sort_newest">최신 추가순</string>
+	<string name="bookmarks_sort_oldest">오래된 추가순</string>
+	<string name="bookmarks_sort_chapter">화 순서</string>
+	<string name="search_bookmarks_hint">시리즈 또는 화 검색</string>
+	<string name="search_bookmarked_chapters_hint">북마크된 화 검색</string>
+	<string name="no_bookmarks_matching_query">일치하는 북마크 없음</string>
+	<string name="no_bookmarks_matching_summary">현재 필터와 일치하는 북마크가 없습니다</string>
+	<string name="download_bookmarked_chapters">북마크된 화 다운로드</string>
+	<string name="download_bookmarked_only">북마크된 화만</string>
+	<string name="download_bookmarked_next_2">북마크 + 다음 2화</string>
+	<string name="download_bookmarked_next_3">북마크 + 다음 3화</string>
+	<string name="no_bookmarked_chapters_to_download">다운로드할 북마크된 화가 없습니다</string>
+	<string name="migrate_bookmarks">다른 소스로 북마크 이전</string>
+	<string name="bookmark_migration_choose_series">이전할 시리즈 선택</string>
+	<string name="bookmark_migration_searching">활성 소스 검색 중…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d 소스 · %3$d개 일치</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d화 일치</string>
+	<string name="bookmark_migration_total_chapters">%1$d화</string>
+	<string name="bookmark_migration_no_candidates">호환되는 소스를 찾을 수 없습니다</string>
+	<string name="bookmark_migration_no_candidates_summary">이 시리즈 및 북마크와 일치하는 활성 소스가 없습니다</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s)의 북마크 %1$d개를 \"%4$s\" (%5$s)(으)로 이전할까요?\n북마크된 %7$d화 중 %6$d화가 일치합니다.</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s)의 북마크 %1$d개를 \"%4$s\" (%5$s)(으)로 이전할까요?\n읽기 진행도에 따라 화가 매칭됩니다.</string>
+	<string name="bookmark_migration_success">북마크를 %1$s(으)로 이전했습니다</string>
+	<string name="bookmark_migration_no_bookmarks">이 시리즈에 북마크가 없습니다</string>
+	<string name="bookmark_migration_rescan">다시 검색</string>
+	<string name="bookmark_migration_unavailable_no_chapters">화 없음</string>
+	<string name="bookmarks_count_badge">북마크 %1$d개</string>
+</resources>

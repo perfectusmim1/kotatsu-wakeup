@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Comptes des sources</string>
+	<string name="source_accounts_summary">%1$d connectés · %2$d pris en charge</string>
+	<string name="source_accounts_summary_none">Aucune session active · %1$d pris en charge</string>
+	<string name="source_accounts_empty">Aucune source prenant en charge les comptes</string>
+	<string name="source_account_signed_in">Connecté</string>
+	<string name="source_account_not_signed_in">Non connecté</string>
+	<string name="source_account_switch">Changer de compte</string>
+	<string name="source_signed_out">Déconnecté</string>
+	<string name="sign_up">S\'inscrire</string>
+	<string name="auth_verify">Vérifier</string>
+	<string name="auth_refresh">Actualiser</string>
+	<string name="auth_not_verified_yet">Session non encore vérifiée. Terminez la connexion et réessayez.</string>
+</resources>

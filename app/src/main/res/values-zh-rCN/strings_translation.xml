@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">翻译设置</string>
+	<string name="translation_toggle">切换翻译</string>
+	<string name="translation_enable">启用翻译</string>
+	<string name="translation_disable">停用翻译</string>
+	<string name="translation_active">开启</string>
+	<string name="translation_off">关闭</string>
+	<string name="translation_provider">翻译服务</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google 翻译</string>
+	<string name="translation_source_lang">源语言 (OCR)</string>
+	<string name="translation_target_lang">目标语言</string>
+	<string name="translation_api_keys">Gemini API 密钥</string>
+	<string name="translation_api_keys_hint">多个密钥请用逗号或换行分隔</string>
+	<string name="translation_api_keys_empty">未配置 API 密钥</string>
+	<string name="translation_api_key_required">添加 Gemini API 密钥或切换为 Google 翻译</string>
+	<string name="translation_auto_translate">自动翻译页面</string>
+	<string name="translation_skip_sfx">跳过音效字</string>
+	<string name="translation_filter_promo">跳过宣传与制作人员页</string>
+	<string name="translation_ocr_ready">OCR 模型已就绪</string>
+	<string name="translation_ocr_auto_ready">自动识别 OCR 已就绪</string>
+	<string name="translation_ocr_not_downloaded">首次使用时将自动下载 OCR 模型</string>
+	<string name="translation_ocr_download">下载模型</string>
+	<string name="translation_ocr_downloading">正在下载 OCR 模型… %1$d%%</string>
+	<string name="translation_ocr_running">正在识别文字…</string>
+	<string name="translation_translating_text">正在翻译…</string>
+	<string name="translation_rendering_page">正在渲染页面…</string>
+	<string name="translation_clear_cache">清除翻译缓存</string>
+	<string name="translation_cache_cleared">翻译缓存已清除</string>
+	<string name="translation_cache_cleared_size">已清除 %1$s 翻译缓存</string>
+	<string name="translation_error_generic">翻译失败：%1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="other">已配置 %1$d 个有效密钥</item>
+	</plurals>
+</resources>

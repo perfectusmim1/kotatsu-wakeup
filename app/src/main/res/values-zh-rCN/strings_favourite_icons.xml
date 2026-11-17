@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">图标</string>
+	<string name="fav_icon_default">爱心</string>
+	<string name="fav_icon_star">星星</string>
+	<string name="fav_icon_fire">火焰</string>
+	<string name="fav_icon_crown">皇冠</string>
+	<string name="fav_icon_book">书本</string>
+	<string name="fav_icon_bookmark">书签</string>
+	<string name="fav_icon_eye">眼睛</string>
+	<string name="fav_icon_bolt">闪电</string>
+	<string name="fav_icon_clock">时钟</string>
+	<string name="fav_icon_folder">文件夹</string>
+	<string name="fav_icon_check">勾选</string>
+	<string name="fav_icon_sparkles">闪耀</string>
+</resources>

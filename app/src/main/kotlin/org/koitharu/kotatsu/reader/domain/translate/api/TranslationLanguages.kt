@@ -164,16 +164,46 @@ object TranslationLanguages {
 		source: OcrSourceLanguage,
 		locale: Locale = Locale.getDefault(),
 	): String {
-		val isTurkish = locale.language.equals("tr", ignoreCase = true)
+		if (locale.language.equals("tr", ignoreCase = true)) {
+			return when (source) {
+				OcrSourceLanguage.AUTO -> "Otomatik algıla"
+				OcrSourceLanguage.ENGLISH -> "İngilizce"
+				OcrSourceLanguage.JAPANESE -> "Japonca"
+				OcrSourceLanguage.KOREAN -> "Korece"
+				OcrSourceLanguage.CHINESE -> "Çince"
+				OcrSourceLanguage.LATIN -> "Latin Alfabesi (ES/FR/DE/PT…)"
+				OcrSourceLanguage.CYRILLIC -> "Kiril Alfabesi (RU/UK…)"
+				OcrSourceLanguage.ARABIC -> "Arapça / Farsça"
+			}
+		}
+		fun cap(text: String) = text.replaceFirstChar {
+			if (it.isLowerCase()) it.titlecase(locale) else it.toString()
+		}
 		return when (source) {
-			OcrSourceLanguage.AUTO -> if (isTurkish) "Otomatik algıla" else "Auto-detect"
-			OcrSourceLanguage.ENGLISH -> if (isTurkish) "İngilizce" else "English"
-			OcrSourceLanguage.JAPANESE -> if (isTurkish) "Japonca" else "Japanese"
-			OcrSourceLanguage.KOREAN -> if (isTurkish) "Korece" else "Korean"
-			OcrSourceLanguage.CHINESE -> if (isTurkish) "Çince" else "Chinese"
-			OcrSourceLanguage.LATIN -> if (isTurkish) "Latin Alfabesi (ES/FR/DE/PT…)" else "Latin Script (ES/FR/DE/PT…)"
-			OcrSourceLanguage.CYRILLIC -> if (isTurkish) "Kiril Alfabesi (RU/UK…)" else "Cyrillic Script (RU/UK…)"
-			OcrSourceLanguage.ARABIC -> if (isTurkish) "Arapça / Farsça" else "Arabic / Persian"
+			OcrSourceLanguage.AUTO -> when (locale.language.lowercase(Locale.ROOT)) {
+				"de" -> "Automatisch erkennen"
+				"es" -> "Detección automática"
+				"fr" -> "Détection automatique"
+				"ru" -> "Автоопределение"
+				"pt" -> "Detecção automática"
+				"it" -> "Rilevamento automatico"
+				"ja" -> "自動検出"
+				"ko" -> "자동 감지"
+				"zh" -> "自动检测"
+				"ar" -> "كشف تلقائي"
+				"uk" -> "Автовизначення"
+				"pl" -> "Wykryj automatycznie"
+				"id", "in" -> "Deteksi otomatis"
+				"vi" -> "Tự động phát hiện"
+				else -> "Auto-detect"
+			}
+			OcrSourceLanguage.ENGLISH -> cap(Locale.ENGLISH.getDisplayLanguage(locale).ifBlank { "English" })
+			OcrSourceLanguage.JAPANESE -> cap(Locale.JAPANESE.getDisplayLanguage(locale).ifBlank { "Japanese" })
+			OcrSourceLanguage.KOREAN -> cap(Locale.KOREAN.getDisplayLanguage(locale).ifBlank { "Korean" })
+			OcrSourceLanguage.CHINESE -> cap(Locale.CHINESE.getDisplayLanguage(locale).ifBlank { "Chinese" })
+			OcrSourceLanguage.LATIN -> "Latin (ES/FR/DE/PT…)"
+			OcrSourceLanguage.CYRILLIC -> "${cap(Locale.forLanguageTag("ru").getDisplayLanguage(locale).ifBlank { "Russian" })} / ${cap(Locale.forLanguageTag("uk").getDisplayLanguage(locale).ifBlank { "Ukrainian" })}…"
+			OcrSourceLanguage.ARABIC -> "${cap(Locale.forLanguageTag("ar").getDisplayLanguage(locale).ifBlank { "Arabic" })} / ${cap(Locale.forLanguageTag("fa").getDisplayLanguage(locale).ifBlank { "Persian" })}"
 		}
 	}
 

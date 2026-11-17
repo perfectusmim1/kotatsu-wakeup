@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Filter
+import androidx.core.os.ConfigurationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
@@ -188,7 +189,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 
 	private fun setupSourceLanguageDropdown(binding: SheetTranslationSettingsBinding) {
 		val sources = TranslationLanguages.sourceLanguages
-		val locale = Locale.getDefault()
+		val locale = currentAppLocale()
 		val labels = sources.map { TranslationLanguages.getSourceDisplayName(it, locale) }
 		val adapter = StaticDropdownAdapter(requireContext(), labels)
 		binding.editSourceLang.setAdapter(adapter)
@@ -207,7 +208,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 
 	private fun setupTargetLanguageDropdown(binding: SheetTranslationSettingsBinding) {
 		val targets = TranslationLanguages.targetLanguages
-		val locale = Locale.getDefault()
+		val locale = currentAppLocale()
 		val labels = targets.map { it.displayName(locale) }
 		val adapter = StaticDropdownAdapter(requireContext(), labels)
 		binding.editTargetLang.setAdapter(adapter)
@@ -223,6 +224,9 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 			settings.translationTargetLang = selected.code
 		}
 	}
+
+	private fun currentAppLocale(): Locale =
+		ConfigurationCompat.getLocales(resources.configuration)[0] ?: Locale.getDefault()
 
 	private fun setupSwitches(binding: SheetTranslationSettingsBinding) {
 		isUpdatingSwitchProgrammatically = true

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Закладки додано</string>
+	<string name="bookmarks_sort_newest">Спочатку нові</string>
+	<string name="bookmarks_sort_oldest">Спочатку старі</string>
+	<string name="bookmarks_sort_chapter">Порядок розділів</string>
+	<string name="search_bookmarks_hint">Пошук серії або розділу</string>
+	<string name="search_bookmarked_chapters_hint">Пошук у розділах із закладками</string>
+	<string name="no_bookmarks_matching_query">Немає відповідних закладок</string>
+	<string name="no_bookmarks_matching_summary">Жодна закладка не відповідає вашому фільтру</string>
+	<string name="download_bookmarked_chapters">Завантажити розділи із закладками</string>
+	<string name="download_bookmarked_only">Лише розділи із закладками</string>
+	<string name="download_bookmarked_next_2">Із закладками + 2 наступні розділи</string>
+	<string name="download_bookmarked_next_3">Із закладками + 3 наступні розділи</string>
+	<string name="no_bookmarked_chapters_to_download">Немає розділів із закладками для завантаження</string>
+	<string name="migrate_bookmarks">Перенести закладки до іншого джерела</string>
+	<string name="bookmark_migration_choose_series">Виберіть серію для перенесення</string>
+	<string name="bookmark_migration_searching">Пошук в активних джерелах…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d джерел · %3$d збігів</string>
+	<string name="bookmark_migration_chapters_matched">Збіглось %1$d/%2$d розділів</string>
+	<string name="bookmark_migration_total_chapters">%1$d розділів</string>
+	<string name="bookmark_migration_no_candidates">Сумісних джерел не знайдено</string>
+	<string name="bookmark_migration_no_candidates_summary">Жодне увімкнене джерело не збіглося з цією серією та її закладками</string>
+	<string name="bookmark_migration_confirm">Перенести %1$d закл. з \"%2$s\" (%3$s) до \"%4$s\" (%5$s)?\nЗбіглося %6$d із %7$d розділів із закладками.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Перенести %1$d закл. з \"%2$s\" (%3$s) до \"%4$s\" (%5$s)?\nРозділи буде зіставлено за прогресом читання.</string>
+	<string name="bookmark_migration_success">Закладки перенесено до %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Для цієї серії закладок немає</string>
+	<string name="bookmark_migration_rescan">Сканувати знову</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Немає розділів</string>
+	<string name="bookmarks_count_badge">Закладок: %1$d</string>
+</resources>

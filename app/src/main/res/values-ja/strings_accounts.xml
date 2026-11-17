@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">ソースアカウント</string>
+	<string name="source_accounts_summary">%1$d ログイン済み · %2$d 対応</string>
+	<string name="source_accounts_summary_none">有効なセッションなし · %1$d 対応</string>
+	<string name="source_accounts_empty">アカウント対応ソースが見つかりません</string>
+	<string name="source_account_signed_in">ログイン済み</string>
+	<string name="source_account_not_signed_in">未ログイン</string>
+	<string name="source_account_switch">アカウント切替</string>
+	<string name="source_signed_out">ログアウトしました</string>
+	<string name="sign_up">新規登録</string>
+	<string name="auth_verify">確認</string>
+	<string name="auth_refresh">更新</string>
+	<string name="auth_not_verified_yet">セッションが未確認です。ログインを完了してから再試行してください。</string>
+</resources>

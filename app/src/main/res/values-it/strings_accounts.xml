@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Account delle fonti</string>
+	<string name="source_accounts_summary">%1$d connessi · %2$d supportati</string>
+	<string name="source_accounts_summary_none">Nessuna sessione attiva · %1$d supportati</string>
+	<string name="source_accounts_empty">Nessuna fonte con supporto account trovata</string>
+	<string name="source_account_signed_in">Connesso</string>
+	<string name="source_account_not_signed_in">Non connesso</string>
+	<string name="source_account_switch">Cambia account</string>
+	<string name="source_signed_out">Disconnesso</string>
+	<string name="sign_up">Registrati</string>
+	<string name="auth_verify">Verifica</string>
+	<string name="auth_refresh">Aggiorna</string>
+	<string name="auth_not_verified_yet">Sessione non ancora verificata. Completa l\'accesso e riprova.</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">ブックマークを追加しました</string>
+	<string name="bookmarks_sort_newest">新しい順</string>
+	<string name="bookmarks_sort_oldest">古い順</string>
+	<string name="bookmarks_sort_chapter">チャプター順</string>
+	<string name="search_bookmarks_hint">作品やチャプターを検索</string>
+	<string name="search_bookmarked_chapters_hint">ブックマーク済みチャプターを検索</string>
+	<string name="no_bookmarks_matching_query">一致するブックマークがありません</string>
+	<string name="no_bookmarks_matching_summary">現在のフィルターに一致するブックマークがありません</string>
+	<string name="download_bookmarked_chapters">ブックマーク済みチャプターをダウンロード</string>
+	<string name="download_bookmarked_only">ブックマーク済みチャプターのみ</string>
+	<string name="download_bookmarked_next_2">ブックマーク + 次の2チャプター</string>
+	<string name="download_bookmarked_next_3">ブックマーク + 次の3チャプター</string>
+	<string name="no_bookmarked_chapters_to_download">ダウンロードするブックマーク済みチャプターがありません</string>
+	<string name="migrate_bookmarks">ブックマークを別のソースへ移行</string>
+	<string name="bookmark_migration_choose_series">移行先の作品を選択</string>
+	<string name="bookmark_migration_searching">有効なソースを検索中…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d ソース · %3$d 件一致</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d チャプター一致</string>
+	<string name="bookmark_migration_total_chapters">%1$d チャプター</string>
+	<string name="bookmark_migration_no_candidates">互換性のあるソースが見つかりません</string>
+	<string name="bookmark_migration_no_candidates_summary">この作品およびブックマークと一致する有効なソースがありません</string>
+	<string name="bookmark_migration_confirm">%1$d 件のブックマークを「%2$s」(%3$s) から「%4$s」(%5$s) に移行しますか？\n%7$d チャプター中 %6$d 件が一致しました。</string>
+	<string name="bookmark_migration_confirm_no_overlap">%1$d 件のブックマークを「%2$s」(%3$s) から「%4$s」(%5$s) に移行しますか？\n読書進捗からチャプターを推定します。</string>
+	<string name="bookmark_migration_success">ブックマークを %1$s に移行しました</string>
+	<string name="bookmark_migration_no_bookmarks">この作品のブックマークはありません</string>
+	<string name="bookmark_migration_rescan">再スキャン</string>
+	<string name="bookmark_migration_unavailable_no_chapters">チャプターなし</string>
+	<string name="bookmarks_count_badge">ブックマーク %1$d 件</string>
+</resources>

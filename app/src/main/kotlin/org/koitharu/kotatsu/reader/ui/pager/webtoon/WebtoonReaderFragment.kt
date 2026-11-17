@@ -139,11 +139,24 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 	}
 
 	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
+		val adapter = requireAdapter()
+		val rv = viewBinding?.recyclerView
+		val lm = rv?.layoutManager as? LinearLayoutManager
+		var anchorPos = RecyclerView.NO_POSITION
+		var anchorPage: ReaderPage? = null
+		var anchorTop = 0
+		if (pendingState == null && rv != null && lm != null && adapter.hasItems) {
+			anchorPos = lm.findFirstVisibleItemPosition()
+			if (anchorPos != RecyclerView.NO_POSITION) {
+				anchorPage = adapter.getItemOrNull(anchorPos)
+				anchorTop = lm.findViewByPosition(anchorPos)?.top ?: 0
+			}
+		}
 		val setItems = launch {
-			requireAdapter().setItems(pages)
+			adapter.setItems(pages)
 			yield()
-			viewBinding?.recyclerView?.let { rv ->
-				recyclerLifecycleDispatcher?.invalidate(rv)
+			viewBinding?.recyclerView?.let { recycler ->
+				recyclerLifecycleDispatcher?.invalidate(recycler)
 			}
 		}
 		if (pendingState != null) {
@@ -157,9 +170,9 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 					} else {
 						0
 					}
-					val lm = layoutManager as? LinearLayoutManager
-					if (gap != 0 && lm != null) {
-						lm.scrollToPositionWithOffset(position, -gap)
+					val layoutManager = layoutManager as? LinearLayoutManager
+					if (gap != 0 && layoutManager != null) {
+						layoutManager.scrollToPositionWithOffset(position, -gap)
 					} else {
 						firstVisibleItemPosition = position
 					}
@@ -176,6 +189,16 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 			}
 		} else {
 			setItems.join()
+			val savedAnchor = anchorPage
+			if (savedAnchor != null && rv != null && lm != null) {
+				val newPosition = pages.indexOfFirst {
+					it.id == savedAnchor.id && it.chapterId == savedAnchor.chapterId
+				}
+				if (newPosition != -1 && newPosition != anchorPos) {
+					lm.scrollToPositionWithOffset(newPosition, anchorTop)
+					rv.updateChildrenScroll()
+				}
+			}
 		}
 	}
 

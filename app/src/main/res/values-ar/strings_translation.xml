@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">إعدادات الترجمة</string>
+	<string name="translation_toggle">تبديل الترجمة</string>
+	<string name="translation_enable">تفعيل الترجمة</string>
+	<string name="translation_disable">تعطيل الترجمة</string>
+	<string name="translation_active">مفعّل</string>
+	<string name="translation_off">إيقاف</string>
+	<string name="translation_provider">مزوّد الترجمة</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">ترجمة Google</string>
+	<string name="translation_source_lang">لغة المصدر (OCR)</string>
+	<string name="translation_target_lang">اللغة المستهدفة</string>
+	<string name="translation_api_keys">مفاتيح Gemini API</string>
+	<string name="translation_api_keys_hint">افصل المفاتيح المتعددة بفاصلة أو سطر جديد</string>
+	<string name="translation_api_keys_empty">لم يتم إعداد مفتاح API</string>
+	<string name="translation_api_key_required">أضف مفتاح Gemini API أو بدّل إلى ترجمة Google</string>
+	<string name="translation_auto_translate">ترجمة الصفحات تلقائياً</string>
+	<string name="translation_skip_sfx">تخطي المؤثرات الصوتية</string>
+	<string name="translation_filter_promo">تخطي صفحات الإعلانات والاعتمادات</string>
+	<string name="translation_ocr_ready">نموذج OCR جاهز</string>
+	<string name="translation_ocr_auto_ready">التعرف التلقائي OCR جاهز</string>
+	<string name="translation_ocr_not_downloaded">سيتم تنزيل نموذج OCR عند أول استخدام</string>
+	<string name="translation_ocr_download">تنزيل النموذج</string>
+	<string name="translation_ocr_downloading">جارٍ تنزيل نموذج OCR… %1$d%%</string>
+	<string name="translation_ocr_running">جارٍ التعرف على النص…</string>
+	<string name="translation_translating_text">جارٍ الترجمة…</string>
+	<string name="translation_rendering_page">جارٍ معالجة الصفحة…</string>
+	<string name="translation_clear_cache">مسح ذاكرة الترجمة المؤقتة</string>
+	<string name="translation_cache_cleared">تم مسح ذاكرة الترجمة المؤقتة</string>
+	<string name="translation_cache_cleared_size">تم مسح %1$s من الترجمات المخزنة</string>
+	<string name="translation_error_generic">فشلت الترجمة: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="zero">لا توجد مفاتيح نشطة</item>
+		<item quantity="one">تم إعداد مفتاح نشط واحد (%1$d)</item>
+		<item quantity="two">تم إعداد مفتاحين نشطين (%1$d)</item>
+		<item quantity="few">تم إعداد %1$d مفاتيح نشطة</item>
+		<item quantity="many">تم إعداد %1$d مفتاحاً نشطاً</item>
+		<item quantity="other">تم إعداد %1$d مفتاح نشط</item>
+	</plurals>
+</resources>

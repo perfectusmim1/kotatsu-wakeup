@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$s の認証が必要です</string>
+	<string name="cf_banner_multiple_required">%1$s (+他 %2$d 件) の認証が必要です</string>
+	<string name="cf_banner_solve">解決</string>
+	<string name="cf_banner_dismiss">閉じる</string>
+</resources>

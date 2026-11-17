@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList에서 가져오기</string>
+	<string name="anilist_import_mode_label">가져오기 대상</string>
+	<string name="anilist_import_by_status">상태별</string>
+	<string name="anilist_import_single_category">단일 카테고리</string>
+	<string name="anilist_import_new_category">새 카테고리</string>
+	<string name="anilist_import_new_category_hint">카테고리 이름</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">AniList 라이브러리 불러오는 중…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">완료 (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">가져옴: %1$d · 기존: %2$d · 미일치: %3$d</string>
+	<string name="anilist_import_empty">AniList 만화 목록이 비어 있습니다.</string>
+	<string name="anilist_import_unmatched_title">일치하지 않는 제목</string>
+	<string name="anilist_import_start">가져오기 시작</string>
+	<string name="anilist_import_retry">다시 가져오기</string>
+	<string name="anilist_import_error_no_sources">가져오기 전에 하나 이상의 만화 소스를 활성화하세요.</string>
+</resources>

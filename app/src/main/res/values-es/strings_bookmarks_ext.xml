@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Marcadores añadidos</string>
+	<string name="bookmarks_sort_newest">Más recientes</string>
+	<string name="bookmarks_sort_oldest">Más antiguos</string>
+	<string name="bookmarks_sort_chapter">Orden de capítulos</string>
+	<string name="search_bookmarks_hint">Buscar serie o capítulo</string>
+	<string name="search_bookmarked_chapters_hint">Buscar capítulos con marcador</string>
+	<string name="no_bookmarks_matching_query">Sin marcadores coincidentes</string>
+	<string name="no_bookmarks_matching_summary">Ningún marcador coincide con tu filtro actual</string>
+	<string name="download_bookmarked_chapters">Descargar capítulos con marcador</string>
+	<string name="download_bookmarked_only">Solo capítulos con marcador</string>
+	<string name="download_bookmarked_next_2">Con marcador + 2 capítulos siguientes</string>
+	<string name="download_bookmarked_next_3">Con marcador + 3 capítulos siguientes</string>
+	<string name="no_bookmarked_chapters_to_download">No hay capítulos con marcador para descargar</string>
+	<string name="migrate_bookmarks">Migrar marcadores a otra fuente</string>
+	<string name="bookmark_migration_choose_series">Elige serie para migrar</string>
+	<string name="bookmark_migration_searching">Buscando en fuentes activas…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d fuentes · %3$d coincidencias</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d capítulos coincidentes</string>
+	<string name="bookmark_migration_total_chapters">%1$d capítulos</string>
+	<string name="bookmark_migration_no_candidates">No se encontraron fuentes compatibles</string>
+	<string name="bookmark_migration_no_candidates_summary">Ninguna fuente activada coincide con esta serie y sus marcadores</string>
+	<string name="bookmark_migration_confirm">¿Migrar %1$d marcador(es) de \"%2$s\" (%3$s) a \"%4$s\" (%5$s)?\n%6$d de %7$d capítulos con marcador coinciden.</string>
+	<string name="bookmark_migration_confirm_no_overlap">¿Migrar %1$d marcador(es) de \"%2$s\" (%3$s) a \"%4$s\" (%5$s)?\nLos capítulos se aproximarán según el progreso de lectura.</string>
+	<string name="bookmark_migration_success">Marcadores migrados a %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">No se encontraron marcadores para esta serie</string>
+	<string name="bookmark_migration_rescan">Volver a buscar</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Sin capítulos</string>
+	<string name="bookmarks_count_badge">%1$d marcadores</string>
+</resources>

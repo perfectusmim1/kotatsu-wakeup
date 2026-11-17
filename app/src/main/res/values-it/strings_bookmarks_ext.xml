@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Segnalibri aggiunti</string>
+	<string name="bookmarks_sort_newest">Più recenti</string>
+	<string name="bookmarks_sort_oldest">Meno recenti</string>
+	<string name="bookmarks_sort_chapter">Ordine capitoli</string>
+	<string name="search_bookmarks_hint">Cerca serie o capitolo</string>
+	<string name="search_bookmarked_chapters_hint">Cerca capitoli con segnalibro</string>
+	<string name="no_bookmarks_matching_query">Nessun segnalibro trovato</string>
+	<string name="no_bookmarks_matching_summary">Nessun segnalibro corrisponde al filtro attuale</string>
+	<string name="download_bookmarked_chapters">Scarica capitoli con segnalibro</string>
+	<string name="download_bookmarked_only">Solo capitoli con segnalibro</string>
+	<string name="download_bookmarked_next_2">Con segnalibro + 2 capitoli successivi</string>
+	<string name="download_bookmarked_next_3">Con segnalibro + 3 capitoli successivi</string>
+	<string name="no_bookmarked_chapters_to_download">Nessun capitolo con segnalibro da scaricare</string>
+	<string name="migrate_bookmarks">Migra segnalibri su un\'altra fonte</string>
+	<string name="bookmark_migration_choose_series">Scegli serie da migrare</string>
+	<string name="bookmark_migration_searching">Ricerca nelle fonti attive…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d fonti · %3$d risultati</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d capitoli corrispondenti</string>
+	<string name="bookmark_migration_total_chapters">%1$d capitoli</string>
+	<string name="bookmark_migration_no_candidates">Nessuna fonte compatibile trovata</string>
+	<string name="bookmark_migration_no_candidates_summary">Nessuna fonte attiva corrisponde a questa serie e ai suoi segnalibri</string>
+	<string name="bookmark_migration_confirm">Migrare %1$d segnalibro/i da \"%2$s\" (%3$s) a \"%4$s\" (%5$s)?\n%6$d su %7$d capitoli corrispondenti.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Migrare %1$d segnalibro/i da \"%2$s\" (%3$s) a \"%4$s\" (%5$s)?\nI capitoli verranno associati in base al progresso di lettura.</string>
+	<string name="bookmark_migration_success">Segnalibri migrati su %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Nessun segnalibro per questa serie</string>
+	<string name="bookmark_migration_rescan">Ripeti scansione</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Nessun capitolo</string>
+	<string name="bookmarks_count_badge">%1$d segnalibri</string>
+</resources>

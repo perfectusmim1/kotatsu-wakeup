@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Ikon</string>
+	<string name="fav_icon_default">Hati</string>
+	<string name="fav_icon_star">Bintang</string>
+	<string name="fav_icon_fire">Api</string>
+	<string name="fav_icon_crown">Mahkota</string>
+	<string name="fav_icon_book">Buku</string>
+	<string name="fav_icon_bookmark">Markah</string>
+	<string name="fav_icon_eye">Mata</string>
+	<string name="fav_icon_bolt">Petir</string>
+	<string name="fav_icon_clock">Jam</string>
+	<string name="fav_icon_folder">Folder</string>
+	<string name="fav_icon_check">Centang</string>
+	<string name="fav_icon_sparkles">Kilau</string>
+</resources>

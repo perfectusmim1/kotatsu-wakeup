@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Pengaturan terjemahan</string>
+	<string name="translation_toggle">Alihkan terjemahan</string>
+	<string name="translation_enable">Aktifkan terjemahan</string>
+	<string name="translation_disable">Nonaktifkan terjemahan</string>
+	<string name="translation_active">Aktif</string>
+	<string name="translation_off">Nonaktif</string>
+	<string name="translation_provider">Penyedia terjemahan</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google Terjemahan</string>
+	<string name="translation_source_lang">Bahasa sumber (OCR)</string>
+	<string name="translation_target_lang">Bahasa target</string>
+	<string name="translation_api_keys">Kunci API Gemini</string>
+	<string name="translation_api_keys_hint">Pisahkan beberapa kunci dengan koma atau baris baru</string>
+	<string name="translation_api_keys_empty">Belum ada kunci API yang diatur</string>
+	<string name="translation_api_key_required">Tambahkan kunci API Gemini atau alihkan ke Google Terjemahan</string>
+	<string name="translation_auto_translate">Terjemahkan halaman otomatis</string>
+	<string name="translation_skip_sfx">Lewati efek suara</string>
+	<string name="translation_filter_promo">Lewati halaman promo &amp; kredit</string>
+	<string name="translation_ocr_ready">Model OCR siap</string>
+	<string name="translation_ocr_auto_ready">OCR deteksi otomatis siap</string>
+	<string name="translation_ocr_not_downloaded">Model OCR diunduh saat penggunaan pertama</string>
+	<string name="translation_ocr_download">Unduh model</string>
+	<string name="translation_ocr_downloading">Mengunduh model OCR… %1$d%%</string>
+	<string name="translation_ocr_running">Mengenali teks…</string>
+	<string name="translation_translating_text">Menerjemahkan…</string>
+	<string name="translation_rendering_page">Merender halaman…</string>
+	<string name="translation_clear_cache">Hapus cache terjemahan</string>
+	<string name="translation_cache_cleared">Cache terjemahan dihapus</string>
+	<string name="translation_cache_cleared_size">Menghapus %1$s cache terjemahan</string>
+	<string name="translation_error_generic">Terjemahan gagal: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="other">%1$d kunci aktif dikonfigurasi</item>
+	</plurals>
+</resources>

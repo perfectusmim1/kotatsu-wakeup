@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">圖源帳號</string>
+	<string name="source_accounts_summary">%1$d 個已登入 · %2$d 個支援</string>
+	<string name="source_accounts_summary_none">無使用中工作階段 · %1$d 個支援</string>
+	<string name="source_accounts_empty">找不到支援帳號的圖源</string>
+	<string name="source_account_signed_in">已登入</string>
+	<string name="source_account_not_signed_in">未登入</string>
+	<string name="source_account_switch">切換帳號</string>
+	<string name="source_signed_out">已登出</string>
+	<string name="sign_up">註冊</string>
+	<string name="auth_verify">驗證</string>
+	<string name="auth_refresh">重新整理</string>
+	<string name="auth_not_verified_yet">工作階段尚未驗證。請完成登入後再試一次。</string>
+</resources>

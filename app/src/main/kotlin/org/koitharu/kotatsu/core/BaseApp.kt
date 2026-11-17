@@ -89,6 +89,9 @@ open class BaseApp : Application(), Configuration.Provider {
 		// Sentry could do stays off; see SentryInitializer.
 		SentryInitializer.ensureInitialized(this, enableAnr = true)
 		AppCompatDelegate.setDefaultNightMode(settings.theme)
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+			AppCompatDelegate.setApplicationLocales(settings.appLocales)
+		}
 		// TLS 1.3 support for Android < 10
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
 			Security.insertProviderAt(Conscrypt.newProvider(), 1)

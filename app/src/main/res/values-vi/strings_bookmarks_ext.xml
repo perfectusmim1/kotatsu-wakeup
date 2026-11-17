@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Đã thêm dấu trang</string>
+	<string name="bookmarks_sort_newest">Mới nhất</string>
+	<string name="bookmarks_sort_oldest">Cũ nhất</string>
+	<string name="bookmarks_sort_chapter">Thứ tự chương</string>
+	<string name="search_bookmarks_hint">Tìm truyện hoặc chương</string>
+	<string name="search_bookmarked_chapters_hint">Tìm các chương đã đánh dấu</string>
+	<string name="no_bookmarks_matching_query">Không có dấu trang khớp</string>
+	<string name="no_bookmarks_matching_summary">Không có dấu trang nào khớp với bộ lọc hiện tại</string>
+	<string name="download_bookmarked_chapters">Tải các chương đã đánh dấu</string>
+	<string name="download_bookmarked_only">Chỉ các chương đã đánh dấu</string>
+	<string name="download_bookmarked_next_2">Đã đánh dấu + 2 chương tiếp</string>
+	<string name="download_bookmarked_next_3">Đã đánh dấu + 3 chương tiếp</string>
+	<string name="no_bookmarked_chapters_to_download">Không có chương đã đánh dấu để tải</string>
+	<string name="migrate_bookmarks">Di chuyển dấu trang sang nguồn khác</string>
+	<string name="bookmark_migration_choose_series">Chọn truyện để di chuyển</string>
+	<string name="bookmark_migration_searching">Đang tìm kiếm các nguồn đang bật…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d nguồn · %3$d khớp</string>
+	<string name="bookmark_migration_chapters_matched">Khớp %1$d/%2$d chương</string>
+	<string name="bookmark_migration_total_chapters">%1$d chương</string>
+	<string name="bookmark_migration_no_candidates">Không tìm thấy nguồn tương thích</string>
+	<string name="bookmark_migration_no_candidates_summary">Không có nguồn đang bật nào khớp với truyện và dấu trang này</string>
+	<string name="bookmark_migration_confirm">Di chuyển %1$d dấu trang từ \"%2$s\" (%3$s) sang \"%4$s\" (%5$s)?\nKhớp %6$d/%7$d chương đã đánh dấu.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Di chuyển %1$d dấu trang từ \"%2$s\" (%3$s) sang \"%4$s\" (%5$s)?\nChương sẽ được ước lượng theo tiến độ đọc.</string>
+	<string name="bookmark_migration_success">Đã di chuyển dấu trang sang %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Không có dấu trang cho truyện này</string>
+	<string name="bookmark_migration_rescan">Quét lại</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Không có chương</string>
+	<string name="bookmarks_count_badge">%1$d dấu trang</string>
+</resources>

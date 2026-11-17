@@ -93,7 +93,13 @@ class WebtoonHolder(
 			val pending = pendingShift
 			pendingShift = 0
 			isShiftScheduled = false
-			if (pending != 0 && itemView.parent === recyclerView) {
+			if (
+				pending != 0 &&
+				itemView.parent === recyclerView &&
+				itemView.top < 0 &&
+				itemView.bottom > 0 &&
+				kotlin.math.abs(pending) <= recyclerView.height * 2
+			) {
 				recyclerView.scrollBy(0, pending)
 				recyclerView.updateChildrenScroll()
 			}
@@ -110,7 +116,7 @@ class WebtoonHolder(
 	 * would otherwise stay as tall as whatever it last showed, or as the screen, as a blank in the middle of a strip.
 	 */
 	override fun onStateChanged(state: PageState) {
-		if (state is PageState.Loaded) {
+		if (state is PageState.Loaded && !state.preserveViewState) {
 			rowToKeepAtTop = topRowOnScreen()
 		}
 		super.onStateChanged(state)
@@ -149,7 +155,7 @@ class WebtoonHolder(
 	/** See [topRowOnScreen]. If that very row went, what comes after it is what ends up there. */
 	private fun putRowAtTop(row: Int, recyclerView: WebtoonRecyclerView) {
 		val ssiv = binding.ssiv
-		if (itemView.parent !== recyclerView || !ssiv.isReady || ssiv.sWidth <= 0) {
+		if (itemView.parent !== recyclerView || !ssiv.isReady || ssiv.sWidth <= 0 || itemView.top > 0 || itemView.bottom <= 0) {
 			return
 		}
 		val visible = viewModel.shownMask?.toVisible(row) ?: row
@@ -157,7 +163,10 @@ class WebtoonHolder(
 		val scroll = minOf(rowInView, ssiv.getScrollRange())
 		ssiv.scrollTo(scroll)
 		// What the page's own scroll cannot take up, the list does
-		recyclerView.scrollBy(0, itemView.top - (scroll - rowInView))
+		val delta = itemView.top - (scroll - rowInView)
+		if (delta != 0 && kotlin.math.abs(delta) <= recyclerView.height * 2) {
+			recyclerView.scrollBy(0, delta)
+		}
 	}
 
 	private fun setCollapsed(isCollapsed: Boolean) {

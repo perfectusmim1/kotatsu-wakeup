@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">已新增書籤</string>
+	<string name="bookmarks_sort_newest">最新新增</string>
+	<string name="bookmarks_sort_oldest">最早新增</string>
+	<string name="bookmarks_sort_chapter">章節順序</string>
+	<string name="search_bookmarks_hint">搜尋作品或章節</string>
+	<string name="search_bookmarked_chapters_hint">搜尋已加書籤的章節</string>
+	<string name="no_bookmarks_matching_query">沒有符合的書籤</string>
+	<string name="no_bookmarks_matching_summary">沒有符合目前篩選條件的書籤</string>
+	<string name="download_bookmarked_chapters">下載已加書籤章節</string>
+	<string name="download_bookmarked_only">僅已加書籤章節</string>
+	<string name="download_bookmarked_next_2">書籤章節 + 後2章</string>
+	<string name="download_bookmarked_next_3">書籤章節 + 後3章</string>
+	<string name="no_bookmarked_chapters_to_download">沒有可下載的書籤章節</string>
+	<string name="migrate_bookmarks">將書籤轉移至其他圖源</string>
+	<string name="bookmark_migration_choose_series">選擇要轉移的作品</string>
+	<string name="bookmark_migration_searching">正在搜尋啟用的圖源…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d 圖源 · %3$d 符合</string>
+	<string name="bookmark_migration_chapters_matched">已符合 %1$d/%2$d 章節</string>
+	<string name="bookmark_migration_total_chapters">%1$d 章節</string>
+	<string name="bookmark_migration_no_candidates">找不到相容的圖源</string>
+	<string name="bookmark_migration_no_candidates_summary">沒有已啟用的圖源符合此作品及其書籤章節</string>
+	<string name="bookmark_migration_confirm">將「%2$s」(%3$s) 中的 %1$d 個書籤轉移到「%4$s」(%5$s)？\n%7$d 個書籤章節中符合了 %6$d 個。</string>
+	<string name="bookmark_migration_confirm_no_overlap">將「%2$s」(%3$s) 中的 %1$d 個書籤轉移到「%4$s」(%5$s)？\n將依閱讀進度推算章節。</string>
+	<string name="bookmark_migration_success">書籤已轉移至 %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">此作品沒有書籤</string>
+	<string name="bookmark_migration_rescan">重新掃描</string>
+	<string name="bookmark_migration_unavailable_no_chapters">無章節</string>
+	<string name="bookmarks_count_badge">%1$d 個書籤</string>
+</resources>

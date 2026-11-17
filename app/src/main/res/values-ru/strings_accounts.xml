@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Аккаунты источников</string>
+	<string name="source_accounts_summary">%1$d выполнено · %2$d поддерживается</string>
+	<string name="source_accounts_summary_none">Нет активных сеансов · %1$d поддерживается</string>
+	<string name="source_accounts_empty">Источники с поддержкой аккаунтов не найдены</string>
+	<string name="source_account_signed_in">Вход выполнен</string>
+	<string name="source_account_not_signed_in">Вход не выполнен</string>
+	<string name="source_account_switch">Сменить аккаунт</string>
+	<string name="source_signed_out">Выход выполнен</string>
+	<string name="sign_up">Регистрация</string>
+	<string name="auth_verify">Проверить</string>
+	<string name="auth_refresh">Обновить</string>
+	<string name="auth_not_verified_yet">Сеанс ещё не подтверждён. Завершите вход и попробуйте снова.</string>
+</resources>

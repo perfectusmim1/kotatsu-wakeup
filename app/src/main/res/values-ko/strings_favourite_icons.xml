@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">아이콘</string>
+	<string name="fav_icon_default">하트</string>
+	<string name="fav_icon_star">별</string>
+	<string name="fav_icon_fire">불꽃</string>
+	<string name="fav_icon_crown">왕관</string>
+	<string name="fav_icon_book">책</string>
+	<string name="fav_icon_bookmark">북마크</string>
+	<string name="fav_icon_eye">눈</string>
+	<string name="fav_icon_bolt">번개</string>
+	<string name="fav_icon_clock">시계</string>
+	<string name="fav_icon_folder">폴더</string>
+	<string name="fav_icon_check">체크</string>
+	<string name="fav_icon_sparkles">반짝임</string>
+</resources>

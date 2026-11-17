@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">حسابات المصادر</string>
+	<string name="source_accounts_summary">%1$d مسجّل · %2$d مدعوم</string>
+	<string name="source_accounts_summary_none">لا توجد جلسات نشطة · %1$d مدعوم</string>
+	<string name="source_accounts_empty">لم يتم العثور على مصادر تدعم الحسابات</string>
+	<string name="source_account_signed_in">تم تسجيل الدخول</string>
+	<string name="source_account_not_signed_in">غير مسجّل الدخول</string>
+	<string name="source_account_switch">تبديل الحساب</string>
+	<string name="source_signed_out">تم تسجيل الخروج</string>
+	<string name="sign_up">إنشاء حساب</string>
+	<string name="auth_verify">تحقق</string>
+	<string name="auth_refresh">تحديث</string>
+	<string name="auth_not_verified_yet">لم يتم التحقق من الجلسة بعد. أكمل تسجيل الدخول وحاول مرة أخرى.</string>
+</resources>

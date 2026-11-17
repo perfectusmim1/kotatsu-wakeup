@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Импорт из AniList</string>
+	<string name="anilist_import_mode_label">Назначение импорта</string>
+	<string name="anilist_import_by_status">По статусу</string>
+	<string name="anilist_import_single_category">Одна категория</string>
+	<string name="anilist_import_new_category">Новая категория</string>
+	<string name="anilist_import_new_category_hint">Название категории</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Загрузка библиотеки AniList…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Завершено (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Импортировано: %1$d · Существует: %2$d · Не найдено: %3$d</string>
+	<string name="anilist_import_empty">Ваш список манги AniList пуст.</string>
+	<string name="anilist_import_unmatched_title">Ненайденные названия</string>
+	<string name="anilist_import_start">Начать импорт</string>
+	<string name="anilist_import_retry">Импортировать снова</string>
+	<string name="anilist_import_error_no_sources">Перед импортом включите хотя бы один источник манги.</string>
+</resources>

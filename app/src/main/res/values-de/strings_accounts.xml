@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Quellenkonten</string>
+	<string name="source_accounts_summary">%1$d angemeldet · %2$d unterstützt</string>
+	<string name="source_accounts_summary_none">Keine aktiven Sitzungen · %1$d unterstützt</string>
+	<string name="source_accounts_empty">Keine Quellen mit Kontounterstützung gefunden</string>
+	<string name="source_account_signed_in">Angemeldet</string>
+	<string name="source_account_not_signed_in">Nicht angemeldet</string>
+	<string name="source_account_switch">Konto wechseln</string>
+	<string name="source_signed_out">Abgemeldet</string>
+	<string name="sign_up">Registrieren</string>
+	<string name="auth_verify">Verifizieren</string>
+	<string name="auth_refresh">Aktualisieren</string>
+	<string name="auth_not_verified_yet">Sitzung noch nicht verifiziert. Anmeldung abschließen und erneut versuchen.</string>
+</resources>

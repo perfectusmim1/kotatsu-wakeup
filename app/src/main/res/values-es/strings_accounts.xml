@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Cuentas de fuentes</string>
+	<string name="source_accounts_summary">%1$d iniciadas · %2$d compatibles</string>
+	<string name="source_accounts_summary_none">Sin sesiones activas · %1$d compatibles</string>
+	<string name="source_accounts_empty">No se encontraron fuentes compatibles con cuentas</string>
+	<string name="source_account_signed_in">Sesión iniciada</string>
+	<string name="source_account_not_signed_in">Sin sesión iniciada</string>
+	<string name="source_account_switch">Cambiar cuenta</string>
+	<string name="source_signed_out">Sesión cerrada</string>
+	<string name="sign_up">Registrarse</string>
+	<string name="auth_verify">Verificar</string>
+	<string name="auth_refresh">Actualizar</string>
+	<string name="auth_not_verified_yet">Sesión aún no verificada. Completa el inicio de sesión e inténtalo de nuevo.</string>
+</resources>

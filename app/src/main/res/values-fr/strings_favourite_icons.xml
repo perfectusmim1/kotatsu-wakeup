@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Icône</string>
+	<string name="fav_icon_default">Cœur</string>
+	<string name="fav_icon_star">Étoile</string>
+	<string name="fav_icon_fire">Feu</string>
+	<string name="fav_icon_crown">Couronne</string>
+	<string name="fav_icon_book">Livre</string>
+	<string name="fav_icon_bookmark">Marque-page</string>
+	<string name="fav_icon_eye">Œil</string>
+	<string name="fav_icon_bolt">Éclair</string>
+	<string name="fav_icon_clock">Horloge</string>
+	<string name="fav_icon_folder">Dossier</string>
+	<string name="fav_icon_check">Coche</string>
+	<string name="fav_icon_sparkles">Étincelles</string>
+</resources>

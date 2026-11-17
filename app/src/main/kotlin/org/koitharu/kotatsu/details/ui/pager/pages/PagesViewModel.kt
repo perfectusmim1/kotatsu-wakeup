@@ -163,7 +163,16 @@ class PagesViewModel @Inject constructor(
 	}
 
 	private suspend fun doInit(state: State) {
-		if (chaptersLoader.size > 0 && chaptersLoader.hasLoadedPages() && thumbnails.value.isNotEmpty() && loadedBranch == state.branch) {
+		val targetChapterId = state.readerState?.chapterId?.takeIf { chId ->
+			state.details.allChapters.any { it.id == chId && it.branch == state.branch }
+		}
+		if (
+			chaptersLoader.size > 0 &&
+			chaptersLoader.hasLoadedPages() &&
+			thumbnails.value.isNotEmpty() &&
+			loadedBranch == state.branch &&
+			(targetChapterId == null || chaptersLoader.hasPages(targetChapterId))
+		) {
 			chaptersLoader.init(state.details)
 			updateCurrentPageIndicator(state.readerState)
 			return
@@ -172,9 +181,11 @@ class PagesViewModel @Inject constructor(
 		loadingNextJob?.cancelAndJoin()
 		chaptersLoader.init(state.details)
 		loadedBranch = state.branch
-		val initialChapterId = state.readerState?.chapterId?.takeIf {
+		val initialChapterId = targetChapterId?.takeIf {
 			chaptersLoader.peekChapter(it) != null
-		} ?: state.details.allChapters.firstOrNull()?.id ?: return
+		} ?: state.details.allChapters.firstOrNull { it.branch == state.branch }?.id
+			?: state.details.allChapters.firstOrNull()?.id
+			?: return
 		if (!chaptersLoader.hasPages(initialChapterId)) {
 			var hasPages = chaptersLoader.loadSingleChapter(initialChapterId)
 			while (!hasPages) {

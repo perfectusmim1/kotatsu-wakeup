@@ -122,7 +122,6 @@ class WebtoonImageView @JvmOverloads constructor(
 		if (isReady) {
 			adjustScale()
 			applyScroll()
-			onImageEventListener.onReady()
 		}
 	}
 

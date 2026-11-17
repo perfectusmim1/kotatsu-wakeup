@@ -10,7 +10,7 @@ import android.widget.Toast
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.Lazy
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,12 +22,12 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareActivity
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareHiddenActivity
+import org.koitharu.kotatsu.core.LocalizedAppContext
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.model.UnknownMangaSource
-import org.koitharu.kotatsu.core.nav.AppRouter
+import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.ui.DefaultActivityLifecycleCallbacks
-import org.koitharu.kotatsu.core.ui.util.ForegroundActivityHolder
 import org.koitharu.kotatsu.core.util.ext.findCloudFlareException
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
 import org.koitharu.kotatsu.parsers.model.MangaSource
@@ -41,8 +41,8 @@ import javax.inject.Singleton
 /** Owns the single Cloudflare verification session allowed in the app process. */
 @Singleton
 class CaptchaAutoResolveCoordinator @Inject constructor(
-	@ApplicationContext private val context: Context,
-	private val foregroundActivityHolder: ForegroundActivityHolder,
+	@LocalizedAppContext private val context: Context,
+	private val webViewExecutorLazy: Lazy<WebViewExecutor>,
 ) : DefaultActivityLifecycleCallbacks, DefaultLifecycleObserver {
 
 	private val stateMutex = Mutex()
@@ -262,15 +262,11 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 	}
 
 	private fun launch(session: ResolveSession) {
-		val intent = AppRouter.cloudFlareResolveIntent(context, session.exception, hidden = true).apply {
-			putExtra(CloudFlareActivity.EXTRA_AUTO_RESOLVE, true)
-		}
-		val launcher = foregroundActivityHolder.current
-		if (launcher != null) {
-			launcher.startActivity(intent)
-		} else {
-			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-			context.startActivity(intent)
+		scope.launch {
+			val resolved = runCatching {
+				webViewExecutorLazy.get().tryResolveCaptcha(session.exception, AUTO_RESOLVE_TIMEOUT_MS)
+			}.getOrDefault(false)
+			session.activityResult.complete(resolved)
 		}
 	}
 
@@ -341,6 +337,7 @@ class CaptchaAutoResolveCoordinator @Inject constructor(
 
 	private companion object {
 		const val TAG = "CaptchaCoordinator"
+		const val AUTO_RESOLVE_TIMEOUT_MS = 15_000L
 		const val RECENT_SUCCESS_COOLDOWN_MS = 30_000L
 		const val RECENT_FAILURE_COOLDOWN_MS = 3 * 60_000L
 		const val MAX_REQUEST_RETRIES = 1

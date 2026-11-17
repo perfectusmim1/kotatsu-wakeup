@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Biểu tượng</string>
+	<string name="fav_icon_default">Trái tim</string>
+	<string name="fav_icon_star">Ngôi sao</string>
+	<string name="fav_icon_fire">Ngọn lửa</string>
+	<string name="fav_icon_crown">Vương miện</string>
+	<string name="fav_icon_book">Sách</string>
+	<string name="fav_icon_bookmark">Dấu trang</string>
+	<string name="fav_icon_eye">Mắt</string>
+	<string name="fav_icon_bolt">Tia sét</string>
+	<string name="fav_icon_clock">Đồng hồ</string>
+	<string name="fav_icon_folder">Thư mục</string>
+	<string name="fav_icon_check">Dấu tích</string>
+	<string name="fav_icon_sparkles">Lấp lánh</string>
+</resources>

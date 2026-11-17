@@ -74,6 +74,7 @@ class PagesFragment :
 	private var spanResolver: GridSpanResolver? = null
 	private var scrollListener: ScrollListener? = null
 	private var selectionController: ListSelectionController? = null
+	private var lastScrolledCurrentKey: Pair<Long, Int>? = null
 
 	private val spanSizeLookup = SpanSizeLookup()
 
@@ -149,6 +150,7 @@ class PagesFragment :
 		scrollListener = null
 		thumbnailsAdapter = null
 		selectionController = null
+		lastScrolledCurrentKey = null
 		spanSizeLookup.invalidateCache()
 		super.onDestroyView()
 	}
@@ -223,22 +225,23 @@ class PagesFragment :
 
 	private suspend fun onThumbnailsChanged(list: List<ListModel>) {
 		val adapter = thumbnailsAdapter ?: return
-		if (adapter.itemCount == 0) {
-			var position = list.indexOfFirst { it is PageThumbnail && it.isCurrent }
-			if (position > 0) {
-				val spanCount = spanResolver?.spanCount ?: 0
-				val offset = if (position > spanCount + 1) {
-					(resources.getDimensionPixelSize(R.dimen.manga_list_details_item_height) * 0.6).roundToInt()
-				} else {
-					position = 0
-					0
-				}
-				val scrollCallback = RecyclerViewScrollCallback(requireViewBinding().recyclerView, position, offset)
-				adapter.emit(list)
-				scrollCallback.run()
+		var position = list.indexOfFirst { it is PageThumbnail && it.isCurrent }
+		val currentKey = (list.getOrNull(position) as? PageThumbnail)?.let { it.page.chapterId to it.page.index }
+		val shouldScrollToCurrent = adapter.itemCount == 0 || (currentKey != null && currentKey != lastScrolledCurrentKey)
+		if (currentKey != null) {
+			lastScrolledCurrentKey = currentKey
+		}
+		if (shouldScrollToCurrent && position >= 0) {
+			val spanCount = spanResolver?.spanCount ?: 0
+			val offset = if (position > spanCount + 1) {
+				(resources.getDimensionPixelSize(R.dimen.manga_list_details_item_height) * 0.6).roundToInt()
 			} else {
-				adapter.emit(list)
+				position = 0
+				0
 			}
+			val scrollCallback = RecyclerViewScrollCallback(requireViewBinding().recyclerView, position, offset)
+			adapter.emit(list)
+			scrollCallback.run()
 		} else {
 			adapter.emit(list)
 		}

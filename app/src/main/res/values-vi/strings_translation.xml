@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Cài đặt dịch thuật</string>
+	<string name="translation_toggle">Bật/tắt dịch</string>
+	<string name="translation_enable">Bật dịch thuật</string>
+	<string name="translation_disable">Tắt dịch thuật</string>
+	<string name="translation_active">Đang bật</string>
+	<string name="translation_off">Đã tắt</string>
+	<string name="translation_provider">Nhà cung cấp dịch</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google Dịch</string>
+	<string name="translation_source_lang">Ngôn ngữ nguồn (OCR)</string>
+	<string name="translation_target_lang">Ngôn ngữ đích</string>
+	<string name="translation_api_keys">Khóa API Gemini</string>
+	<string name="translation_api_keys_hint">Phân tách nhiều khóa bằng dấu phẩy hoặc xuống dòng</string>
+	<string name="translation_api_keys_empty">Chưa cấu hình khóa API</string>
+	<string name="translation_api_key_required">Thêm khóa API Gemini hoặc chuyển sang Google Dịch</string>
+	<string name="translation_auto_translate">Tự động dịch trang</string>
+	<string name="translation_skip_sfx">Bỏ qua hiệu ứng âm thanh</string>
+	<string name="translation_filter_promo">Bỏ qua trang quảng cáo &amp; nhóm dịch</string>
+	<string name="translation_ocr_ready">Mô hình OCR đã sẵn sàng</string>
+	<string name="translation_ocr_auto_ready">OCR tự nhận diện đã sẵn sàng</string>
+	<string name="translation_ocr_not_downloaded">Mô hình OCR sẽ tải xuống khi dùng lần đầu</string>
+	<string name="translation_ocr_download">Tải mô hình</string>
+	<string name="translation_ocr_downloading">Đang tải mô hình OCR… %1$d%%</string>
+	<string name="translation_ocr_running">Đang nhận diện chữ…</string>
+	<string name="translation_translating_text">Đang dịch…</string>
+	<string name="translation_rendering_page">Đang kết xuất trang…</string>
+	<string name="translation_clear_cache">Xóa bộ nhớ đệm dịch</string>
+	<string name="translation_cache_cleared">Đã xóa bộ nhớ đệm dịch</string>
+	<string name="translation_cache_cleared_size">Đã xóa %1$s bản dịch lưu đệm</string>
+	<string name="translation_error_generic">Dịch thất bại: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="other">Đã cấu hình %1$d khóa hoạt động</item>
+	</plurals>
+</resources>

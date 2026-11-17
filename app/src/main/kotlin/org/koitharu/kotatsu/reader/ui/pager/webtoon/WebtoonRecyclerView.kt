@@ -56,6 +56,13 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 		pullListener = listener
 	}
 
+	override fun onScrollStateChanged(state: Int) {
+		super.onScrollStateChanged(state)
+		if (state == SCROLL_STATE_IDLE) {
+			scrollDirection = 0
+		}
+	}
+
 	override fun onChildDetachedFromWindow(child: View) {
 		super.onChildDetachedFromWindow(child)
 		detachedViews.add(child)
@@ -248,7 +255,7 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 		val range = ssiv.getScrollRange()
 		val scroll = ssiv.getScroll().coerceIn(0, range)
 		val isOnScreen = child.top < height && child.bottom > 0
-		if (isOnScreen && scrollDirection >= 0 && child.top < 0 && scroll < range) {
+		if (isOnScreen && scrollDirection > 0 && child.top < 0 && scroll < range) {
 			val target = minOf(scroll - child.top, range)
 			ssiv.scrollTo(target)
 			// RecyclerView.scrollBy moves only the list: it does not route through consumeVerticalScroll

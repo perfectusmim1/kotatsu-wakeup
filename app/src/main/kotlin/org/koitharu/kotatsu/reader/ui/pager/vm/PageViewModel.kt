@@ -394,7 +394,7 @@ class PageViewModel(
 		}
 		pendingPreserveViewState = preserveViewState
 		displayedUri = displayUri
-		state.value = PageState.Loaded(displayUri.toImageSource(cachedBounds), isConverted, mask)
+		state.value = PageState.Loaded(displayUri.toImageSource(cachedBounds), isConverted, mask, preserveViewState)
 	}
 
 	private fun resolveDisplayUri(

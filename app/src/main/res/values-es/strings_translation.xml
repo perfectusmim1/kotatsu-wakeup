@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Ajustes de traducción</string>
+	<string name="translation_toggle">Alternar traducción</string>
+	<string name="translation_enable">Activar traducción</string>
+	<string name="translation_disable">Desactivar traducción</string>
+	<string name="translation_active">Activo</string>
+	<string name="translation_off">Desactivado</string>
+	<string name="translation_provider">Proveedor de traducción</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Traductor de Google</string>
+	<string name="translation_source_lang">Idioma de origen (OCR)</string>
+	<string name="translation_target_lang">Idioma de destino</string>
+	<string name="translation_api_keys">Claves API de Gemini</string>
+	<string name="translation_api_keys_hint">Separa varias claves con comas o saltos de línea</string>
+	<string name="translation_api_keys_empty">No hay clave API configurada</string>
+	<string name="translation_api_key_required">Añade una clave API de Gemini o cambia al Traductor de Google</string>
+	<string name="translation_auto_translate">Traducir páginas automáticamente</string>
+	<string name="translation_skip_sfx">Omitir efectos de sonido</string>
+	<string name="translation_filter_promo">Omitir páginas promocionales y créditos</string>
+	<string name="translation_ocr_ready">Modelo OCR listo</string>
+	<string name="translation_ocr_auto_ready">OCR automático listo</string>
+	<string name="translation_ocr_not_downloaded">El modelo OCR se descarga en el primer uso</string>
+	<string name="translation_ocr_download">Descargar modelo</string>
+	<string name="translation_ocr_downloading">Descargando modelo OCR… %1$d%%</string>
+	<string name="translation_ocr_running">Reconociendo texto…</string>
+	<string name="translation_translating_text">Traduciendo…</string>
+	<string name="translation_rendering_page">Renderizando página…</string>
+	<string name="translation_clear_cache">Limpiar caché de traducción</string>
+	<string name="translation_cache_cleared">Caché de traducción limpiada</string>
+	<string name="translation_cache_cleared_size">Se eliminaron %1$s de traducciones en caché</string>
+	<string name="translation_error_generic">Error al traducir: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d clave activa configurada</item>
+		<item quantity="other">%1$d claves activas configuradas</item>
+	</plurals>
+</resources>

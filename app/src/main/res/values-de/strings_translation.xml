@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Übersetzungseinstellungen</string>
+	<string name="translation_toggle">Übersetzung umschalten</string>
+	<string name="translation_enable">Übersetzung aktivieren</string>
+	<string name="translation_disable">Übersetzung deaktivieren</string>
+	<string name="translation_active">Aktiv</string>
+	<string name="translation_off">Aus</string>
+	<string name="translation_provider">Übersetzungsanbieter</string>
+	<string name="translation_provider_gemini">Gemini 3.5 Flash Lite</string>
+	<string name="translation_provider_google">Google Übersetzer</string>
+	<string name="translation_source_lang">Quellsprache (OCR)</string>
+	<string name="translation_target_lang">Zielsprache</string>
+	<string name="translation_api_keys">Gemini-API-Schlüssel</string>
+	<string name="translation_api_keys_hint">Mehrere Schlüssel durch Komma oder Zeilenumbruch trennen</string>
+	<string name="translation_api_keys_empty">Kein API-Schlüssel konfiguriert</string>
+	<string name="translation_api_key_required">Gemini-API-Schlüssel hinzufügen oder zu Google Übersetzer wechseln</string>
+	<string name="translation_auto_translate">Seiten automatisch übersetzen</string>
+	<string name="translation_skip_sfx">Soundeffekte überspringen</string>
+	<string name="translation_filter_promo">Promo- &amp; Credits-Seiten überspringen</string>
+	<string name="translation_ocr_ready">OCR-Modell bereit</string>
+	<string name="translation_ocr_auto_ready">Automatische OCR bereit</string>
+	<string name="translation_ocr_not_downloaded">OCR-Modell wird bei erster Nutzung geladen</string>
+	<string name="translation_ocr_download">Modell herunterladen</string>
+	<string name="translation_ocr_downloading">OCR-Modell wird geladen… %1$d%%</string>
+	<string name="translation_ocr_running">Text wird erkannt…</string>
+	<string name="translation_translating_text">Wird übersetzt…</string>
+	<string name="translation_rendering_page">Seite wird erstellt…</string>
+	<string name="translation_clear_cache">Übersetzungscache leeren</string>
+	<string name="translation_cache_cleared">Übersetzungscache geleert</string>
+	<string name="translation_cache_cleared_size">%1$s zwischengespeicherte Übersetzungen gelöscht</string>
+	<string name="translation_error_generic">Übersetzung fehlgeschlagen: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d aktiver Schlüssel konfiguriert</item>
+		<item quantity="other">%1$d aktive Schlüssel konfiguriert</item>
+	</plurals>
+</resources>
