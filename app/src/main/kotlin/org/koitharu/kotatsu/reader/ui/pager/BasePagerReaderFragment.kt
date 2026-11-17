@@ -168,7 +168,7 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 		} finally {
 			isUpdatingItems = false
 		}
-		if (restoredPosition != -1) {
+		if (restoredPosition != -1 && adapter.itemCount == viewModel.content.value.pages.size) {
 			notifyPageChanged(restoredPosition)
 		}
 	}
@@ -220,7 +220,13 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 	}
 
 	protected open fun notifyPageChanged(page: Int) {
-		viewModel.onCurrentPageChanged(page, page)
+		val adapter = readerAdapter
+		viewModel.onCurrentPageChanged(
+			lowerPos = page,
+			upperPos = page,
+			expectedPageCount = adapter?.itemCount ?: -1,
+			expectedCenterPage = adapter?.getItemOrNull(page),
+		)
 	}
 
 	companion object {

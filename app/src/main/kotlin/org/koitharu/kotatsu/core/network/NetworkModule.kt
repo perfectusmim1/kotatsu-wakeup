@@ -9,6 +9,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.Cache
+import okhttp3.ConnectionPool
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import org.koitharu.kotatsu.BuildConfig
@@ -72,6 +73,7 @@ interface NetworkModule {
 			connectTimeout(20, TimeUnit.SECONDS)
 			readTimeout(60, TimeUnit.SECONDS)
 			writeTimeout(20, TimeUnit.SECONDS)
+			connectionPool(ConnectionPool(8, 45, TimeUnit.SECONDS))
 			cookieJar(cookieJar)
 			proxySelector(proxyProvider.selector)
 			proxyAuthenticator(proxyProvider.authenticator)
@@ -85,6 +87,7 @@ interface NetworkModule {
 			//addInterceptor(GZipInterceptor())
 			addInterceptor(UnexpectedErrorInterceptor())
 			addInterceptor(proxyProvider.configInterceptor)
+			addInterceptor(TransientNetworkRetryInterceptor())
 			addInterceptor(CloudFlareInterceptor(webViewExecutorLazy))
 			addInterceptor(RateLimitInterceptor())
 			if (BuildConfig.DEBUG) {

@@ -12,6 +12,8 @@ import coil3.network.NetworkHeaders
 import coil3.network.NetworkResponse
 import coil3.network.NetworkResponseBody
 import coil3.request.Options
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -19,6 +21,8 @@ import okio.FileSystem
 import okio.Path.Companion.toOkioPath
 import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
+import org.koitharu.kotatsu.core.network.retryOnTransientReset
+import org.koitharu.kotatsu.core.network.withFreshConnectionIf
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.util.MimeTypes
 import org.koitharu.kotatsu.core.util.ext.fetch
@@ -41,6 +45,7 @@ class MangaPageFetcher(
 	private val mangaRepositoryFactory: MangaRepository.Factory,
 	private val imageProxyInterceptor: ImageProxyInterceptor,
 	private val imageLoader: ImageLoader,
+	private val networkSemaphore: Semaphore,
 ) : Fetcher {
 
 	override suspend fun fetch(): FetchResult? {
@@ -62,7 +67,18 @@ class MangaPageFetcher(
 				)
 			}
 		}
-		return loadPage(pageUrl)
+		return networkSemaphore.withPermit {
+			if (options.diskCachePolicy.readEnabled) {
+				pagesCache[pageUrl]?.let { file ->
+					return@withPermit SourceFetchResult(
+						source = ImageSource(file.toOkioPath(), options.fileSystem),
+						mimeType = MimeTypes.getMimeTypeFromExtension(file.name)?.toString(),
+						dataSource = DataSource.DISK,
+					)
+				}
+			}
+			loadPage(pageUrl)
+		}
 	}
 
 	private suspend fun loadPage(pageUrl: String): FetchResult? = if (pageUrl.toUri().isNetworkUri()) {
@@ -72,20 +88,23 @@ class MangaPageFetcher(
 	}
 
 	private suspend fun fetchPage(pageUrl: String): FetchResult {
-		val request = PageLoader.createPageRequest(pageUrl, page.source)
-		return imageProxyInterceptor.interceptPageRequest(request, okHttpClient).use { response ->
-			if (!response.isSuccessful) {
-				throw HttpException(response.toNetworkResponse())
+		val baseRequest = PageLoader.createPageRequest(pageUrl, page.source)
+		return retryOnTransientReset { forceFresh ->
+			val request = baseRequest.withFreshConnectionIf(forceFresh)
+			imageProxyInterceptor.interceptPageRequest(request, okHttpClient).use { response ->
+				if (!response.isSuccessful) {
+					throw HttpException(response.toNetworkResponse())
+				}
+				val mimeType = response.mimeType?.toMimeTypeOrNull()
+				val file = response.requireBody().use {
+					pagesCache.set(pageUrl, it.source(), mimeType)
+				}
+				SourceFetchResult(
+					source = ImageSource(file.toOkioPath(), FileSystem.SYSTEM),
+					mimeType = mimeType?.toString(),
+					dataSource = DataSource.NETWORK,
+				)
 			}
-			val mimeType = response.mimeType?.toMimeTypeOrNull()
-			val file = response.requireBody().use {
-				pagesCache.set(pageUrl, it.source(), mimeType)
-			}
-			SourceFetchResult(
-				source = ImageSource(file.toOkioPath(), FileSystem.SYSTEM),
-				mimeType = mimeType?.toString(),
-				dataSource = DataSource.NETWORK,
-			)
 		}
 	}
 
@@ -113,6 +132,8 @@ class MangaPageFetcher(
 		private val imageProxyInterceptor: ImageProxyInterceptor,
 	) : Fetcher.Factory<MangaPage> {
 
+		private val networkSemaphore = Semaphore(THUMBNAIL_NETWORK_CONCURRENCY)
+
 		override fun create(data: MangaPage, options: Options, imageLoader: ImageLoader) = MangaPageFetcher(
 			okHttpClient = okHttpClient,
 			pagesCache = pagesCache,
@@ -121,6 +142,12 @@ class MangaPageFetcher(
 			mangaRepositoryFactory = mangaRepositoryFactory,
 			imageProxyInterceptor = imageProxyInterceptor,
 			imageLoader = imageLoader,
+			networkSemaphore = networkSemaphore,
 		)
+	}
+
+	private companion object {
+
+		const val THUMBNAIL_NETWORK_CONCURRENCY = 4
 	}
 }

@@ -137,7 +137,14 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 		lastVisiblePosition: Int,
 	) {
 		if (!isUpdatingItems) {
-			viewModel.onCurrentPageChanged(firstVisiblePosition, lastVisiblePosition)
+			val adapter = readerAdapter
+			val centerPos = (firstVisiblePosition + lastVisiblePosition) / 2
+			viewModel.onCurrentPageChanged(
+				lowerPos = firstVisiblePosition,
+				upperPos = lastVisiblePosition,
+				expectedPageCount = adapter?.itemCount ?: -1,
+				expectedCenterPage = adapter?.getItemOrNull(centerPos),
+			)
 		}
 	}
 
@@ -188,9 +195,15 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 						} else {
 							firstVisibleItemPosition = position
 						}
+						val targetChapterId = pendingState.chapterId
+						val targetPageIndex = pendingState.page
+						val targetScroll = pendingState.scroll
 						post {
-							(findViewHolderForAdapterPosition(position) as? WebtoonHolder)
-								?.restoreScroll(pendingState.scroll)
+							val targetPos = readerAdapter?.findPagePosition(targetChapterId, targetPageIndex) ?: -1
+							if (targetPos != -1) {
+								(findViewHolderForAdapterPosition(targetPos) as? WebtoonHolder)
+									?.restoreScroll(targetScroll)
+							}
 							notifyScrollChanged()
 						}
 					}
@@ -216,10 +229,16 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 								} else {
 									0
 								}
+								val targetChapterId = fallbackState.chapterId
+								val targetPageIndex = fallbackState.page
+								val targetScroll = fallbackState.scroll
 								lm.scrollToPositionWithOffset(newPosition, -gap)
 								rv.post {
-									(rv.findViewHolderForAdapterPosition(newPosition) as? WebtoonHolder)
-										?.restoreScroll(fallbackState.scroll)
+									val targetPos = readerAdapter?.findPagePosition(targetChapterId, targetPageIndex) ?: -1
+									if (targetPos != -1) {
+										(rv.findViewHolderForAdapterPosition(targetPos) as? WebtoonHolder)
+											?.restoreScroll(targetScroll)
+									}
 									rv.notifyScrollChanged()
 								}
 							} else {
@@ -241,9 +260,15 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 							} else {
 								rv.firstVisibleItemPosition = newPosition
 							}
+							val targetChapterId = fallbackState.chapterId
+							val targetPageIndex = fallbackState.page
+							val targetScroll = fallbackState.scroll
 							rv.post {
-								(rv.findViewHolderForAdapterPosition(newPosition) as? WebtoonHolder)
-									?.restoreScroll(fallbackState.scroll)
+								val targetPos = readerAdapter?.findPagePosition(targetChapterId, targetPageIndex) ?: -1
+								if (targetPos != -1) {
+									(rv.findViewHolderForAdapterPosition(targetPos) as? WebtoonHolder)
+										?.restoreScroll(targetScroll)
+								}
 								rv.notifyScrollChanged()
 							}
 							notifyPosition = newPosition
@@ -254,8 +279,13 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 		} finally {
 			isUpdatingItems = false
 		}
-		if (notifyPosition != -1) {
-			viewModel.onCurrentPageChanged(notifyPosition, notifyPosition)
+		if (notifyPosition != -1 && adapter.itemCount == viewModel.content.value.pages.size) {
+			viewModel.onCurrentPageChanged(
+				lowerPos = notifyPosition,
+				upperPos = notifyPosition,
+				expectedPageCount = adapter.itemCount,
+				expectedCenterPage = adapter.getItemOrNull(notifyPosition),
+			)
 		}
 	}
 

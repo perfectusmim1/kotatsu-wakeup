@@ -12,6 +12,8 @@ import okhttp3.OkHttpClient
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
+import org.koitharu.kotatsu.core.network.retryOnTransientReset
+import org.koitharu.kotatsu.core.network.withFreshConnectionIf
 import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
@@ -66,10 +68,13 @@ class PagePreloader @Inject constructor(
 					launch {
 						val url = repository.getPageUrl(page)
 						download(url) {
-							val request = PageLoader.createPageRequest(url, page.source)
-							imageProxyInterceptor.interceptPageRequest(request, okHttp).ensureSuccess().use { response ->
-								response.requireBody().use {
-									cache.set(url, it.source(), it.contentType()?.toMimeType())
+							val baseRequest = PageLoader.createPageRequest(url, page.source)
+							retryOnTransientReset { forceFresh ->
+								val request = baseRequest.withFreshConnectionIf(forceFresh)
+								imageProxyInterceptor.interceptPageRequest(request, okHttp).ensureSuccess().use { response ->
+									response.requireBody().use {
+										cache.set(url, it.source(), it.contentType()?.toMimeType())
+									}
 								}
 							}
 						}

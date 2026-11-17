@@ -50,8 +50,8 @@ android {
 		applicationId 'io.github.kotatsuwakeup.kotatsu'
 		minSdk = 23
 		targetSdk = 37
-		versionCode = 2061
-        versionName = '9.8.19'
+		versionCode = 2062
+        versionName = '9.8.20'
 		generatedDensities = []
 		ndk {
 			// ARM only. x86 and x86_64 devices - Intel Chromebooks, emulators, BlueStacks - run these

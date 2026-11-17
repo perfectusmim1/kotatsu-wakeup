@@ -75,6 +75,8 @@ class PagesFragment :
 	private var scrollListener: ScrollListener? = null
 	private var selectionController: ListSelectionController? = null
 	private var lastScrolledCurrentKey: Pair<Long, Int>? = null
+	private var pendingAnchorItem: ListModel? = null
+	private var pendingAnchorOffset: Int = 0
 
 	private val spanSizeLookup = SpanSizeLookup()
 
@@ -113,7 +115,11 @@ class PagesFragment :
 		)
 		thumbnailsAdapter = PageThumbnailAdapter(
 			clickListener = this@PagesFragment,
-		)
+		).also { adapter ->
+			adapter.addListListener { _, _ ->
+				spanSizeLookup.invalidateCache()
+			}
+		}
 		viewModel.gridScale.observe(viewLifecycleOwner, ::onGridScaleChanged) // before rv initialization
 		with(binding.recyclerView) {
 			addItemDecoration(TypedListSpacingDecoration(context, false))
@@ -151,6 +157,8 @@ class PagesFragment :
 		thumbnailsAdapter = null
 		selectionController = null
 		lastScrolledCurrentKey = null
+		pendingAnchorItem = null
+		pendingAnchorOffset = 0
 		spanSizeLookup.invalidateCache()
 		super.onDestroyView()
 	}
@@ -160,7 +168,7 @@ class PagesFragment :
 		val barsInsets = insets.getInsets(typeBask)
 		viewBinding?.recyclerView?.setPadding(
 			barsInsets.left,
-			barsInsets.top,
+			0,
 			barsInsets.right,
 			barsInsets.bottom,
 		)
@@ -225,12 +233,39 @@ class PagesFragment :
 
 	private suspend fun onThumbnailsChanged(list: List<ListModel>) {
 		val adapter = thumbnailsAdapter ?: return
+		val rv = viewBinding?.recyclerView
+		val lm = rv?.layoutManager as? GridLayoutManager
 		var position = list.indexOfFirst { it is PageThumbnail && it.isCurrent }
 		val currentKey = (list.getOrNull(position) as? PageThumbnail)?.let { it.page.chapterId to it.page.index }
 		val shouldScrollToCurrent = adapter.itemCount == 0 || (currentKey != null && currentKey != lastScrolledCurrentKey)
 		if (currentKey != null) {
 			lastScrolledCurrentKey = currentKey
 		}
+		var firstVisible = RecyclerView.NO_POSITION
+		var anchorItem: ListModel? = null
+		var anchorOffset = 0
+		if (!shouldScrollToCurrent && lm != null && adapter.itemCount > 0) {
+			val oldItems = adapter.items
+			firstVisible = lm.findFirstVisibleItemPosition()
+			if (firstVisible != RecyclerView.NO_POSITION) {
+				anchorItem = oldItems.getOrNull(firstVisible)
+				anchorOffset = lm.findViewByPosition(firstVisible)?.let { child ->
+					lm.getDecoratedTop(child) - lm.paddingTop
+				} ?: 0
+			} else {
+				anchorItem = pendingAnchorItem
+					?: currentKey?.let { key ->
+						oldItems.firstOrNull {
+							it is PageThumbnail && it.page.chapterId == key.first && it.page.index == key.second
+						}
+					}
+					?: oldItems.firstOrNull()
+				anchorOffset = pendingAnchorOffset
+			}
+		}
+		spanSizeLookup.invalidateCache()
+		adapter.emit(list)
+		spanSizeLookup.invalidateCache()
 		if (shouldScrollToCurrent && position >= 0) {
 			val spanCount = spanResolver?.spanCount ?: 0
 			val offset = if (position > spanCount + 1) {
@@ -239,13 +274,24 @@ class PagesFragment :
 				position = 0
 				0
 			}
-			val scrollCallback = RecyclerViewScrollCallback(requireViewBinding().recyclerView, position, offset)
-			adapter.emit(list)
-			scrollCallback.run()
-		} else {
-			adapter.emit(list)
+			pendingAnchorItem = list.getOrNull(position)
+			pendingAnchorOffset = offset
+			scrollListener?.resetAutoPreload()
+			val targetRv = rv ?: requireViewBinding().recyclerView
+			RecyclerViewScrollCallback(targetRv, position, offset).run()
+		} else if (shouldScrollToCurrent) {
+			pendingAnchorItem = list.firstOrNull()
+			pendingAnchorOffset = 0
+			scrollListener?.resetAutoPreload()
+		} else if (anchorItem != null && rv != null && lm != null) {
+			val newAnchorPos = list.indexOfFirst { it.areItemsTheSame(anchorItem) }
+			if (newAnchorPos != -1 && (firstVisible == RecyclerView.NO_POSITION || newAnchorPos != firstVisible)) {
+				pendingAnchorItem = list[newAnchorPos]
+				pendingAnchorOffset = anchorOffset
+				rv.stopScroll()
+				lm.scrollToPositionWithOffset(newAnchorPos, anchorOffset)
+			}
 		}
-		spanSizeLookup.invalidateCache()
 		viewBinding?.recyclerView?.let {
 			scrollListener?.postInvalidate(it)
 		}
@@ -277,8 +323,26 @@ class PagesFragment :
 
 	private inner class ScrollListener : BoundsScrollListener(3, 3) {
 
+		private var lastScrollDy = 0
+		private var allowAutoStartPreload = true
+
+		fun resetAutoPreload() {
+			allowAutoStartPreload = true
+		}
+
+		override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+			lastScrollDy = dy
+			if (dy < 0) {
+				allowAutoStartPreload = true
+			}
+			super.onScrolled(recyclerView, dx, dy)
+		}
+
 		override fun onScrolledToStart(recyclerView: RecyclerView) {
-			viewModel.loadPrevChapter()
+			if (lastScrollDy < 0 || allowAutoStartPreload) {
+				allowAutoStartPreload = false
+				viewModel.loadPrevChapter()
+			}
 		}
 
 		override fun onScrolledToEnd(recyclerView: RecyclerView) {

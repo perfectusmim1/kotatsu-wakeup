@@ -46,6 +46,8 @@ import org.koitharu.kotatsu.core.image.BitmapDecoderCompat
 import org.koitharu.kotatsu.core.network.CommonHeaders
 import org.koitharu.kotatsu.core.network.MangaHttpClient
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
+import org.koitharu.kotatsu.core.network.retryOnTransientReset
+import org.koitharu.kotatsu.core.network.withFreshConnectionIf
 import org.koitharu.kotatsu.core.parser.CachingMangaRepository
 import org.koitharu.kotatsu.core.parser.MangaRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -522,10 +524,13 @@ class PageLoader @Inject constructor(
 				if (isPrefetch) {
 					downloadSlowdownDispatcher.delay(page.source)
 				}
-				val request = createPageRequest(pageUrl, page.source)
-				val file = imageProxyInterceptor.interceptPageRequest(request, okHttp).ensureSuccess().use { response ->
-					response.requireBody().withProgress(progress).use {
-						cache.set(pageUrl, it.source(), it.contentType()?.toMimeType())
+				val baseRequest = createPageRequest(pageUrl, page.source)
+				val file = retryOnTransientReset { forceFresh ->
+					val request = baseRequest.withFreshConnectionIf(forceFresh)
+					imageProxyInterceptor.interceptPageRequest(request, okHttp).ensureSuccess().use { response ->
+						response.requireBody().withProgress(progress).use {
+							cache.set(pageUrl, it.source(), it.contentType()?.toMimeType())
+						}
 					}
 				}
 				decodeIfAvif(file.toUri())

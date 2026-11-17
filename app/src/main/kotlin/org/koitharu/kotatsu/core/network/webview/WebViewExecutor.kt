@@ -96,6 +96,17 @@ class WebViewExecutor @Inject constructor(
 
 	fun hasRecentlySolvedHost(host: String?): Boolean = lastSolvedHostAt(host) > 0L
 
+	fun markHostsSolved(urls: Iterable<String>) {
+		val nowMs = System.currentTimeMillis()
+		for (rawUrl in urls) {
+			val host = rawUrl.toHttpUrlOrNull()?.host?.lowercase()
+				?: rawUrl.trim().lowercase().takeIf { it.isNotEmpty() && '/' !in it && ' ' !in it }
+				?: continue
+			recentSolvedHostAt[host] = nowMs
+			recentFailureUntil.remove(host)
+		}
+	}
+
 	fun lastSolvedHostAt(host: String?): Long {
 		val normalized = host?.lowercase() ?: return 0L
 		val solvedAt = recentSolvedHostAt[normalized] ?: return 0L
@@ -1016,7 +1027,7 @@ class WebViewExecutor @Inject constructor(
 
 		val rawResult = withTimeoutOrNull(BRIDGE_FETCH_TIMEOUT_MS) {
 			while (true) {
-				delay(50L)
+				delay(BRIDGE_FETCH_POLL_INTERVAL_MS)
 				val polled = suspendCancellableCoroutine<String?> { cont ->
 					webView.evaluateJavascript("window.__cfBridgeResult || null") { value ->
 						if (cont.isActive) cont.resume(value)
@@ -1198,6 +1209,7 @@ class WebViewExecutor @Inject constructor(
 		const val REQUIRED_STABLE_ERRORS = 4
 		const val BRIDGE_CHALLENGE_TIMEOUT_MS = 20_000L
 		const val BRIDGE_FETCH_TIMEOUT_MS = 15_000L
+		const val BRIDGE_FETCH_POLL_INTERVAL_MS = 20L
 		const val SOLVED_HOST_TTL_MS = 120_000L
 
 		private const val CF_TURNSTILE_TAP_PROBE_JS = """

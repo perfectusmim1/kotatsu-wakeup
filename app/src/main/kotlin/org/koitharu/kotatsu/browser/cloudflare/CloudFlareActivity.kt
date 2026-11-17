@@ -39,6 +39,7 @@ import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.network.cookies.AndroidCookieJar
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
 import org.koitharu.kotatsu.core.network.webview.CF_STATE_JS
+import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.network.webview.alignUserAgentWithEngine as alignUserAgentForWebView
 import org.koitharu.kotatsu.core.network.webview.applyCloudFlareRequestedWithPolicy
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
@@ -85,6 +86,9 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 
 	@Inject
 	lateinit var captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator
+
+	@Inject
+	lateinit var webViewExecutor: WebViewExecutor
 
 	private lateinit var cfClient: CloudFlareClient
 
@@ -491,6 +495,7 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		}
 		val webViewUserAgent = viewBinding.webView.settings.userAgentString?.nullIfEmpty()
 		val urls = listOfNotNull(intent?.dataString, viewBinding.webView.url).distinct()
+		webViewExecutor.markHostsSolved(urls)
 		lifecycleScope.launch {
 			// Sync both WebView cookies and the exact WebView User-Agent before closing the Activity
 			// so the retrying OkHttp request presents the same clearance + UA pair.

@@ -155,7 +155,7 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 		} finally {
 			isUpdatingItems = false
 		}
-		if (restoredPosition != -1 && paddedPages.isNotEmpty()) {
+		if (restoredPosition != -1 && paddedPages.isNotEmpty() && pages.size == viewModel.content.value.pages.size) {
 			notifyPageChanged(restoredPosition, (restoredPosition + 1).coerceAtMost(paddedPages.lastIndex))
 		}
 	}
@@ -214,7 +214,17 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 		val lower = if (origLower >= 0) origLower else origUpper
 		val upper = if (origUpper >= 0) origUpper else origLower
 		if (lower >= 0) {
-			viewModel.onCurrentPageChanged(lower, upper.coerceAtLeast(lower))
+			val adapter = readerAdapter
+			val centerAdapterPos = ((if (origLower >= 0) lowerPos else upperPos) + (if (origUpper >= 0) upperPos else lowerPos)) / 2
+			val centerItem = adapter?.getItemOrNull(centerAdapterPos)?.takeIf { it.index >= 0 }
+				?: adapter?.getItemOrNull(lowerPos)?.takeIf { it.index >= 0 }
+				?: adapter?.getItemOrNull(upperPos)?.takeIf { it.index >= 0 }
+			viewModel.onCurrentPageChanged(
+				lowerPos = lower,
+				upperPos = upper.coerceAtLeast(lower),
+				expectedPageCount = originalPageCount,
+				expectedCenterPage = centerItem,
+			)
 		}
 	}
 

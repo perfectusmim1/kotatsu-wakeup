@@ -26,6 +26,7 @@ import org.koitharu.kotatsu.core.nav.AppRouter
 import org.koitharu.kotatsu.core.nav.router
 import org.koitharu.kotatsu.core.network.cookies.AndroidCookieJar
 import org.koitharu.kotatsu.core.network.cookies.MutableCookieJar
+import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.parser.ParserMangaRepository
 import org.koitharu.kotatsu.core.prefs.SourceSettings
 import org.koitharu.kotatsu.core.util.ext.getDisplayMessage
@@ -52,6 +53,9 @@ class BrowserActivity : BaseBrowserActivity() {
 
 	@Inject
 	lateinit var sourcesRepository: MangaSourcesRepository
+
+	@Inject
+	lateinit var webViewExecutor: WebViewExecutor
 
 	private var targetSource: MangaSource = UnknownMangaSource
 	private var sessionCompletedNotified = false
@@ -140,6 +144,9 @@ class BrowserActivity : BaseBrowserActivity() {
 			.distinct()
 		if (urls.isNotEmpty()) {
 			captchaHandler.markHostsResolved(urls)
+			if (markSessionCompleted) {
+				webViewExecutor.markHostsSolved(urls)
+			}
 		}
 		val source = targetSource.takeUnless { it == UnknownMangaSource }
 		if (source != null) {

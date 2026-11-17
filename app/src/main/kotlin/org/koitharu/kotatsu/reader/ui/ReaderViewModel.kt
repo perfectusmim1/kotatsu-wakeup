@@ -603,38 +603,63 @@ class ReaderViewModel @Inject constructor(
     ): Boolean = translationCoordinator.setEnabled(isEnabled, fromUserTap)
 
     @MainThread
-    fun onCurrentPageChanged(lowerPos: Int, upperPos: Int) {
+    fun onCurrentPageChanged(
+        lowerPos: Int,
+        upperPos: Int,
+        expectedPageCount: Int = -1,
+        expectedCenterPage: ReaderPage? = null,
+    ) {
         val prevJob = stateChangeJob
         val pages = content.value.pages // capture immediately
+        if (expectedPageCount >= 0 && expectedPageCount != pages.size) {
+            return
+        }
+        val centerPos = (lowerPos + upperPos) / 2
+        val targetLowerPage = pages.getOrNull(lowerPos)
+        val targetCenterPage = pages.getOrNull(centerPos)
+        val targetUpperPage = pages.getOrNull(upperPos)
+        if (
+            expectedCenterPage != null &&
+            targetCenterPage != null &&
+            (expectedCenterPage.id != targetCenterPage.id || expectedCenterPage.chapterId != targetCenterPage.chapterId)
+        ) {
+            return
+        }
         stateChangeJob = launchJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
             loadingJob?.join()
-            if (pages.size != content.value.pages.size) {
-                return@launchJob // TODO
-            }
-            val centerPos = (lowerPos + upperPos) / 2
-            pages.getOrNull(centerPos)?.let { page ->
+            val currentPages = content.value.pages
+            val resolved = resolveCurrentPageRange(
+                capturedPages = pages,
+                currentPages = currentPages,
+                lowerPos = lowerPos,
+                upperPos = upperPos,
+                capturedLowerPage = targetLowerPage,
+                capturedCenterPage = targetCenterPage ?: expectedCenterPage,
+                capturedUpperPage = targetUpperPage,
+            ) ?: return@launchJob
+            resolved.centerPage?.let { page ->
                 readingState.update { cs ->
                     cs?.copy(chapterId = page.chapterId, page = page.index)
                 }
             }
             notifyStateChanged()
-            if (pages.isEmpty() || loadingJob?.isActive == true) {
+            if (currentPages.isEmpty() || loadingJob?.isActive == true) {
                 return@launchJob
             }
             ensureActive()
-            updateTranslationWindow(pages, lowerPos, upperPos)
+            updateTranslationWindow(currentPages, resolved.lowerPos, resolved.upperPos)
             val autoLoadAllowed = readerMode.value != ReaderMode.WEBTOON || !isWebtoonPullGestureEnabled.value
             if (autoLoadAllowed) {
-                if (upperPos >= pages.lastIndex - BOUNDS_PAGE_OFFSET) {
-                    loadPrevNextChapter(pages.last().chapterId, isNext = true)
+                if (resolved.upperPos >= currentPages.lastIndex - BOUNDS_PAGE_OFFSET) {
+                    loadPrevNextChapter(currentPages.last().chapterId, isNext = true)
                 }
-                if (lowerPos <= BOUNDS_PAGE_OFFSET) {
-                    loadPrevNextChapter(pages.first().chapterId, isNext = false)
+                if (resolved.lowerPos <= BOUNDS_PAGE_OFFSET) {
+                    loadPrevNextChapter(currentPages.first().chapterId, isNext = false)
                 }
             }
             if (pageLoader.isPrefetchApplicable()) {
-                pageLoader.prefetch(pages.trySublist(upperPos + 1, upperPos + 1 + PREFETCH_LIMIT))
+                pageLoader.prefetch(currentPages.trySublist(resolved.upperPos + 1, resolved.upperPos + 1 + PREFETCH_LIMIT))
             }
         }
     }
@@ -763,13 +788,13 @@ class ReaderViewModel @Inject constructor(
                         }
                         mangaDetails.value = details.filterChapters(selectedBranch.value)
                         notifyStateChanged()
-                        val pendingPublishState = if (hasPublishedInitialPages && content.value.pages.isNotEmpty()) {
-                            null
-                        } else {
-                            readingState.value
+                        val currentSnapshot = chaptersLoader.snapshot()
+                        if (!hasPublishedInitialPages || content.value.pages.isEmpty()) {
+                            publishPages(readingState.value)
+                            hasPublishedInitialPages = true
+                        } else if (currentSnapshot != content.value.pages) {
+                            publishPages(null)
                         }
-                        publishPages(pendingPublishState)
-                        hasPublishedInitialPages = true
 
                         // save state, once the pages are on their way: this rewrites the whole chapter list
                         if (!isIncognitoMode.firstNotNull()) {
@@ -1083,5 +1108,60 @@ class ReaderViewModel @Inject constructor(
         data object Initial : PendingFailedLoad
         data class SwitchChapter(val chapterId: Long, val page: Int, val scroll: Int) : PendingFailedLoad
         data class PrevNextChapter(val currentId: Long, val isNext: Boolean) : PendingFailedLoad
+    }
+
+    internal data class ResolvedPageRange(
+        val lowerPos: Int,
+        val upperPos: Int,
+        val centerPos: Int,
+        val centerPage: ReaderPage?,
+    )
+
+    companion object {
+        internal fun resolveCurrentPageRange(
+            capturedPages: List<ReaderPage>,
+            currentPages: List<ReaderPage>,
+            lowerPos: Int,
+            upperPos: Int,
+            capturedLowerPage: ReaderPage?,
+            capturedCenterPage: ReaderPage?,
+            capturedUpperPage: ReaderPage?,
+        ): ResolvedPageRange? {
+            if (currentPages.isEmpty()) {
+                return null
+            }
+            if (currentPages.size == capturedPages.size && currentPages === capturedPages) {
+                val safeLower = lowerPos.coerceIn(0, currentPages.lastIndex)
+                val safeUpper = upperPos.coerceIn(safeLower, currentPages.lastIndex)
+                val centerPos = (safeLower + safeUpper) / 2
+                return ResolvedPageRange(
+                    lowerPos = safeLower,
+                    upperPos = safeUpper,
+                    centerPos = centerPos,
+                    centerPage = currentPages.getOrNull(centerPos),
+                )
+            }
+            val targetCenter = capturedCenterPage ?: capturedLowerPage ?: capturedUpperPage ?: return null
+            val resolvedCenterIdx = currentPages.indexOfFirst {
+                it.id == targetCenter.id && it.chapterId == targetCenter.chapterId
+            }
+            if (resolvedCenterIdx < 0) {
+                return null
+            }
+            val resolvedLowerIdx = capturedLowerPage?.let { target ->
+                currentPages.indexOfFirst { it.id == target.id && it.chapterId == target.chapterId }
+            }?.takeIf { it >= 0 } ?: resolvedCenterIdx
+            val resolvedUpperIdx = capturedUpperPage?.let { target ->
+                currentPages.indexOfFirst { it.id == target.id && it.chapterId == target.chapterId }
+            }?.takeIf { it >= 0 } ?: resolvedCenterIdx
+            val safeLower = minOf(resolvedLowerIdx, resolvedUpperIdx).coerceIn(0, currentPages.lastIndex)
+            val safeUpper = maxOf(resolvedLowerIdx, resolvedUpperIdx).coerceIn(safeLower, currentPages.lastIndex)
+            return ResolvedPageRange(
+                lowerPos = safeLower,
+                upperPos = safeUpper,
+                centerPos = resolvedCenterIdx,
+                centerPage = currentPages[resolvedCenterIdx],
+            )
+        }
     }
 }
