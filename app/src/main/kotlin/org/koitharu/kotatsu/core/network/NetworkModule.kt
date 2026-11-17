@@ -2,6 +2,7 @@ package org.koitharu.kotatsu.core.network
 
 import android.content.Context
 import dagger.Binds
+import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +18,7 @@ import org.koitharu.kotatsu.core.network.cookies.PreferencesCookieJar
 import org.koitharu.kotatsu.core.network.imageproxy.ImageProxyInterceptor
 import org.koitharu.kotatsu.core.network.imageproxy.RealImageProxyInterceptor
 import org.koitharu.kotatsu.core.network.proxy.ProxyProvider
+import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.assertNotInMainThread
 import org.koitharu.kotatsu.core.util.ext.printStackTraceDebug
@@ -64,6 +66,7 @@ interface NetworkModule {
 			cookieJar: CookieJar,
 			settings: AppSettings,
 			proxyProvider: ProxyProvider,
+			webViewExecutorLazy: Lazy<WebViewExecutor>,
 		): OkHttpClient = OkHttpClient.Builder().apply {
 			assertNotInMainThread()
 			connectTimeout(20, TimeUnit.SECONDS)
@@ -82,7 +85,7 @@ interface NetworkModule {
 			//addInterceptor(GZipInterceptor())
 			addInterceptor(UnexpectedErrorInterceptor())
 			addInterceptor(proxyProvider.configInterceptor)
-			addInterceptor(CloudFlareInterceptor())
+			addInterceptor(CloudFlareInterceptor(webViewExecutorLazy))
 			addInterceptor(RateLimitInterceptor())
 			if (BuildConfig.DEBUG) {
 				addInterceptor(CurlLoggingInterceptor())

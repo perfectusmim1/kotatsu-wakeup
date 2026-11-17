@@ -665,8 +665,8 @@ open class CloudFlareActivity : BaseBrowserActivity(), CloudFlareCallback {
 		private const val VIEWPORT_FOCUS_TIMEOUT_MS = 2_000L
 		private const val HIDDEN_VIEWPORT_FOCUS_TIMEOUT_MS = 500L
 		private const val RESOLVE_POLL_INTERVAL_MS = 350L
-		private const val HIDDEN_AUTO_RESOLVE_TIMEOUT_MS = 3_500L
-		private const val CLEARANCE_REDIRECT_GRACE_MS = 1_200L
+		private const val HIDDEN_AUTO_RESOLVE_TIMEOUT_MS = 12_000L
+		private const val CLEARANCE_REDIRECT_GRACE_MS = 2_500L
 		private const val HIDDEN_AUTO_RESOLVE_MAX_BUDGET_MS =
 			HIDDEN_AUTO_RESOLVE_TIMEOUT_MS + CLEARANCE_REDIRECT_GRACE_MS
 		private const val REQUIRED_STABLE_PASSES = 2

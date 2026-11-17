@@ -1,14 +1,19 @@
 package org.koitharu.kotatsu.core.network
 
+import dagger.Lazy
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
 import okio.IOException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareBlockedException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
+import org.koitharu.kotatsu.core.network.webview.WebViewExecutor
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.network.CloudFlareHelper
 
-class CloudFlareInterceptor : Interceptor {
+class CloudFlareInterceptor(
+	private val webViewExecutorLazy: Lazy<WebViewExecutor>,
+) : Interceptor {
 
 	override fun intercept(chain: Interceptor.Chain): Response {
 		val request = chain.request()
@@ -21,13 +26,25 @@ class CloudFlareInterceptor : Interceptor {
 				),
 			)
 
-			CloudFlareHelper.PROTECTION_CAPTCHA -> response.closeThrowing(
-				CloudFlareProtectedException(
-					url = request.url.toString(),
-					source = request.tag(MangaSource::class.java),
-					headers = request.headers,
-				),
-			)
+			CloudFlareHelper.PROTECTION_CAPTCHA -> {
+				val source = request.tag(MangaSource::class.java)
+				val bridgedResponse = runCatching {
+					runBlocking {
+						webViewExecutorLazy.get().executeCloudFlareRequest(request, source)
+					}
+				}.getOrNull()
+				if (bridgedResponse != null) {
+					runCatching { response.close() }
+					return bridgedResponse
+				}
+				response.closeThrowing(
+					CloudFlareProtectedException(
+						url = request.url.toString(),
+						source = source,
+						headers = request.headers,
+					),
+				)
+			}
 
 			else -> response
 		}

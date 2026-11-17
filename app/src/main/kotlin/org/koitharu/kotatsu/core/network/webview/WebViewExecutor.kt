@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.AndroidRuntimeException
+import android.util.Base64
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +20,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -26,7 +28,15 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Cookie
+import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import org.json.JSONObject
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareCallback
 import org.koitharu.kotatsu.browser.cloudflare.CloudFlareClient
 import org.koitharu.kotatsu.core.exceptions.CloudFlareException
@@ -458,6 +468,304 @@ class WebViewExecutor @Inject constructor(
 		return CloudFlareClient(cookieJar, callback, exception.url)
 	}
 
+	/**
+	 * Executes an HTTP request inside an invisible WebView using `fetch()` so requests blocked by
+	 * OkHttp TLS/HTTP2 fingerprinting (even with a valid `cf_clearance`) succeed in the background
+	 * without opening a browser window.
+	 */
+	suspend fun executeCloudFlareRequest(
+		request: Request,
+		source: MangaSource?,
+		timeoutMs: Long = BRIDGE_CHALLENGE_TIMEOUT_MS,
+	): Response? {
+		val host = request.url.host.lowercase()
+		val now = System.currentTimeMillis()
+		val skipUntil = recentFailureUntil[host]
+		if (skipUntil != null) {
+			if (skipUntil > now) {
+				Log.d(TAG, "Skipping WebView HTTP bridge for $host (cooled down for ${skipUntil - now}ms)")
+				return null
+			}
+			recentFailureUntil.remove(host)
+		}
+
+		val targetSource = source ?: request.tag(MangaSource::class.java)
+		val resolvedSource = targetSource ?: UnknownMangaSource
+		val requestBodyBytes = request.body?.let { body ->
+			runCatching {
+				Buffer().also { body.writeTo(it) }.readByteArray()
+			}.getOrNull()
+		}
+
+		var syncedUrls: List<String> = emptyList()
+		var effectiveUserAgent: String? = null
+		val response = mutex.withLock {
+			val skipAfterLock = recentFailureUntil[host]
+			if (skipAfterLock != null && skipAfterLock > System.currentTimeMillis()) {
+				return@withLock null
+			}
+			runCatchingCancellable { proxyProvider.applyWebViewConfig() }.onFailure { it.printStackTraceDebug() }
+			withContext(Dispatchers.Main.immediate) {
+				val activity = foregroundActivityHolder.current
+				val webView: WebView
+				val hostView: ViewGroup?
+				val isThrowaway: Boolean
+				if (activity != null) {
+					webView = WebView(activity).apply { configureForParser(null) }
+					hostView = attachToInvisibleHost(webView, activity)
+					isThrowaway = true
+				} else {
+					webView = obtainWebView()
+					hostView = null
+					isThrowaway = false
+				}
+				try {
+					webView.webChromeClient = WebChromeClient()
+					webView.onResume()
+					val requestUserAgent = request.header(CommonHeaders.USER_AGENT)
+						?: targetSource?.getUserAgent()
+					val alignedUserAgent = requestUserAgent?.let(::alignUserAgentWithEngine)
+					alignedUserAgent?.let {
+						webView.settings.userAgentString = it
+					}
+					if (targetSource != null) {
+						applyCloudFlareRequestedWithPolicy(webView.settings, needsCloudFlareInterception(targetSource))
+					}
+					if (hostView != null) {
+						awaitVisibleLayout(webView)
+					}
+
+					val originUrl = "${request.url.scheme}://${request.url.host}/"
+					val challengePassed = loadAndPassChallenge(
+						webView = webView,
+						originUrl = originUrl,
+						source = resolvedSource,
+						timeoutMs = timeoutMs,
+					)
+					if (!challengePassed) {
+						Log.w(TAG, "Background WebView challenge did not pass for $originUrl")
+						return@withContext null
+					}
+
+					val bridged = executeFetchInWebView(webView, request, requestBodyBytes)
+					if (bridged != null && !isCloudFlareChallengeResponse(bridged)) {
+						syncedUrls = listOfNotNull(originUrl, request.url.toString(), webView.url).distinct()
+						effectiveUserAgent = webView.settings.userAgentString
+							?.sanitizeHeaderValue()
+							?.trim()
+							?.nullIfEmpty()
+						bridged
+					} else {
+						bridged?.close()
+						null
+					}
+				} catch (e: CancellationException) {
+					throw e
+				} catch (e: Exception) {
+					e.printStackTraceDebug()
+					null
+				} finally {
+					runCatching { webView.onPause() }
+					webView.webChromeClient = WebChromeClient()
+					if (isThrowaway) {
+						runCatching { webView.stopLoading() }
+						webView.webViewClient = WebViewClient()
+						hostView?.let { detachFromHost(webView, it) }
+						runCatching { webView.destroy() }
+					} else {
+						webView.reset()
+					}
+				}
+			}
+		}
+
+		if (response != null) {
+			if (resolvedSource != UnknownMangaSource) {
+				persistSolvedState(resolvedSource, syncedUrls, effectiveUserAgent)
+			}
+			recentFailureUntil.remove(host)
+		} else {
+			recentFailureUntil[host] = System.currentTimeMillis() + FAILURE_COOLDOWN_MS
+		}
+		return response
+	}
+
+	@MainThread
+	private fun attachToInvisibleHost(webView: WebView, activity: android.app.Activity): ViewGroup? {
+		val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return null
+		runCatching {
+			(webView.parent as? ViewGroup)?.removeView(webView)
+			webView.alpha = 0.01f
+			webView.visibility = View.VISIBLE
+			webView.isClickable = false
+			webView.isFocusable = false
+			webView.isFocusableInTouchMode = false
+			content.addView(
+				webView,
+				ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+			)
+		}.onFailure {
+			it.printStackTraceDebug()
+			return null
+		}
+		return content
+	}
+
+	@MainThread
+	private suspend fun loadAndPassChallenge(
+		webView: WebView,
+		originUrl: String,
+		source: MangaSource,
+		timeoutMs: Long,
+	): Boolean {
+		val dummyException = CloudFlareProtectedException(
+			url = originUrl,
+			source = source,
+			headers = Headers.headersOf(),
+		)
+		val resolved = withTimeoutOrNull(timeoutMs) {
+			suspendCancellableCoroutine { cont ->
+				webView.webViewClient = createCloudFlareClient(webView, dummyException, cont)
+				webView.loadUrl(originUrl)
+			}
+		}
+		return resolved == true
+	}
+
+	@MainThread
+	private suspend fun executeFetchInWebView(
+		webView: WebView,
+		request: Request,
+		bodyBytes: ByteArray?,
+	): Response? {
+		val headersJson = JSONObject().apply {
+			for (i in 0 until request.headers.size) {
+				val name = request.headers.name(i)
+				val lower = name.lowercase()
+				if (lower in FORBIDDEN_FETCH_HEADERS) continue
+				put(name, request.headers.value(i))
+			}
+			request.body?.contentType()?.let { ct ->
+				if (!has("Content-Type") && !has("content-type")) {
+					put("Content-Type", ct.toString())
+				}
+			}
+		}
+		val bodyBase64 = bodyBytes?.let { Base64.encodeToString(it, Base64.NO_WRAP) }
+		val urlJson = JSONObject.quote(request.url.toString())
+		val methodJson = JSONObject.quote(request.method)
+		val bodyJson = if (bodyBase64 != null) JSONObject.quote(bodyBase64) else "null"
+
+		val script = """
+			(function() {
+				delete window.__cfBridgeResult;
+				(async function() {
+					try {
+						var opts = {
+							method: $methodJson,
+							headers: $headersJson,
+							credentials: 'include'
+						};
+						var b64Body = $bodyJson;
+						if (b64Body !== null && $methodJson !== 'GET' && $methodJson !== 'HEAD') {
+							var bin = atob(b64Body);
+							var arr = new Uint8Array(bin.length);
+							for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+							opts.body = arr;
+						}
+						var resp = await fetch($urlJson, opts);
+						var buf = await resp.arrayBuffer();
+						var bytes = new Uint8Array(buf);
+						var chunks = [];
+						var chunkSize = 0x8000;
+						for (var j = 0; j < bytes.length; j += chunkSize) {
+							chunks.push(String.fromCharCode.apply(null, bytes.subarray(j, j + chunkSize)));
+						}
+						var hdrs = {};
+						resp.headers.forEach(function(v, k) { hdrs[k] = v; });
+						window.__cfBridgeResult = JSON.stringify({
+							status: resp.status,
+							statusText: resp.statusText || '',
+							headers: hdrs,
+							bodyBase64: btoa(chunks.join(''))
+						});
+					} catch (e) {
+						window.__cfBridgeResult = JSON.stringify({ error: String(e) });
+					}
+				})();
+			})();
+		""".trimIndent()
+
+		webView.evaluateJavascript(script, null)
+
+		val rawResult = withTimeoutOrNull(BRIDGE_FETCH_TIMEOUT_MS) {
+			while (true) {
+				delay(50L)
+				val polled = suspendCancellableCoroutine<String?> { cont ->
+					webView.evaluateJavascript("window.__cfBridgeResult || null") { value ->
+						if (cont.isActive) cont.resume(value)
+					}
+				}
+				if (polled != null && polled != "null") {
+					return@withTimeoutOrNull unquoteJsString(polled)
+				}
+			}
+			@Suppress("UNREACHABLE_CODE")
+			null
+		} ?: return null
+
+		val json = runCatching { JSONObject(rawResult) }.getOrNull() ?: return null
+		if (json.has("error")) {
+			Log.w(TAG, "WebView fetch error for ${request.url}: ${json.optString("error")}")
+			return null
+		}
+		val status = json.optInt("status", 0)
+		if (status <= 0) return null
+		val statusText = json.optString("statusText", "OK").ifEmpty { "OK" }
+		val responseHeadersBuilder = Headers.Builder()
+		val hdrsObj = json.optJSONObject("headers")
+		var contentType: String? = null
+		if (hdrsObj != null) {
+			val keys = hdrsObj.keys()
+			while (keys.hasNext()) {
+				val key = keys.next()
+				val lower = key.lowercase()
+				if (lower == "content-encoding" || lower == "content-length" || lower == "transfer-encoding") {
+					continue
+				}
+				val value = hdrsObj.optString(key)
+				if (lower == "content-type") {
+					contentType = value
+				}
+				runCatching { responseHeadersBuilder.add(key, value) }
+			}
+		}
+		val decodedBytes = Base64.decode(json.optString("bodyBase64", ""), Base64.DEFAULT)
+		return Response.Builder()
+			.request(request)
+			.protocol(Protocol.HTTP_1_1)
+			.code(status)
+			.message(statusText)
+			.headers(responseHeadersBuilder.build())
+			.body(decodedBytes.toResponseBody(contentType?.toMediaTypeOrNull()))
+			.build()
+	}
+
+	private fun unquoteJsString(raw: String): String? {
+		if (raw == "null") return null
+		return runCatching { JSONObject("{\"v\":$raw}").getString("v") }.getOrNull()
+	}
+
+	private fun isCloudFlareChallengeResponse(response: Response): Boolean {
+		if (response.code != 403 && response.code != 503) return false
+		val cfMitigated = response.header("cf-mitigated")
+		if (cfMitigated.equals("challenge", ignoreCase = true)) return true
+		val bodyPreview = runCatching { response.peekBody(8192L).string() }.getOrDefault("")
+		return bodyPreview.contains("challenge-error-title") ||
+			bodyPreview.contains("challenge-error-text") ||
+			bodyPreview.contains("Just a moment...")
+	}
+
 	private fun needsCloudFlareInterception(source: MangaSource): Boolean = runCatching {
 		val repository = mangaRepositoryFactoryProvider.get().create(source) as? ParserMangaRepository ?: return false
 		repository.getConfigKeys().filterIsInstance<ConfigKey.InterceptCloudflare>().firstOrNull()?.defaultValue == true
@@ -531,6 +839,19 @@ class WebViewExecutor @Inject constructor(
 		const val TAG = "WebViewExecutor"
 		const val CHALLENGE_POLL_INTERVAL_MS = 700L
 		const val REQUIRED_STABLE_PASSES = 3
+		const val BRIDGE_CHALLENGE_TIMEOUT_MS = 12_000L
+		const val BRIDGE_FETCH_TIMEOUT_MS = 15_000L
+
+		private val FORBIDDEN_FETCH_HEADERS = setOf(
+			"cookie",
+			"host",
+			"content-length",
+			"user-agent",
+			"accept-encoding",
+			"connection",
+			"origin",
+			"referer",
+		)
 
 		// After a failed auto-resolve for a host, skip new attempts for this long so a burst of failing
 		// requests (favicon + catalog + chapters + …) doesn't queue up multiple full timeouts.
