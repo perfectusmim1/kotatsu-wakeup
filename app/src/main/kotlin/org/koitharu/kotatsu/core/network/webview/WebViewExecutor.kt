@@ -8,9 +8,11 @@ import android.os.SystemClock
 import android.util.AndroidRuntimeException
 import android.util.Base64
 import android.util.Log
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -252,7 +254,7 @@ class WebViewExecutor @Inject constructor(
 				// matches CloudFlareActivity's WebView — Cloudflare/Turnstile fingerprints differ between
 				// app-context and Activity-context WebViews. Falls back to the cached one if no Activity is
 				// available (e.g. background path).
-				val activity = foregroundActivityHolder.current
+				val activity = foregroundActivityHolder.current ?: foregroundActivityHolder.awaitCurrent(1_500L)
 				val webView: WebView
 				val host: ViewGroup?
 				val isThrowaway: Boolean
@@ -266,7 +268,7 @@ class WebViewExecutor @Inject constructor(
 					isThrowaway = false
 				}
 				try {
-					webView.webChromeClient = WebChromeClient()
+					webView.webChromeClient = createDiagnosticWebChromeClient()
 					webView.onResume()
 					val requestUserAgent = (exception as? CloudFlareProtectedException)
 						?.headers
@@ -278,17 +280,16 @@ class WebViewExecutor @Inject constructor(
 					}
 					val stripRequestedWith = needsCloudFlareInterception(exception.source)
 					applyCloudFlareRequestedWithPolicy(webView.settings, stripRequestedWith)
-					val resolved = withTimeoutOrNull(timeout) {
-						if (host != null) {
-							awaitVisibleLayout(webView)
-						}
-						loadAndPassChallenge(
-							webView = webView,
-							originUrl = exception.url,
-							source = exception.source,
-							timeoutMs = timeout,
-						)
+					if (host != null) {
+						awaitVisibleLayout(webView)
 					}
+					clearRejectedClearance(exception.url)
+					val resolved = loadAndPassChallenge(
+						webView = webView,
+						originUrl = exception.url,
+						source = exception.source,
+						timeoutMs = timeout,
+					)
 					if (resolved == true) {
 						syncedUrls = listOfNotNull(exception.url, webView.url).distinct()
 						effectiveUserAgent = webView.settings.userAgentString
@@ -549,7 +550,7 @@ class WebViewExecutor @Inject constructor(
 						alignedUserAgent?.let { headless.settings.userAgentString = it }
 						applyCloudFlareRequestedWithPolicy(headless.settings, stripRequestedWith)
 						ensureOriginContext(headless, originUrl)
-						val fastResponse = executeFetchInWebView(headless, request, requestBodyBytes)
+						val fastResponse = executeFetchInWebView(headless, request, targetSource, requestBodyBytes)
 						if (fastResponse != null && !isCloudFlareChallengeResponse(fastResponse)) {
 							recentSolvedHostAt[host] = System.currentTimeMillis()
 							syncedUrls = listOfNotNull(originUrl, request.url.toString(), headless.url).distinct()
@@ -570,7 +571,7 @@ class WebViewExecutor @Inject constructor(
 					}
 				}
 
-				val activity = foregroundActivityHolder.current
+				val activity = foregroundActivityHolder.current ?: foregroundActivityHolder.awaitCurrent(1_500L)
 				val webView: WebView
 				val hostView: ViewGroup?
 				val isThrowaway: Boolean
@@ -584,7 +585,7 @@ class WebViewExecutor @Inject constructor(
 					isThrowaway = false
 				}
 				try {
-					webView.webChromeClient = WebChromeClient()
+					webView.webChromeClient = createDiagnosticWebChromeClient()
 					webView.onResume()
 					alignedUserAgent?.let {
 						webView.settings.userAgentString = it
@@ -594,18 +595,40 @@ class WebViewExecutor @Inject constructor(
 						awaitVisibleLayout(webView)
 					}
 
+					val challengeUrl = if (request.method.equals("GET", ignoreCase = true)) {
+						request.url.toString()
+					} else {
+						originUrl
+					}
+					clearRejectedClearance(challengeUrl)
 					val challengePassed = loadAndPassChallenge(
 						webView = webView,
-						originUrl = originUrl,
+						originUrl = challengeUrl,
 						source = resolvedSource,
 						timeoutMs = timeoutMs,
 					)
 					if (!challengePassed) {
-						Log.w(TAG, "Background WebView challenge did not pass for $originUrl")
+						Log.w(TAG, "Background WebView challenge did not pass for $challengeUrl (hostView=${hostView != null})")
 						return@withContext null
 					}
 
-					val bridged = executeFetchInWebView(webView, request, requestBodyBytes)
+					var bridged = executeFetchInWebView(webView, request, targetSource, requestBodyBytes)
+					// If originUrl passed (e.g. cached homepage) but the actual POST/API endpoint still requires its own clearance,
+					// solve directly on the request URL once and retry fetch.
+					if ((bridged == null || isCloudFlareChallengeResponse(bridged)) && challengeUrl != request.url.toString()) {
+						bridged?.close()
+						val endpointPassed = loadAndPassChallenge(
+							webView = webView,
+							originUrl = request.url.toString(),
+							source = resolvedSource,
+							timeoutMs = timeoutMs,
+						)
+						if (endpointPassed) {
+							bridged = executeFetchInWebView(webView, request, targetSource, requestBodyBytes)
+						} else {
+							bridged = null
+						}
+					}
 					if (bridged != null && !isCloudFlareChallengeResponse(bridged)) {
 						recentSolvedHostAt[host] = System.currentTimeMillis()
 						syncedUrls = listOfNotNull(originUrl, request.url.toString(), webView.url).distinct()
@@ -676,7 +699,7 @@ class WebViewExecutor @Inject constructor(
 			webView.alpha = 0.01f
 			webView.visibility = View.VISIBLE
 			webView.isClickable = false
-			webView.isFocusable = false
+			webView.isFocusable = true
 			webView.isFocusableInTouchMode = false
 			webView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
 			content.addView(
@@ -688,6 +711,32 @@ class WebViewExecutor @Inject constructor(
 			return null
 		}
 		return content
+	}
+
+	private fun createDiagnosticWebChromeClient(): WebChromeClient = object : WebChromeClient() {
+		override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+			if (consoleMessage != null && consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+				Log.w(TAG, "WebView console [${consoleMessage.sourceId()}:${consoleMessage.lineNumber()}]: ${consoleMessage.message()}")
+			}
+			return super.onConsoleMessage(consoleMessage)
+		}
+	}
+
+	private fun clearRejectedClearance(rawUrl: String) {
+		val httpUrl = rawUrl.toHttpUrlOrNull() ?: return
+		runCatching {
+			cookieJar.removeCookies(httpUrl) { it.name == "cf_clearance" }
+			val cm = CookieManager.getInstance()
+			val rawCookies = cm.getCookie(rawUrl) ?: return@runCatching
+			val expiredAt = System.currentTimeMillis() - 100_000L
+			for (part in rawCookies.split(';')) {
+				val cookie = Cookie.parse(httpUrl, part.trim()) ?: continue
+				if (cookie.name == "cf_clearance") {
+					cm.setCookie(rawUrl, cookie.newBuilder().expiresAt(expiredAt).build().toString())
+				}
+			}
+			cm.flush()
+		}.onFailure { it.printStackTraceDebug() }
 	}
 
 	@MainThread
@@ -761,8 +810,30 @@ class WebViewExecutor @Inject constructor(
 	private fun dispatchSyntheticTap(webView: WebView, xPx: Float, yPx: Float) {
 		val touchWebView = webView as? TouchPassThroughWebView
 		val downTime = SystemClock.uptimeMillis()
-		val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, xPx, yPx, 0)
-		val up = MotionEvent.obtain(downTime, downTime + 55L, MotionEvent.ACTION_UP, xPx, yPx, 0)
+		val props = arrayOf(
+			MotionEvent.PointerProperties().apply {
+				id = 0
+				toolType = MotionEvent.TOOL_TYPE_FINGER
+			},
+		)
+		val coords = arrayOf(
+			MotionEvent.PointerCoords().apply {
+				x = xPx
+				y = yPx
+				pressure = 0.8f
+				size = 0.2f
+				touchMajor = 24f
+				touchMinor = 24f
+			},
+		)
+		val down = MotionEvent.obtain(
+			downTime, downTime, MotionEvent.ACTION_DOWN, 1, props, coords,
+			0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0,
+		)
+		val up = MotionEvent.obtain(
+			downTime, downTime + 65L, MotionEvent.ACTION_UP, 1, props, coords,
+			0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0,
+		)
 		try {
 			if (touchWebView != null) {
 				touchWebView.dispatchSyntheticTouch(down)
@@ -788,9 +859,23 @@ class WebViewExecutor @Inject constructor(
 	private suspend fun executeFetchInWebView(
 		webView: WebView,
 		request: Request,
+		source: MangaSource?,
 		bodyBytes: ByteArray?,
 	): Response? {
 		val headersJson = JSONObject().apply {
+			if (source != null) {
+				runCatching {
+					val repo = mangaRepositoryFactoryProvider.get().create(source) as? ParserMangaRepository
+					repo?.getRequestHeaders()?.let { parserHeaders ->
+						for (i in 0 until parserHeaders.size) {
+							val name = parserHeaders.name(i)
+							if (name.lowercase() !in FORBIDDEN_FETCH_HEADERS) {
+								put(name, parserHeaders.value(i))
+							}
+						}
+					}
+				}
+			}
 			for (i in 0 until request.headers.size) {
 				val name = request.headers.name(i)
 				val lower = name.lowercase()
@@ -991,7 +1076,7 @@ class WebViewExecutor @Inject constructor(
 		const val TAG = "WebViewExecutor"
 		const val CHALLENGE_POLL_INTERVAL_MS = 350L
 		const val REQUIRED_STABLE_PASSES = 2
-		const val BRIDGE_CHALLENGE_TIMEOUT_MS = 15_000L
+		const val BRIDGE_CHALLENGE_TIMEOUT_MS = 20_000L
 		const val BRIDGE_FETCH_TIMEOUT_MS = 15_000L
 		const val SOLVED_HOST_TTL_MS = 120_000L
 
@@ -1036,6 +1121,6 @@ class WebViewExecutor @Inject constructor(
 
 		// After a failed auto-resolve for a host, skip new attempts for this long so a burst of failing
 		// requests (favicon + catalog + chapters + …) doesn't queue up multiple full timeouts.
-		const val FAILURE_COOLDOWN_MS = 30_000L
+		const val FAILURE_COOLDOWN_MS = 10_000L
 	}
 }
