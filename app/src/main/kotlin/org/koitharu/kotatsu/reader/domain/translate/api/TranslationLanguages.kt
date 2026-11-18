@@ -235,4 +235,31 @@ object TranslationLanguages {
 			else -> normalized
 		}
 	}
+
+	fun OcrSourceLanguage.toDeeplSourceCode(): String? = when (this) {
+		OcrSourceLanguage.ENGLISH -> "EN"
+		OcrSourceLanguage.JAPANESE -> "JA"
+		OcrSourceLanguage.KOREAN -> "KO"
+		OcrSourceLanguage.CHINESE -> "ZH"
+		OcrSourceLanguage.AUTO,
+		OcrSourceLanguage.LATIN,
+		OcrSourceLanguage.CYRILLIC,
+		OcrSourceLanguage.ARABIC,
+		-> null
+	}
+
+	fun toDeeplTargetCode(code: String): String {
+		return when (val lower = normalizeTargetCode(code).lowercase(Locale.ROOT)) {
+			"en" -> "EN-US"
+			"en-gb" -> "EN-GB"
+			"en-us" -> "EN-US"
+			"pt" -> "PT-BR"
+			"pt-pt" -> "PT-PT"
+			"pt-br" -> "PT-BR"
+			"zh", "zh-cn" -> "ZH-HANS"
+			"zh-tw" -> "ZH-HANT"
+			"no", "nb" -> "NB"
+			else -> lower.uppercase(Locale.ROOT)
+		}
+	}
 }

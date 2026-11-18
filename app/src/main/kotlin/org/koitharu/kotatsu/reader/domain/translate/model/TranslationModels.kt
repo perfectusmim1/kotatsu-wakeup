@@ -33,7 +33,26 @@ data class NormalizedBox(
 
 enum class TranslationProvider {
 	GEMINI,
+	DEEPL,
 	GOOGLE,
+}
+
+enum class GeminiThinkingLevel(
+	val apiValue: String,
+	val fallbackBudget: Int,
+) {
+	MINIMAL("MINIMAL", 0),
+	LOW("LOW", 1024),
+	MEDIUM("MEDIUM", 4096),
+	HIGH("HIGH", 12288),
+	;
+
+	companion object {
+		fun fromName(raw: String?): GeminiThinkingLevel {
+			if (raw.isNullOrBlank()) return MINIMAL
+			return entries.firstOrNull { it.name.equals(raw.trim(), ignoreCase = true) } ?: MINIMAL
+		}
+	}
 }
 
 enum class OcrSourceLanguage(
@@ -145,12 +164,27 @@ data class TranslationSettingsSnapshot(
 	val sourceLang: OcrSourceLanguage = OcrSourceLanguage.AUTO,
 	val targetLang: String = "tr",
 	val apiKeys: List<String> = emptyList(),
+	val deeplApiKeys: List<String> = emptyList(),
+	val geminiThinkingLevel: GeminiThinkingLevel = GeminiThinkingLevel.MINIMAL,
 	val autoTranslate: Boolean = false,
 	val prefetchNextPage: Boolean = true,
 	val skipPureSfx: Boolean = true,
 	val filterPromoAndCredits: Boolean = true,
 ) {
-	fun effectiveCacheSignature(): String = "${sourceLang.code}:${targetLang.lowercase()}:${provider.name}:$skipPureSfx:$filterPromoAndCredits"
+	fun hasRequiredCredentials(): Boolean = when (provider) {
+		TranslationProvider.GEMINI -> apiKeys.isNotEmpty()
+		TranslationProvider.DEEPL -> deeplApiKeys.isNotEmpty()
+		TranslationProvider.GOOGLE -> true
+	}
+
+	fun effectiveCacheSignature(): String {
+		val providerSignature = if (provider == TranslationProvider.GEMINI) {
+			"${provider.name}:${geminiThinkingLevel.name}"
+		} else {
+			provider.name
+		}
+		return "${sourceLang.code}:${targetLang.lowercase()}:$providerSignature:$skipPureSfx:$filterPromoAndCredits"
+	}
 }
 
 enum class TranslationStage {

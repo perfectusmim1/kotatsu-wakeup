@@ -28,6 +28,7 @@ import org.koitharu.kotatsu.core.util.ext.viewLifecycleScope
 import org.koitharu.kotatsu.databinding.SheetTranslationSettingsBinding
 import org.koitharu.kotatsu.reader.domain.translate.ReaderTranslationCoordinator
 import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages
+import org.koitharu.kotatsu.reader.domain.translate.model.GeminiThinkingLevel
 import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationProvider
 import java.util.Locale
@@ -79,6 +80,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 	) {
 		super.onViewBindingCreated(binding, savedInstanceState)
 		setupProviderControls(binding)
+		setupGeminiThinkingControls(binding)
 		setupApiKeysField(binding)
 		setupSourceLanguageDropdown(binding)
 		setupTargetLanguageDropdown(binding)
@@ -86,7 +88,17 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 		setupActions(binding)
 
 		if (savedInstanceState == null && promptAutoEnableOnDismiss) {
-			binding.inputLayoutApiKeys.error = getString(R.string.translation_api_key_required)
+			when (settings.translationProvider) {
+				TranslationProvider.GEMINI -> {
+					binding.inputLayoutApiKeys.error = getString(R.string.translation_api_key_required)
+				}
+
+				TranslationProvider.DEEPL -> {
+					binding.inputLayoutDeeplApiKeys.error = getString(R.string.translation_deepl_api_key_required)
+				}
+
+				TranslationProvider.GOOGLE -> Unit
+			}
 		}
 
 		coordinator.isEnabled.observe(viewLifecycleOwner) { enabled ->
@@ -111,8 +123,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 	override fun onDismiss(dialog: DialogInterface) {
 		super.onDismiss(dialog)
 		if (promptAutoEnableOnDismiss && !userTouchedEnabledSwitch) {
-			val provider = settings.translationProvider
-			if (provider != TranslationProvider.GEMINI || settings.translationApiKeys.isNotEmpty()) {
+			if (settings.getTranslationSettingsSnapshot().hasRequiredCredentials()) {
 				coordinator.setEnabled(true, fromUserTap = false)
 			}
 		}
@@ -121,10 +132,10 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 	private fun setupProviderControls(binding: SheetTranslationSettingsBinding) {
 		val currentProvider = settings.translationProvider
 		binding.toggleGroupProvider.check(
-			if (currentProvider == TranslationProvider.GEMINI) {
-				R.id.button_provider_gemini
-			} else {
-				R.id.button_provider_google
+			when (currentProvider) {
+				TranslationProvider.GEMINI -> R.id.button_provider_gemini
+				TranslationProvider.DEEPL -> R.id.button_provider_deepl
+				TranslationProvider.GOOGLE -> R.id.button_provider_google
 			},
 		)
 		updateProviderVisibility(binding, currentProvider)
@@ -133,6 +144,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 			if (!isChecked) return@addOnButtonCheckedListener
 			val nextProvider = when (checkedId) {
 				R.id.button_provider_gemini -> TranslationProvider.GEMINI
+				R.id.button_provider_deepl -> TranslationProvider.DEEPL
 				R.id.button_provider_google -> TranslationProvider.GOOGLE
 				else -> return@addOnButtonCheckedListener
 			}
@@ -142,23 +154,54 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 		}
 	}
 
+	private fun setupGeminiThinkingControls(binding: SheetTranslationSettingsBinding) {
+		val currentLevel = settings.translationGeminiThinkingLevel
+		binding.toggleGroupThinkingLevel.check(
+			when (currentLevel) {
+				GeminiThinkingLevel.MINIMAL -> R.id.button_thinking_minimal
+				GeminiThinkingLevel.LOW -> R.id.button_thinking_low
+				GeminiThinkingLevel.MEDIUM -> R.id.button_thinking_medium
+				GeminiThinkingLevel.HIGH -> R.id.button_thinking_high
+			},
+		)
+		binding.toggleGroupThinkingLevel.addOnButtonCheckedListener { _, checkedId, isChecked ->
+			if (!isChecked) return@addOnButtonCheckedListener
+			val nextLevel = when (checkedId) {
+				R.id.button_thinking_minimal -> GeminiThinkingLevel.MINIMAL
+				R.id.button_thinking_low -> GeminiThinkingLevel.LOW
+				R.id.button_thinking_medium -> GeminiThinkingLevel.MEDIUM
+				R.id.button_thinking_high -> GeminiThinkingLevel.HIGH
+				else -> return@addOnButtonCheckedListener
+			}
+			clearApiKeysFocus(binding)
+			settings.translationGeminiThinkingLevel = nextLevel
+		}
+	}
+
 	private fun updateProviderVisibility(
 		binding: SheetTranslationSettingsBinding,
 		provider: TranslationProvider,
 	) {
 		val showGeminiFields = provider == TranslationProvider.GEMINI
+		val showDeeplFields = provider == TranslationProvider.DEEPL
+		binding.textViewThinkingLevelLabel.isVisible = showGeminiFields
+		binding.toggleGroupThinkingLevel.isVisible = showGeminiFields
 		binding.inputLayoutApiKeys.isVisible = showGeminiFields
-		if (showGeminiFields) {
-			updateApiKeyHelper(binding)
-		} else {
-			clearApiKeysFocus(binding)
+		binding.inputLayoutDeeplApiKeys.isVisible = showDeeplFields
+		when {
+			showGeminiFields -> updateApiKeyHelper(binding)
+			showDeeplFields -> updateDeeplApiKeyHelper(binding)
+			else -> clearApiKeysFocus(binding)
 		}
 	}
 
 	private fun clearApiKeysFocus(binding: SheetTranslationSettingsBinding) {
-		val editText = binding.editTextApiKeys
-		if (editText.hasFocus()) {
-			editText.clearFocus()
+		if (binding.editTextApiKeys.hasFocus()) {
+			binding.editTextApiKeys.clearFocus()
+			binding.layoutContent.requestFocus()
+		}
+		if (binding.editTextDeeplApiKeys.hasFocus()) {
+			binding.editTextDeeplApiKeys.clearFocus()
 			binding.layoutContent.requestFocus()
 		}
 		val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
@@ -175,11 +218,31 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 				binding.inputLayoutApiKeys.error = null
 			}
 		}
+
+		binding.editTextDeeplApiKeys.setText(settings.translationDeeplApiKeysRaw)
+		updateDeeplApiKeyHelper(binding)
+		binding.editTextDeeplApiKeys.doAfterTextChanged { editable ->
+			settings.translationDeeplApiKeysRaw = editable?.toString().orEmpty()
+			val keyCount = updateDeeplApiKeyHelper(binding)
+			if (keyCount > 0) {
+				binding.inputLayoutDeeplApiKeys.error = null
+			}
+		}
 	}
 
 	private fun updateApiKeyHelper(binding: SheetTranslationSettingsBinding): Int {
 		val count = settings.translationApiKeys.size
 		binding.inputLayoutApiKeys.helperText = if (count > 0) {
+			resources.getQuantityString(R.plurals.translation_api_keys_count, count, count)
+		} else {
+			getString(R.string.translation_api_keys_empty)
+		}
+		return count
+	}
+
+	private fun updateDeeplApiKeyHelper(binding: SheetTranslationSettingsBinding): Int {
+		val count = settings.translationDeeplApiKeys.size
+		binding.inputLayoutDeeplApiKeys.helperText = if (count > 0) {
 			resources.getQuantityString(R.plurals.translation_api_keys_count, count, count)
 		} else {
 			getString(R.string.translation_api_keys_empty)
@@ -241,6 +304,12 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 					button.isChecked = false
 					binding.inputLayoutApiKeys.error = getString(R.string.translation_api_key_required)
 					binding.editTextApiKeys.requestFocus()
+					return@setOnCheckedChangeListener
+				}
+				if (settings.translationProvider == TranslationProvider.DEEPL && settings.translationDeeplApiKeys.isEmpty()) {
+					button.isChecked = false
+					binding.inputLayoutDeeplApiKeys.error = getString(R.string.translation_deepl_api_key_required)
+					binding.editTextDeeplApiKeys.requestFocus()
 					return@setOnCheckedChangeListener
 				}
 				clearApiKeysFocus(binding)

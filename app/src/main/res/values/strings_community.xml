@@ -21,6 +21,8 @@
 	<string name="community_comment_edited">(edited)</string>
 	<string name="community_comment_deleted">Comment deleted</string>
 	<string name="community_comment_delete_confirm">Delete this comment?</string>
+	<string name="community_comment_translate">Translate</string>
+	<string name="community_comment_show_original">Original</string>
 	<string name="community_spoiler_warning">Spoiler — Tap to reveal</string>
 	<string name="community_spoiler_hide">Hide spoiler</string>
 	<string name="community_sign_in_to_comment">Sign in to post comments or reactions</string>

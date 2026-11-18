@@ -32,7 +32,9 @@ import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.ext.lifecycleScope
 import org.koitharu.kotatsu.parsers.model.MangaPage
+import org.koitharu.kotatsu.reader.domain.translate.api.InvalidDeeplApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.api.InvalidGeminiApiKeyException
+import org.koitharu.kotatsu.reader.domain.translate.api.MissingDeeplApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.api.MissingGeminiApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.model.LocalOcrEngine
 import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
@@ -422,8 +424,8 @@ class ReaderTranslationCoordinator private constructor(
 		}
 
 		val snapshot = settingsSnapshot.value
-		if (snapshot.provider == TranslationProvider.GEMINI && snapshot.apiKeys.isEmpty()) {
-			TranslatePipelineLog.w(LOG_TAG, "Cannot enable Gemini translation: no API keys configured")
+		if (!snapshot.hasRequiredCredentials()) {
+			TranslatePipelineLog.w(LOG_TAG, "Cannot enable ${snapshot.provider} translation: no API keys configured")
 			_isEnabled.value = false
 			if (fromUserTap) {
 				_uiEvents.tryEmit(TranslationUiEvent.PromptMissingApiKey)
@@ -725,10 +727,42 @@ class ReaderTranslationCoordinator private constructor(
 							openSettingsAction = true,
 						)
 					}
+				} catch (e: MissingDeeplApiKeyException) {
+					TranslatePipelineLog.w(LOG_TAG, "Translation stopped on page=${page.id}: MissingDeeplApiKeyException")
+					if (generation == generationCounter.get()) {
+						_isEnabled.value = false
+						generationCounter.incrementAndGet()
+						cancelAllJobs()
+						clearInProgressStates()
+						emitErrorOnce(
+							key = "missing_api_key",
+							message = null,
+							openSettingsAction = true,
+						)
+					}
 				} catch (e: InvalidGeminiApiKeyException) {
 					TranslatePipelineLog.w(
 						LOG_TAG,
 						"Translation failed on page=${page.id}: InvalidGeminiApiKeyException: ${e.message}",
+					)
+					if (generation == generationCounter.get()) {
+						updatePageState(
+							PageTranslationState(
+								pageId = page.id,
+								stage = TranslationStage.ERROR,
+								errorMessage = e.message,
+							),
+						)
+						emitErrorOnce(
+							key = "invalid_api_key",
+							message = e.message,
+							openSettingsAction = true,
+						)
+					}
+				} catch (e: InvalidDeeplApiKeyException) {
+					TranslatePipelineLog.w(
+						LOG_TAG,
+						"Translation failed on page=${page.id}: InvalidDeeplApiKeyException: ${e.message}",
 					)
 					if (generation == generationCounter.get()) {
 						updatePageState(
@@ -959,8 +993,7 @@ class ReaderTranslationCoordinator private constructor(
 	}
 
 	private fun shouldAutoEnable(snapshot: TranslationSettingsSnapshot): Boolean {
-		return snapshot.autoTranslate &&
-			(snapshot.provider != TranslationProvider.GEMINI || snapshot.apiKeys.isNotEmpty())
+		return snapshot.autoTranslate && snapshot.hasRequiredCredentials()
 	}
 
 	private fun TranslationStage.isInProgress(): Boolean = when (this) {

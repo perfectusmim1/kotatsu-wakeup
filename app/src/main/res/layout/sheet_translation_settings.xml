@@ -64,7 +64,19 @@
 					android:layout_width="0dp"
 					android:layout_height="wrap_content"
 					android:layout_weight="1"
+					android:maxLines="2"
+					android:paddingHorizontal="6dp"
 					android:text="@string/translation_provider_google" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_provider_deepl"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:maxLines="2"
+					android:paddingHorizontal="6dp"
+					android:text="@string/translation_provider_deepl" />
 
 				<com.google.android.material.button.MaterialButton
 					android:id="@+id/button_provider_gemini"
@@ -72,7 +84,69 @@
 					android:layout_width="0dp"
 					android:layout_height="wrap_content"
 					android:layout_weight="1"
+					android:maxLines="2"
+					android:paddingHorizontal="6dp"
 					android:text="@string/translation_provider_gemini" />
+
+			</com.google.android.material.button.MaterialButtonToggleGroup>
+
+			<TextView
+				android:id="@+id/textView_thinking_level_label"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:text="@string/translation_gemini_thinking_level"
+				android:textAppearance="@style/TextAppearance.Kotatsu.GridTitle" />
+
+			<com.google.android.material.button.MaterialButtonToggleGroup
+				android:id="@+id/toggleGroup_thinking_level"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_small"
+				app:selectionRequired="true"
+				app:singleSelection="true">
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_thinking_minimal"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:maxLines="1"
+					android:paddingHorizontal="4dp"
+					android:text="@string/translation_thinking_minimal" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_thinking_low"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:maxLines="1"
+					android:paddingHorizontal="4dp"
+					android:text="@string/translation_thinking_low" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_thinking_medium"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:maxLines="1"
+					android:paddingHorizontal="4dp"
+					android:text="@string/translation_thinking_medium" />
+
+				<com.google.android.material.button.MaterialButton
+					android:id="@+id/button_thinking_high"
+					style="?materialButtonOutlinedStyle"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:maxLines="1"
+					android:paddingHorizontal="4dp"
+					android:text="@string/translation_thinking_high" />
 
 			</com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -89,6 +163,29 @@
 
 				<com.google.android.material.textfield.TextInputEditText
 					android:id="@+id/editText_api_keys"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:gravity="top|start"
+					android:importantForAutofill="no"
+					android:inputType="textMultiLine|textNoSuggestions"
+					android:maxLines="4"
+					android:minLines="2" />
+
+			</com.google.android.material.textfield.TextInputLayout>
+
+			<com.google.android.material.textfield.TextInputLayout
+				android:id="@+id/inputLayout_deepl_api_keys"
+				style="?textInputOutlinedStyle"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginHorizontal="@dimen/margin_normal"
+				android:layout_marginTop="@dimen/margin_normal"
+				android:hint="@string/translation_deepl_api_keys"
+				app:endIconMode="clear_text"
+				app:helperText="@string/translation_api_keys_empty">
+
+				<com.google.android.material.textfield.TextInputEditText
+					android:id="@+id/editText_deepl_api_keys"
 					android:layout_width="match_parent"
 					android:layout_height="wrap_content"
 					android:gravity="top|start"

@@ -4,6 +4,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import org.koitharu.kotatsu.reader.domain.translate.model.TranslationProvider
 import java.io.IOException
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -29,6 +30,21 @@ class InvalidGeminiApiKeyException(
 class GeminiQuotaExhaustedException(
 	val retryDelayMs: Long,
 	message: String = "All Gemini API keys are rate-limited or out of quota.",
+	cause: Throwable? = null,
+) : TranslationException(message, cause)
+
+class MissingDeeplApiKeyException(
+	message: String = "DeepL API key is missing. Add at least one DeepL API key in translation settings or switch providers.",
+) : TranslationException(message)
+
+class InvalidDeeplApiKeyException(
+	val invalidKeysCount: Int,
+	message: String = "All configured DeepL API key(s) ($invalidKeysCount) were rejected as invalid or unauthorized.",
+) : TranslationException(message)
+
+class DeeplQuotaExhaustedException(
+	val retryDelayMs: Long,
+	message: String = "All DeepL API keys are rate-limited or out of quota.",
 	cause: Throwable? = null,
 ) : TranslationException(message, cause)
 
@@ -119,10 +135,15 @@ class GeminiKeyPool @Inject constructor() {
 	suspend fun acquireKey(
 		rawKeys: List<String>,
 		maxWaitMs: Long = DEFAULT_MAX_WAIT_MS,
+		provider: TranslationProvider = TranslationProvider.GEMINI,
 	): AcquiredGeminiKey {
 		val keys = normalizeApiKeysList(rawKeys)
 		if (keys.isEmpty()) {
-			throw MissingGeminiApiKeyException()
+			throw if (provider == TranslationProvider.DEEPL) {
+				MissingDeeplApiKeyException()
+			} else {
+				MissingGeminiApiKeyException()
+			}
 		}
 
 		var remainingWaitBudgetMs = maxWaitMs.coerceAtLeast(0L)
@@ -137,10 +158,17 @@ class GeminiKeyPool @Inject constructor() {
 				if (usableSlots.isEmpty()) {
 					val reasons = activeSlots.mapNotNull { it.invalidReason }.distinct().take(2)
 					val detail = if (reasons.isNotEmpty()) " (${reasons.joinToString("; ")})" else ""
-					throw InvalidGeminiApiKeyException(
-						invalidKeysCount = activeSlots.size,
-						message = "All ${activeSlots.size} Gemini API key(s) are invalid or unauthorized$detail.",
-					)
+					throw if (provider == TranslationProvider.DEEPL) {
+						InvalidDeeplApiKeyException(
+							invalidKeysCount = activeSlots.size,
+							message = "All ${activeSlots.size} DeepL API key(s) are invalid or unauthorized$detail.",
+						)
+					} else {
+						InvalidGeminiApiKeyException(
+							invalidKeysCount = activeSlots.size,
+							message = "All ${activeSlots.size} Gemini API key(s) are invalid or unauthorized$detail.",
+						)
+					}
 				}
 
 				val readySlots = usableSlots.filter { it.cooldownUntilMs <= now }
@@ -199,10 +227,17 @@ class GeminiKeyPool @Inject constructor() {
 				is AcquireStep.CooldownWait -> {
 					if (remainingWaitBudgetMs <= 0L || step.waitMs > maxWaitMs) {
 						val seconds = ((step.waitMs + 999L) / 1000L).coerceAtLeast(1L)
-						throw GeminiQuotaExhaustedException(
-							retryDelayMs = step.waitMs,
-							message = "All ${step.usableKeyCount} Gemini API key(s) are rate-limited (~${seconds}s cooldown remaining).",
-						)
+						throw if (provider == TranslationProvider.DEEPL) {
+							DeeplQuotaExhaustedException(
+								retryDelayMs = step.waitMs,
+								message = "All ${step.usableKeyCount} DeepL API key(s) are rate-limited (~${seconds}s cooldown remaining).",
+							)
+						} else {
+							GeminiQuotaExhaustedException(
+								retryDelayMs = step.waitMs,
+								message = "All ${step.usableKeyCount} Gemini API key(s) are rate-limited (~${seconds}s cooldown remaining).",
+							)
+						}
 					}
 					val sleepMs = min(step.waitMs + 50L, remainingWaitBudgetMs)
 					delay(sleepMs)

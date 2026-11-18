@@ -40,6 +40,8 @@
 	<string name="community_comment_edited">(düzenlendi)</string>
 	<string name="community_comment_deleted">Yorum silindi</string>
 	<string name="community_comment_delete_confirm">Bu yorum silinsin mi?</string>
+	<string name="community_comment_translate">Çevir</string>
+	<string name="community_comment_show_original">Orijinal</string>
 	<string name="community_spoiler_warning">Spoiler — Görmek için dokun</string>
 	<string name="community_spoiler_hide">Spoiler\'ı gizle</string>
 	<string name="community_sign_in_to_comment">Yorum yapmak veya tepki vermek için oturum açın</string>

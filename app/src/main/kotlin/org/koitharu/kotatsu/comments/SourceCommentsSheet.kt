@@ -158,6 +158,10 @@ class SourceCommentsSheet :
 		viewBinding?.editTextComment?.showKeyboard()
 	}
 
+	override fun onToggleTranslate(comment: SourceComment) {
+		viewModel.toggleTranslateComment(comment)
+	}
+
 	override fun onToggleReplies(comment: SourceComment) {
 		viewModel.toggleReplies(comment)
 	}

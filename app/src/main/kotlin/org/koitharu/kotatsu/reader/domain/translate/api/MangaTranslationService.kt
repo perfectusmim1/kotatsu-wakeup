@@ -1,6 +1,6 @@
 package org.koitharu.kotatsu.reader.domain.translate.api
 
-import android.util.Log
+import org.koitharu.kotatsu.reader.domain.translate.TranslatePipelineLog as Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -23,9 +23,12 @@ import org.koitharu.kotatsu.core.network.CloudFlareInterceptor
 import org.koitharu.kotatsu.core.network.RateLimitInterceptor
 import org.koitharu.kotatsu.parsers.exception.TooManyRequestExceptions
 import org.koitharu.kotatsu.parsers.util.await
+import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages.toDeeplSourceCode
 import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages.toGeminiPromptLabel
 import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages.toGoogleSourceCode
 import org.koitharu.kotatsu.reader.domain.translate.model.ComicTextTranslator
+import org.koitharu.kotatsu.reader.domain.translate.model.GeminiThinkingLevel
+import org.koitharu.kotatsu.reader.domain.translate.model.NormalizedBox
 import org.koitharu.kotatsu.reader.domain.translate.model.OcrBubbleGroup
 import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
 import org.koitharu.kotatsu.reader.domain.translate.model.TextBlockKind
@@ -90,14 +93,34 @@ class MangaTranslationService @Inject constructor(
 			.build()
 	}
 
+	private val deeplHttpClient: OkHttpClient by lazy {
+		baseCleanHttpClient.newBuilder()
+			.connectTimeout(10, TimeUnit.SECONDS)
+			.readTimeout(15, TimeUnit.SECONDS)
+			.writeTimeout(10, TimeUnit.SECONDS)
+			.callTimeout(20, TimeUnit.SECONDS)
+			.build()
+	}
+
+	private val deeplKeyPool = GeminiKeyPool()
+
+	@Volatile
+	internal var geminiApiBaseOverride: String? = null
+
+	@Volatile
+	internal var deeplEndpointOverride: String? = null
+
+	@Volatile
+	internal var googleEndpointOverride: String? = null
+
 	@Volatile
 	private var fallbackModelUntilMs: Long = 0L
 
 	private val preferredThinkingModeByModel = ConcurrentHashMap<String, ThinkingMode>()
 
-	private enum class ThinkingMode {
-		MINIMAL_LEVEL,
-		ZERO_BUDGET,
+	internal enum class ThinkingMode {
+		LEVEL,
+		BUDGET,
 		OMITTED,
 	}
 
@@ -156,6 +179,12 @@ class MangaTranslationService @Inject constructor(
 					targetLang = targetLang,
 				)
 
+				TranslationProvider.DEEPL -> translateWithDeeplOrFallback(
+					items = toTranslate,
+					settings = settings,
+					targetLang = targetLang,
+				)
+
 				TranslationProvider.GOOGLE -> translateWithGoogle(
 					items = toTranslate,
 					settings = settings,
@@ -181,6 +210,120 @@ class MangaTranslationService @Inject constructor(
 				isTrash = false,
 			)
 		}
+	}
+
+	/**
+	 * Translates a reader/community comment into [targetLang] (typically the active app locale).
+	 * Uses the user's configured provider when credentials are available, falling back cleanly
+	 * to Google Translate if keys are missing or a transient API error occurs.
+	 */
+	suspend fun translateCommentText(
+		text: String,
+		targetLang: String,
+		settings: TranslationSettingsSnapshot,
+	): String {
+		val cleanInput = text
+			.replace("\r\n", "\n")
+			.replace('\r', '\n')
+			.trim()
+		if (cleanInput.isBlank()) return text
+
+		val normalizedTarget = TranslationLanguages.normalizeTargetCode(targetLang).ifBlank { "en" }
+		val translated = when (settings.provider) {
+			TranslationProvider.GEMINI -> {
+				val keys = GeminiKeyPool.normalizeApiKeysList(settings.apiKeys)
+				if (keys.isEmpty()) {
+					executeGoogleTranslateGet(cleanInput, OcrSourceLanguage.AUTO, normalizedTarget)
+				} else {
+					runCatching {
+						translatePlainTextWithGemini(
+							text = cleanInput,
+							targetLang = normalizedTarget,
+							thinkingLevel = settings.geminiThinkingLevel,
+							keys = keys,
+						)
+					}.getOrElse { e ->
+						if (e is CancellationException) throw e
+						Log.w(LOG_TAG, "Comment translation via Gemini failed (${e.message}); falling back to Google", e)
+						executeGoogleTranslateGet(cleanInput, OcrSourceLanguage.AUTO, normalizedTarget)
+					}
+				}
+			}
+
+			TranslationProvider.DEEPL -> {
+				val keys = GeminiKeyPool.normalizeApiKeysList(settings.deeplApiKeys)
+				if (keys.isEmpty()) {
+					executeGoogleTranslateGet(cleanInput, OcrSourceLanguage.AUTO, normalizedTarget)
+				} else {
+					runCatching {
+						translatePlainTextWithDeepl(
+							text = cleanInput,
+							targetLang = normalizedTarget,
+							keys = keys,
+						)
+					}.getOrElse { e ->
+						if (e is CancellationException) throw e
+						Log.w(LOG_TAG, "Comment translation via DeepL failed (${e.message}); falling back to Google", e)
+						executeGoogleTranslateGet(cleanInput, OcrSourceLanguage.AUTO, normalizedTarget)
+					}
+				}
+			}
+
+			TranslationProvider.GOOGLE -> {
+				executeGoogleTranslateGet(cleanInput, OcrSourceLanguage.AUTO, normalizedTarget)
+			}
+		}
+
+		return translated.trim().ifBlank { cleanInput }
+	}
+
+	private suspend fun translatePlainTextWithGemini(
+		text: String,
+		targetLang: String,
+		thinkingLevel: GeminiThinkingLevel,
+		keys: List<String>,
+	): String {
+		val targetName = TranslationLanguages.getPromptLanguageName(targetLang)
+		val fakeSettings = TranslationSettingsSnapshot(
+			provider = TranslationProvider.GEMINI,
+			sourceLang = OcrSourceLanguage.AUTO,
+			targetLang = targetLang,
+			apiKeys = keys,
+			geminiThinkingLevel = thinkingLevel,
+			skipPureSfx = false,
+			filterPromoAndCredits = false,
+		)
+		val bubble = OcrBubbleGroup(
+			id = "comment_0",
+			box = NormalizedBox(0f, 0f, 1f, 1f),
+			text = text,
+			lines = emptyList(),
+			kindHint = TextBlockKind.DIALOGUE,
+		)
+		val result = translateBatchWithGeminiPool(
+			batch = listOf(PreparedBubble(bubble = bubble, cleanText = text)),
+			settings = fakeSettings,
+			targetLang = targetLang,
+			keys = keys,
+			preserveRawText = true,
+		)
+		return result.firstOrNull()?.text?.takeIf { it.isNotBlank() }
+			?: throw TranslationServiceException(502, isTransient = true, message = "Gemini returned empty comment translation for $targetName.")
+	}
+
+	private suspend fun translatePlainTextWithDeepl(
+		text: String,
+		targetLang: String,
+		keys: List<String>,
+	): String {
+		val translated = executeDeeplBatchWithPool(
+			texts = listOf(text),
+			sourceLang = OcrSourceLanguage.AUTO,
+			targetLang = targetLang,
+			keys = keys,
+		)
+		return translated.firstOrNull()?.takeIf { it.isNotBlank() }
+			?: throw TranslationServiceException(502, isTransient = true, message = "DeepL returned empty comment translation.")
 	}
 
 	private suspend fun translateWithGeminiOrFallback(
@@ -238,6 +381,7 @@ class MangaTranslationService @Inject constructor(
 		settings: TranslationSettingsSnapshot,
 		targetLang: String,
 		keys: List<String>,
+		preserveRawText: Boolean = false,
 	): List<TranslatedTextItem> {
 		val maxAttempts = maxOf(6, keys.size * 3)
 		var lastErrorInfo: GeminiHttpErrorInfo? = null
@@ -246,7 +390,7 @@ class MangaTranslationService @Inject constructor(
 		var attempt = 0
 
 		while (attempt < maxAttempts) {
-			val lease = keyPool.acquireKey(keys)
+			val lease = keyPool.acquireKey(keys, provider = TranslationProvider.GEMINI)
 			var keyReleased = false
 			try {
 				val outcome = try {
@@ -279,6 +423,9 @@ class MangaTranslationService @Inject constructor(
 				when (outcome) {
 					is GeminiCallOutcome.Success -> {
 						keyPool.markSuccess(lease.key)
+						if (preserveRawText) {
+							return outcome.items
+						}
 						return fillMissingOrUnchangedItemsWithGoogle(
 							batch = batch,
 							parsed = outcome.items,
@@ -377,8 +524,10 @@ class MangaTranslationService @Inject constructor(
 
 		var lastFailure: GeminiCallOutcome.Failure? = null
 
+		val geminiBase = (geminiApiBaseOverride ?: GEMINI_API_BASE).trimEnd('/')
+
 		for (model in modelsToTry) {
-			var thinkingMode = preferredThinkingModeByModel[model] ?: ThinkingMode.MINIMAL_LEVEL
+			var thinkingMode = preferredThinkingModeByModel[model] ?: ThinkingMode.LEVEL
 
 			while (true) {
 				val bodyJson = buildGeminiPayload(
@@ -387,7 +536,7 @@ class MangaTranslationService @Inject constructor(
 					targetLang = targetLang,
 					thinkingMode = thinkingMode,
 				)
-				val url = "$GEMINI_API_BASE/models/$model:generateContent"
+				val url = "$geminiBase/models/$model:generateContent"
 				val request = Request.Builder()
 					.url(url)
 					.header("x-goog-api-key", apiKey)
@@ -432,8 +581,8 @@ class MangaTranslationService @Inject constructor(
 
 				if (errorInfo.kind == GeminiHttpErrorKind.THINKING_CONFIG_UNSUPPORTED) {
 					val downgraded = when (thinkingMode) {
-						ThinkingMode.MINIMAL_LEVEL -> ThinkingMode.ZERO_BUDGET
-						ThinkingMode.ZERO_BUDGET -> ThinkingMode.OMITTED
+						ThinkingMode.LEVEL -> ThinkingMode.BUDGET
+						ThinkingMode.BUDGET -> ThinkingMode.OMITTED
 						ThinkingMode.OMITTED -> null
 					}
 					if (downgraded != null) {
@@ -573,24 +722,7 @@ class MangaTranslationService @Inject constructor(
 			append(inputArray.toString())
 		}
 
-		val generationConfig = JSONObject().apply {
-			put("temperature", 0.2)
-			put("topP", 0.9)
-			put("maxOutputTokens", 4096)
-			put("responseMimeType", "application/json")
-			put("responseSchema", buildGeminiResponseSchema())
-			when (thinkingMode) {
-				ThinkingMode.MINIMAL_LEVEL -> {
-					put("thinkingConfig", JSONObject().put("thinkingLevel", "MINIMAL"))
-				}
-
-				ThinkingMode.ZERO_BUDGET -> {
-					put("thinkingConfig", JSONObject().put("thinkingBudget", 0))
-				}
-
-				ThinkingMode.OMITTED -> Unit
-			}
-		}
+		val generationConfig = buildGeminiGenerationConfig(settings, thinkingMode)
 
 		return JSONObject().apply {
 			put(
@@ -611,6 +743,347 @@ class MangaTranslationService @Inject constructor(
 			put("generationConfig", generationConfig)
 			put("safetySettings", buildPermissiveSafetySettings())
 		}
+	}
+
+	internal fun buildGeminiGenerationConfig(
+		settings: TranslationSettingsSnapshot,
+		thinkingMode: ThinkingMode,
+	): JSONObject = JSONObject().apply {
+		val minTokens = if (thinkingMode == ThinkingMode.BUDGET) {
+			settings.geminiThinkingLevel.fallbackBudget + 4096
+		} else {
+			4096
+		}
+		put("temperature", 0.2)
+		put("topP", 0.9)
+		put("maxOutputTokens", maxOf(4096, minTokens))
+		put("responseMimeType", "application/json")
+		put("responseSchema", buildGeminiResponseSchema())
+		when (thinkingMode) {
+			ThinkingMode.LEVEL -> {
+				put("thinkingConfig", JSONObject().put("thinkingLevel", settings.geminiThinkingLevel.apiValue))
+			}
+
+			ThinkingMode.BUDGET -> {
+				put("thinkingConfig", JSONObject().put("thinkingBudget", settings.geminiThinkingLevel.fallbackBudget))
+			}
+
+			ThinkingMode.OMITTED -> Unit
+		}
+	}
+
+	private sealed interface DeeplCallOutcome {
+		data class Success(val translatedTexts: List<String>) : DeeplCallOutcome
+		data class Failure(
+			val statusCode: Int,
+			val kind: GeminiHttpErrorKind,
+			val message: String,
+			val retryDelayMs: Long? = null,
+		) : DeeplCallOutcome
+	}
+
+	private suspend fun translateWithDeeplOrFallback(
+		items: List<PreparedBubble>,
+		settings: TranslationSettingsSnapshot,
+		targetLang: String,
+	): List<TranslatedTextItem> {
+		val keys = GeminiKeyPool.normalizeApiKeysList(settings.deeplApiKeys)
+		if (keys.isEmpty()) {
+			throw MissingDeeplApiKeyException()
+		}
+
+		val batches = chunkForDeepl(items, settings.sourceLang, targetLang)
+		val output = ArrayList<TranslatedTextItem>(items.size)
+
+		for (batch in batches) {
+			try {
+				val normalizedInputs = batch.map { prep ->
+					prepareTextForGoogleTranslate(prep.cleanText, settings.sourceLang, targetLang)
+				}
+				val nonBlankIndices = ArrayList<Int>(normalizedInputs.size)
+				val nonBlankTexts = ArrayList<String>(normalizedInputs.size)
+				for (i in normalizedInputs.indices) {
+					val query = normalizedInputs[i]
+					if (query.isNotBlank()) {
+						nonBlankIndices.add(i)
+						nonBlankTexts.add(query)
+					}
+				}
+
+				val translatedByBatchIndex = arrayOfNulls<String>(batch.size)
+				if (nonBlankTexts.isNotEmpty()) {
+					val rawTranslations = executeDeeplBatchWithPool(
+						texts = nonBlankTexts,
+						sourceLang = settings.sourceLang,
+						targetLang = targetLang,
+						keys = keys,
+					)
+					for (j in nonBlankIndices.indices) {
+						translatedByBatchIndex[nonBlankIndices[j]] = rawTranslations.getOrNull(j)
+					}
+				}
+
+				val parsed = batch.mapIndexed { index, prep ->
+					val normalizedQuery = normalizedInputs[index]
+					if (normalizedQuery.isBlank()) {
+						TranslatedTextItem(
+							id = prep.bubble.id,
+							text = "",
+							kind = prep.bubble.kindHint,
+							isTrash = true,
+						)
+					} else {
+						val rawPiece = translatedByBatchIndex[index].orEmpty().ifBlank { prep.cleanText }
+						postProcessTranslatedItem(
+							id = prep.bubble.id,
+							translatedRaw = rawPiece,
+							originalCleanText = prep.cleanText,
+							kind = prep.bubble.kindHint,
+							rawTrash = false,
+							settings = settings,
+							targetLang = targetLang,
+						)
+					}
+				}
+				output.addAll(
+					fillMissingOrUnchangedItemsWithGoogle(
+						batch = batch,
+						parsed = parsed,
+						settings = settings,
+						targetLang = targetLang,
+					),
+				)
+			} catch (e: CancellationException) {
+				throw e
+			} catch (e: MissingDeeplApiKeyException) {
+				throw e
+			} catch (e: InvalidDeeplApiKeyException) {
+				throw e
+			} catch (e: TranslationException) {
+				Log.w(
+					LOG_TAG,
+					"DeepL failed (${e.message}); falling back to Google Translate for ${batch.size} bubble(s)",
+					e,
+				)
+				output.addAll(
+					try {
+						translateWithGoogle(batch, settings, targetLang)
+					} catch (googleError: CancellationException) {
+						throw googleError
+					} catch (googleError: Throwable) {
+						e.addSuppressed(googleError)
+						throw e
+					},
+				)
+			}
+		}
+
+		return output
+	}
+
+	private suspend fun executeDeeplBatchWithPool(
+		texts: List<String>,
+		sourceLang: OcrSourceLanguage,
+		targetLang: String,
+		keys: List<String>,
+	): List<String> {
+		if (texts.isEmpty()) return emptyList()
+		val maxAttempts = maxOf(4, keys.size * 3)
+		var lastFailure: DeeplCallOutcome.Failure? = null
+		var lastThrowable: Throwable? = null
+		var otherFailureCount = 0
+		var attempt = 0
+
+		while (attempt < maxAttempts) {
+			val lease = deeplKeyPool.acquireKey(keys, provider = TranslationProvider.DEEPL)
+			var keyReleased = false
+			try {
+				val outcome = try {
+					executeDeeplApiCall(
+						texts = texts,
+						sourceLang = sourceLang,
+						targetLang = targetLang,
+						apiKey = lease.key,
+					)
+				} catch (e: TooManyRequestExceptions) {
+					DeeplCallOutcome.Failure(
+						statusCode = 429,
+						kind = GeminiHttpErrorKind.RATE_LIMIT,
+						message = e.message ?: "DeepL HTTP 429 Rate Limited",
+						retryDelayMs = parseRetryAfterFromException(e),
+					)
+				} catch (e: IOException) {
+					DeeplCallOutcome.Failure(
+						statusCode = 0,
+						kind = GeminiHttpErrorKind.TRANSIENT,
+						message = e.message ?: "DeepL network I/O error",
+					)
+				}
+
+				when (outcome) {
+					is DeeplCallOutcome.Success -> {
+						deeplKeyPool.markSuccess(lease.key)
+						return outcome.translatedTexts
+					}
+
+					is DeeplCallOutcome.Failure -> {
+						lastFailure = outcome
+						when (outcome.kind) {
+							GeminiHttpErrorKind.INVALID_KEY -> {
+								deeplKeyPool.markInvalid(lease.key, outcome.message)
+							}
+
+							GeminiHttpErrorKind.RATE_LIMIT -> {
+								deeplKeyPool.markRateLimited(
+									key = lease.key,
+									retryDelayMs = outcome.retryDelayMs,
+									errorMessage = outcome.message,
+								)
+							}
+
+							GeminiHttpErrorKind.TRANSIENT -> {
+								deeplKeyPool.releaseKey(lease.key)
+								keyReleased = true
+								delay(computeTransientBackoffMs(attempt))
+							}
+
+							else -> {
+								otherFailureCount += 1
+								if (outcome.statusCode in 400..499 || otherFailureCount >= MAX_CLIENT_OR_PARSE_ATTEMPTS || attempt + 1 >= maxAttempts) {
+									throw TranslationServiceException(
+										statusCode = outcome.statusCode,
+										isTransient = false,
+										message = "DeepL rejected request (${outcome.statusCode}): ${outcome.message}",
+									)
+								}
+								deeplKeyPool.releaseKey(lease.key)
+								keyReleased = true
+								delay(computeTransientBackoffMs(attempt))
+							}
+						}
+					}
+				}
+			} catch (e: CancellationException) {
+				throw e
+			} catch (e: TranslationException) {
+				throw e
+			} catch (e: Throwable) {
+				lastThrowable = e
+				deeplKeyPool.releaseKey(lease.key)
+				keyReleased = true
+				delay(computeTransientBackoffMs(attempt))
+			} finally {
+				if (!keyReleased) {
+					deeplKeyPool.releaseKey(lease.key)
+				}
+			}
+			attempt += 1
+		}
+
+		val finalFailure = lastFailure
+		throw TranslationServiceException(
+			statusCode = finalFailure?.statusCode ?: 503,
+			isTransient = finalFailure?.kind == GeminiHttpErrorKind.TRANSIENT || finalFailure?.kind == GeminiHttpErrorKind.RATE_LIMIT,
+			message = finalFailure?.message ?: lastThrowable?.message ?: "DeepL translation failed after $maxAttempts attempts.",
+			cause = lastThrowable,
+		)
+	}
+
+	private suspend fun executeDeeplApiCall(
+		texts: List<String>,
+		sourceLang: OcrSourceLanguage,
+		targetLang: String,
+		apiKey: String,
+	): DeeplCallOutcome {
+		val endpoint = deeplEndpointOverride ?: resolveDeeplEndpoint(apiKey)
+		val payload = JSONObject().apply {
+			put("text", JSONArray(texts))
+			put("target_lang", TranslationLanguages.toDeeplTargetCode(targetLang))
+			sourceLang.toDeeplSourceCode()?.let { put("source_lang", it) }
+		}
+		val request = Request.Builder()
+			.url(endpoint)
+			.header("Authorization", "DeepL-Auth-Key ${apiKey.trim()}")
+			.header("Content-Type", "application/json; charset=utf-8")
+			.header("Accept", "application/json")
+			.post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+			.build()
+
+		val client = withContext(Dispatchers.IO) { deeplHttpClient }
+		val response = client.newCall(request).await()
+		val statusCode = response.code
+		val retryAfterHeader = response.header("Retry-After")
+		val responseText = response.use { it.body.string() }
+
+		if (statusCode in 200..299) {
+			val root = runCatching { JSONObject(responseText) }.getOrNull()
+			val arr = root?.optJSONArray("translations")
+			if (arr == null || arr.length() != texts.size) {
+				return DeeplCallOutcome.Failure(
+					statusCode = statusCode,
+					kind = GeminiHttpErrorKind.TRANSIENT,
+					message = "DeepL returned unexpected translations array (${arr?.length() ?: -1} vs ${texts.size}).",
+				)
+			}
+			val out = ArrayList<String>(arr.length())
+			for (i in 0 until arr.length()) {
+				out.add(arr.optJSONObject(i)?.optString("text", "").orEmpty())
+			}
+			return DeeplCallOutcome.Success(out)
+		}
+
+		val errMessage = parseDeeplErrorMessage(responseText).ifBlank { "HTTP $statusCode" }
+		Log.w(LOG_TAG, "DeepL HTTP $statusCode error: ${errMessage.take(200)}")
+		val kind = when (statusCode) {
+			401, 403 -> GeminiHttpErrorKind.INVALID_KEY
+			429, 456 -> GeminiHttpErrorKind.RATE_LIMIT
+			408, 500, 502, 503, 504, 529 -> GeminiHttpErrorKind.TRANSIENT
+			else -> GeminiHttpErrorKind.OTHER
+		}
+		val retryDelayMs = if (kind == GeminiHttpErrorKind.RATE_LIMIT) {
+			GeminiKeyPool.parseRetryAfterHeaderMs(retryAfterHeader) ?: if (statusCode == 456) 60_000L else null
+		} else {
+			null
+		}
+		return DeeplCallOutcome.Failure(
+			statusCode = statusCode,
+			kind = kind,
+			message = errMessage,
+			retryDelayMs = retryDelayMs,
+		)
+	}
+
+	private fun parseDeeplErrorMessage(body: String): String {
+		if (body.isBlank()) return ""
+		return runCatching {
+			JSONObject(body).optString("message", body.take(200))
+		}.getOrDefault(body.take(200))
+	}
+
+	private fun chunkForDeepl(
+		items: List<PreparedBubble>,
+		sourceLang: OcrSourceLanguage,
+		targetLang: String,
+	): List<List<PreparedBubble>> {
+		val chunks = ArrayList<List<PreparedBubble>>()
+		var current = ArrayList<PreparedBubble>()
+		var currentChars = 0
+
+		for (item in items) {
+			val normalized = prepareTextForGoogleTranslate(item.cleanText, sourceLang, targetLang)
+			val len = normalized.length
+			if (current.isNotEmpty() && (current.size >= DEEPL_MAX_BATCH_ITEMS || currentChars + len > DEEPL_MAX_BATCH_CHARS)) {
+				chunks.add(current)
+				current = ArrayList()
+				currentChars = 0
+			}
+			current.add(item)
+			currentChars += len
+		}
+		if (current.isNotEmpty()) {
+			chunks.add(current)
+		}
+		return chunks
 	}
 
 	private suspend fun translateWithGoogle(
@@ -839,7 +1312,8 @@ class MangaTranslationService @Inject constructor(
 		sourceLang: OcrSourceLanguage,
 		targetLang: String,
 	): String {
-		val url = GOOGLE_TRANSLATE_ENDPOINT.toHttpUrl().newBuilder()
+		val baseEndpoint = googleEndpointOverride ?: GOOGLE_TRANSLATE_ENDPOINT
+		val url = baseEndpoint.toHttpUrl().newBuilder()
 			.addQueryParameter("client", "gtx")
 			.addQueryParameter("sl", resolveEffectiveGoogleSourceCode(query, sourceLang))
 			.addQueryParameter("tl", TranslationLanguages.toGoogleTargetCode(targetLang))
@@ -1026,6 +1500,8 @@ class MangaTranslationService @Inject constructor(
 		const val FALLBACK_GEMINI_MODEL: String = "gemini-2.5-flash-lite"
 
 		private const val GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
+		private const val DEEPL_FREE_ENDPOINT = "https://api-free.deepl.com/v2/translate"
+		private const val DEEPL_PRO_ENDPOINT = "https://api.deepl.com/v2/translate"
 		private const val GOOGLE_TRANSLATE_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 		private const val GOOGLE_USER_AGENT =
 			"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
@@ -1034,8 +1510,18 @@ class MangaTranslationService @Inject constructor(
 
 		private const val GEMINI_MAX_BATCH_ITEMS = 32
 		private const val GEMINI_MAX_BATCH_CHARS = 12_000
+		private const val DEEPL_MAX_BATCH_ITEMS = 40
+		private const val DEEPL_MAX_BATCH_CHARS = 18_000
 		private const val MODEL_FALLBACK_CACHE_MS = 30L * 60L * 1000L
 		private const val MAX_CLIENT_OR_PARSE_ATTEMPTS = 2
+
+		internal fun resolveDeeplEndpoint(apiKey: String): String {
+			return if (apiKey.trim().endsWith(":fx", ignoreCase = true)) {
+				DEEPL_FREE_ENDPOINT
+			} else {
+				DEEPL_PRO_ENDPOINT
+			}
+		}
 
 		private const val GOOGLE_MAX_BATCH_ITEMS = 10
 		private const val GOOGLE_MAX_ENCODED_QUERY_BYTES = 1_100

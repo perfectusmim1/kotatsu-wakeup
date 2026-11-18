@@ -1,6 +1,9 @@
 package org.koitharu.kotatsu.comments
 
 import android.text.format.DateUtils
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import androidx.core.text.HtmlCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableChapter
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
+import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
 import org.koitharu.kotatsu.core.util.ext.call
@@ -27,12 +31,17 @@ import org.koitharu.kotatsu.parsers.model.community.SourceCommentSort
 import org.koitharu.kotatsu.parsers.model.community.SourceCommunityCapabilities
 import org.koitharu.kotatsu.parsers.model.community.SourceMangaCommunityInfo
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
+import org.koitharu.kotatsu.reader.domain.translate.api.MangaTranslationService
+import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
 class SourceCommentsViewModel @Inject constructor(
 	savedStateHandle: SavedStateHandle,
 	private val communityRepository: CommunityRepository,
+	private val appSettings: AppSettings,
+	private val translationService: MangaTranslationService,
 ) : BaseViewModel() {
 
 	val manga: Manga = requireNotNull(savedStateHandle.get<ParcelableManga>(ARG_MANGA)).manga
@@ -70,6 +79,11 @@ class SourceCommentsViewModel @Inject constructor(
 	private val repliesMap = HashMap<String, ReplyThreadState>()
 	private val revealedSpoilerIds = HashSet<String>()
 	private val likingCommentIds = HashSet<String>()
+	private val translationLock = Any()
+	private val translatedCommentBodies = HashMap<String, String>()
+	private val showingTranslatedCommentIds = HashSet<String>()
+	private val translatingCommentIds = HashSet<String>()
+	private var translationEpoch: Int = 0
 
 	private var loadCommentsJob: Job? = null
 	private var loadWidgetJob: Job? = null
@@ -181,6 +195,72 @@ class SourceCommentsViewModel @Inject constructor(
 			revealedSpoilerIds.remove(commentId)
 		}
 		publishNativeItems()
+	}
+
+	fun toggleTranslateComment(comment: SourceComment) {
+		val commentId = comment.id
+		val cachedHit: Boolean
+		synchronized(translationLock) {
+			if (commentId in translatingCommentIds) {
+				return
+			}
+			if (translatedCommentBodies.containsKey(commentId)) {
+				if (!showingTranslatedCommentIds.add(commentId)) {
+					showingTranslatedCommentIds.remove(commentId)
+				}
+				cachedHit = true
+			} else {
+				val bodyText = extractPlainBody(comment)
+				if (bodyText.isBlank()) {
+					return
+				}
+				translatingCommentIds.add(commentId)
+				cachedHit = false
+			}
+		}
+		if (cachedHit) {
+			publishNativeItems()
+			return
+		}
+
+		publishNativeItems()
+		val epochAtStart = synchronized(translationLock) { translationEpoch }
+		val bodyText = extractPlainBody(comment)
+		launchJob(Dispatchers.Default) {
+			val targetLang = resolveActiveAppLanguageCode(appSettings)
+			val settingsSnapshot = appSettings.getTranslationSettingsSnapshot()
+			runCatchingCancellable {
+				translationService.translateCommentText(
+					text = bodyText,
+					targetLang = targetLang,
+					settings = settingsSnapshot,
+				)
+			}.onSuccess { translated ->
+				synchronized(translationLock) {
+					translatingCommentIds.remove(commentId)
+					if (translationEpoch == epochAtStart && translated.isNotBlank()) {
+						translatedCommentBodies[commentId] = translated
+						showingTranslatedCommentIds.add(commentId)
+					}
+				}
+				publishNativeItems()
+			}.onFailure { error ->
+				error.printStackTraceDebug()
+				synchronized(translationLock) {
+					translatingCommentIds.remove(commentId)
+				}
+				publishNativeItems()
+				handleActionError(error)
+			}
+		}
+	}
+
+	private fun extractPlainBody(comment: SourceComment): String {
+		return comment.body.ifBlank {
+			comment.bodyHtml?.let {
+				HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+			} ?: ""
+		}.trim()
 	}
 
 	fun toggleReplies(comment: SourceComment) {
@@ -488,6 +568,12 @@ class SourceCommentsViewModel @Inject constructor(
 			}.onSuccess { pageResult ->
 				if (reset) {
 					repliesMap.clear()
+					synchronized(translationLock) {
+						translationEpoch += 1
+						translatedCommentBodies.clear()
+						showingTranslatedCommentIds.clear()
+						translatingCommentIds.clear()
+					}
 				}
 				cacheWidgetFromPageIfMissing(pageResult.widgetContext)
 				_nativeState.update {
@@ -556,6 +642,11 @@ class SourceCommentsViewModel @Inject constructor(
 				)
 			}
 		}
+		synchronized(translationLock) {
+			translatedCommentBodies.remove(updated.id)
+			showingTranslatedCommentIds.remove(updated.id)
+			translatingCommentIds.remove(updated.id)
+		}
 	}
 
 	private fun removeCommentFromState(target: SourceComment) {
@@ -607,6 +698,13 @@ class SourceCommentsViewModel @Inject constructor(
 
 	private fun publishNativeItems() {
 		_nativeState.update { state ->
+			val (translatedCopy, showingCopy, translatingCopy) = synchronized(translationLock) {
+				Triple(
+					HashMap(translatedCommentBodies),
+					HashSet(showingTranslatedCommentIds),
+					HashSet(translatingCommentIds),
+				)
+			}
 			val built = ArrayList<SourceCommentListItem>(state.comments.size * 2)
 			for (comment in state.comments) {
 				val thread = repliesMap[comment.id]
@@ -622,6 +720,9 @@ class SourceCommentsViewModel @Inject constructor(
 						isLiking = comment.id in likingCommentIds,
 						formattedTime = formatTime(comment),
 						capabilities = capabilities,
+						translatedBody = translatedCopy[comment.id],
+						isShowingTranslation = comment.id in showingCopy,
+						isTranslating = comment.id in translatingCopy,
 					),
 				)
 				if (isExpanded && thread != null) {
@@ -636,6 +737,9 @@ class SourceCommentsViewModel @Inject constructor(
 								isLiking = reply.id in likingCommentIds,
 								formattedTime = formatTime(reply),
 								capabilities = capabilities,
+								translatedBody = translatedCopy[reply.id],
+								isShowingTranslation = reply.id in showingCopy,
+								isTranslating = reply.id in translatingCopy,
 							),
 						)
 					}
@@ -680,6 +784,17 @@ class SourceCommentsViewModel @Inject constructor(
 		)
 	}
 
+	private fun resolveActiveAppLanguageCode(settings: AppSettings): String {
+		val runtimeLocale = runCatching {
+			AppCompatDelegate.getApplicationLocales().takeUnless { it.isEmpty }?.get(0)
+		}.getOrNull()
+		val chosenLocale = runtimeLocale
+			?: settings.appLocales.takeUnless { it.isEmpty }?.get(0)
+			?: LocaleListCompat.getAdjustedDefault().takeUnless { it.isEmpty }?.get(0)
+			?: Locale.getDefault()
+		return resolveTargetLanguageFromLocale(chosenLocale)
+	}
+
 	private fun handleActionError(error: Throwable) {
 		if (error is AuthRequiredException) {
 			onAuthRequired.call(error.source)
@@ -691,5 +806,18 @@ class SourceCommentsViewModel @Inject constructor(
 	companion object {
 		const val ARG_MANGA = "manga"
 		const val ARG_CHAPTER = "chapter"
+
+		internal fun resolveTargetLanguageFromLocale(locale: Locale): String {
+			val tag = locale.toLanguageTag()
+			if (tag.startsWith("zh-hant", ignoreCase = true)) {
+				return "zh-TW"
+			}
+			val normalizedTag = TranslationLanguages.normalizeTargetCode(tag)
+			if (TranslationLanguages.findTargetLanguage(normalizedTag) != null) {
+				return normalizedTag
+			}
+			val langOnly = TranslationLanguages.normalizeTargetCode(locale.language)
+			return TranslationLanguages.findTargetLanguage(langOnly)?.code ?: "en"
+		}
 	}
 }

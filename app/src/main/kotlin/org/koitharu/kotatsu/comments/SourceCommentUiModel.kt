@@ -29,6 +29,9 @@ sealed interface SourceCommentListItem {
 		val isLiking: Boolean,
 		val formattedTime: CharSequence?,
 		val capabilities: SourceCommunityCapabilities,
+		val translatedBody: String? = null,
+		val isShowingTranslation: Boolean = false,
+		val isTranslating: Boolean = false,
 	) : SourceCommentListItem {
 		override val itemId: String
 			get() = "comment:${comment.id}"

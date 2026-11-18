@@ -46,6 +46,7 @@ class SourceCommentAdapter(
 		fun onToggleSpoiler(commentId: String)
 		fun onToggleLike(comment: SourceComment, isLike: Boolean)
 		fun onReplyClick(comment: SourceComment)
+		fun onToggleTranslate(comment: SourceComment)
 		fun onToggleReplies(comment: SourceComment)
 		fun onEditClick(comment: SourceComment)
 		fun onDeleteClick(comment: SourceComment)
@@ -130,6 +131,9 @@ class SourceCommentAdapter(
 			binding.buttonReply.setOnClickListener {
 				boundItem?.let { listener.onReplyClick(it.comment) }
 			}
+			binding.buttonTranslate.setOnClickListener {
+				boundItem?.let { listener.onToggleTranslate(it.comment) }
+			}
 			binding.buttonReplies.setOnClickListener {
 				boundItem?.let { listener.onToggleReplies(it.comment) }
 			}
@@ -191,18 +195,36 @@ class SourceCommentAdapter(
 			val showSpoilerMask = comment.isSpoiler && !item.isSpoilerRevealed
 			binding.textViewBody.isVisible = !showSpoilerMask
 			binding.buttonRevealSpoiler.isVisible = showSpoilerMask
+			val originalBody = comment.body.ifBlank {
+				comment.bodyHtml?.let {
+					HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_COMPACT).trim()
+				} ?: ""
+			}
 			if (!showSpoilerMask) {
-				val bodyText = comment.body.ifBlank {
-					comment.bodyHtml?.let {
-						HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_COMPACT).trim()
-					} ?: ""
+				binding.textViewBody.text = if (item.isShowingTranslation && !item.translatedBody.isNullOrBlank()) {
+					item.translatedBody
+				} else {
+					originalBody
 				}
-				binding.textViewBody.text = bodyText
 			}
 
 			val primaryColor = context.getThemeColor(appcompatR.attr.colorPrimary)
 			val errorColor = context.getThemeColor(appcompatR.attr.colorError)
 			val neutralColor = context.getThemeColor(materialR.attr.colorOnSurfaceVariant)
+
+			val hasBody = !showSpoilerMask && originalBody.isNotBlank()
+			binding.progressTranslate.isVisible = hasBody && item.isTranslating
+			binding.buttonTranslate.isVisible = hasBody && !item.isTranslating
+			binding.buttonTranslate.setText(
+				if (item.isShowingTranslation) {
+					R.string.community_comment_show_original
+				} else {
+					R.string.community_comment_translate
+				},
+			)
+			val translateTint = ColorStateList.valueOf(if (item.isShowingTranslation) primaryColor else neutralColor)
+			binding.buttonTranslate.iconTint = translateTint
+			binding.buttonTranslate.setTextColor(translateTint)
 
 			binding.buttonLike.isVisible = comment.canLike || caps.supportsCommentLikes || comment.likesCount > 0
 			binding.buttonLike.isEnabled = comment.canLike && !item.isLiking

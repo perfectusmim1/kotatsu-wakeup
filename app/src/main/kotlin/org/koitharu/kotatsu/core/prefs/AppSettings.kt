@@ -42,6 +42,7 @@ import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.reader.domain.ReaderColorFilter
 import org.koitharu.kotatsu.reader.domain.translate.api.GeminiKeyPool
 import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages
+import org.koitharu.kotatsu.reader.domain.translate.model.GeminiThinkingLevel
 import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationProvider
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationSettingsSnapshot
@@ -606,6 +607,19 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val translationApiKeys: List<String>
 		get() = GeminiKeyPool.parseApiKeysInput(translationApiKeysRaw)
 
+	var translationDeeplApiKeysRaw: String
+		get() = prefs.getString(KEY_TRANSLATION_DEEPL_API_KEYS, null).orEmpty()
+		set(value) = prefs.edit { putString(KEY_TRANSLATION_DEEPL_API_KEYS, value.trim()) }
+
+	val translationDeeplApiKeys: List<String>
+		get() = GeminiKeyPool.parseApiKeysInput(translationDeeplApiKeysRaw)
+
+	var translationGeminiThinkingLevel: GeminiThinkingLevel
+		get() = GeminiThinkingLevel.fromName(
+			prefs.getString(KEY_TRANSLATION_GEMINI_THINKING_LEVEL, GeminiThinkingLevel.MINIMAL.name),
+		)
+		set(value) = prefs.edit { putString(KEY_TRANSLATION_GEMINI_THINKING_LEVEL, value.name) }
+
 	var isTranslationAutoEnabled: Boolean
 		get() = prefs.getBoolean(KEY_TRANSLATION_AUTO, false)
 		set(value) = prefs.edit { putBoolean(KEY_TRANSLATION_AUTO, value) }
@@ -623,6 +637,8 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		sourceLang = translationSourceLang,
 		targetLang = translationTargetLang,
 		apiKeys = translationApiKeys,
+		deeplApiKeys = translationDeeplApiKeys,
+		geminiThinkingLevel = translationGeminiThinkingLevel,
 		autoTranslate = isTranslationAutoEnabled,
 		skipPureSfx = isTranslationSkipPureSfx,
 		filterPromoAndCredits = isTranslationFilterPromo,
@@ -1068,6 +1084,8 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_TRANSLATION_SOURCE_LANG = "reader_translation_source_lang"
 		const val KEY_TRANSLATION_TARGET_LANG = "reader_translation_target_lang"
 		const val KEY_TRANSLATION_API_KEYS = "reader_translation_api_keys"
+		const val KEY_TRANSLATION_DEEPL_API_KEYS = "reader_translation_deepl_api_keys"
+		const val KEY_TRANSLATION_GEMINI_THINKING_LEVEL = "reader_translation_gemini_thinking_level"
 		const val KEY_TRANSLATION_AUTO = "reader_translation_auto"
 		const val KEY_TRANSLATION_SKIP_SFX = "reader_translation_skip_sfx"
 		const val KEY_TRANSLATION_FILTER_PROMO = "reader_translation_filter_promo"
@@ -1077,6 +1095,8 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			KEY_TRANSLATION_SOURCE_LANG,
 			KEY_TRANSLATION_TARGET_LANG,
 			KEY_TRANSLATION_API_KEYS,
+			KEY_TRANSLATION_DEEPL_API_KEYS,
+			KEY_TRANSLATION_GEMINI_THINKING_LEVEL,
 			KEY_TRANSLATION_AUTO,
 			KEY_TRANSLATION_SKIP_SFX,
 			KEY_TRANSLATION_FILTER_PROMO,

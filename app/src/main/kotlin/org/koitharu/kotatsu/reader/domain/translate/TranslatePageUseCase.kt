@@ -28,6 +28,7 @@ import org.koitharu.kotatsu.core.util.ext.isZipUri
 import org.koitharu.kotatsu.core.util.ext.ramAvailable
 import org.koitharu.kotatsu.core.util.ext.toMimeTypeOrNull
 import org.koitharu.kotatsu.parsers.model.MangaPage
+import org.koitharu.kotatsu.reader.domain.translate.api.MissingDeeplApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.api.MissingGeminiApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.model.ComicTextTranslator
 import org.koitharu.kotatsu.reader.domain.translate.model.LocalOcrEngine
@@ -79,9 +80,13 @@ internal object TranslatePipelineLog {
 		}
 	}
 
-	fun w(tag: String, msg: String) {
+	fun w(tag: String, msg: String, throwable: Throwable? = null) {
 		if (isAndroidLogAvailable) {
-			Log.w(tag, msg)
+			if (throwable != null) {
+				Log.w(tag, msg, throwable)
+			} else {
+				Log.w(tag, msg)
+			}
 		}
 	}
 
@@ -196,9 +201,16 @@ class TranslatePageUseCase private constructor(
 			return PageTranslationResult.Translated(cached)
 		}
 
-		if (settings.provider == TranslationProvider.GEMINI && settings.apiKeys.isEmpty()) {
-			TranslatePipelineLog.w(LOG_TAG, "Missing Gemini API key for page=${page.id}")
-			throw MissingGeminiApiKeyException()
+		when {
+			settings.provider == TranslationProvider.GEMINI && settings.apiKeys.isEmpty() -> {
+				TranslatePipelineLog.w(LOG_TAG, "Missing Gemini API key for page=${page.id}")
+				throw MissingGeminiApiKeyException()
+			}
+
+			settings.provider == TranslationProvider.DEEPL && settings.deeplApiKeys.isEmpty() -> {
+				TranslatePipelineLog.w(LOG_TAG, "Missing DeepL API key for page=${page.id}")
+				throw MissingDeeplApiKeyException()
+			}
 		}
 
 		val source = prepareSource()
