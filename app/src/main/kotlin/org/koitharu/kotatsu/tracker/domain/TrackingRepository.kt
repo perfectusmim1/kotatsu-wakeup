@@ -51,6 +51,22 @@ class TrackingRepository @Inject constructor(
 		return db.getTracksDao().findNewChapters(mangaId)
 	}
 
+	suspend fun getNewChaptersCounts(mangaIds: Collection<Long>): Map<Long, Int> {
+		if (mangaIds.isEmpty()) {
+			return emptyMap()
+		}
+		val dao = db.getTracksDao()
+		val distinctIds = mangaIds.distinct()
+		if (distinctIds.size <= 500) {
+			return dao.findNewChapters(distinctIds)
+		}
+		val result = LinkedHashMap<Long, Int>(distinctIds.size)
+		for (chunk in distinctIds.chunked(500)) {
+			result.putAll(dao.findNewChapters(chunk))
+		}
+		return result
+	}
+
 	fun observeNewChaptersCount(mangaId: Long): Flow<Int> {
 		return db.getTracksDao().observeNewChapters(mangaId)
 	}

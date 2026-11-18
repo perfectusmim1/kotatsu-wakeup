@@ -13,7 +13,6 @@ import android.text.SpannedString
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.graphics.ColorUtils
@@ -46,7 +45,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNot
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
@@ -134,7 +132,6 @@ class DetailsActivity :
 	BaseActivity<ActivityDetailsBinding>(),
 	View.OnClickListener,
 	View.OnLayoutChangeListener,
-	ViewTreeObserver.OnDrawListener,
 	ChipsView.OnChipClickListener,
 	OnListItemClickListener<Bookmark>,
 	SwipeRefreshLayout.OnRefreshListener,
@@ -153,6 +150,12 @@ class DetailsActivity :
 	private val viewModel: DetailsViewModel by viewModels()
 	private lateinit var menuProvider: DetailsMenuProvider
 	private lateinit var infoBinding: LayoutDetailsTableBinding
+	private var isCoverBackgroundInitialized = false
+	private val updateDescriptionMoreRunnable = Runnable {
+		if (!isDestroyed) {
+			updateDescriptionMoreButton()
+		}
+	}
 
 	private val communityAuthLauncher = registerForActivityResult(SourceAuthActivity.Contract()) { isAuthorized ->
 		if (isAuthorized) {
@@ -200,13 +203,13 @@ class DetailsActivity :
 		}
 		viewBinding.textViewDescription.addOnLayoutChangeListener(this)
 		viewBinding.swipeRefreshLayout.setOnRefreshListener(this)
-		viewBinding.textViewDescription.viewTreeObserver.addOnDrawListener(this)
 		infoBinding.textViewAuthor.movementMethod = LinkMovementMethodCompat.getInstance()
 		viewBinding.textViewDescription.movementMethod = LinkMovementMethodCompat.getInstance()
 		viewBinding.chipsTags.onChipClickListener = this
 		TitleScrollCoordinator(viewBinding.textViewTitle).attach(viewBinding.scrollView)
 		if (settings.isDescriptionExpanded) {
 			viewBinding.textViewDescription.maxLines = Int.MAX_VALUE - 1
+			scheduleDescriptionMoreButtonUpdate()
 		}
 		viewBinding.containerBottomSheet?.let { sheet ->
 			sheet.setOnClickListener(this)
@@ -218,7 +221,11 @@ class DetailsActivity :
 		}
 
 		val appRouter = router
-		viewModel.mangaDetails.filterNotNull().observe(this, ::onMangaUpdated)
+		viewModel.mangaDetails.observe(this) {
+			if (it != null) {
+				onMangaUpdated(it)
+			}
+		}
 		viewModel.coverUrl.observe(this, ::loadCover)
 		viewModel.onMangaRemoved.observeEvent(this, ::onMangaRemoved)
 		viewModel.onError
@@ -311,6 +318,7 @@ class DetailsActivity :
 				} else {
 					tv.maxLines = resources.getInteger(R.integer.details_description_lines)
 				}
+				scheduleDescriptionMoreButtonUpdate()
 			}
 
 			R.id.button_scrobbling_more -> {
@@ -388,13 +396,6 @@ class DetailsActivity :
 		viewModel.reload()
 	}
 
-	override fun onDraw() {
-		viewBinding.run {
-			buttonDescriptionMore.isVisible = textViewDescription.maxLines == Int.MAX_VALUE ||
-				textViewDescription.isTextTruncated
-		}
-	}
-
 	override fun onLayoutChange(
 		v: View?,
 		left: Int,
@@ -407,6 +408,9 @@ class DetailsActivity :
 		oldBottom: Int
 	) {
 		with(viewBinding) {
+			if (v === textViewDescription) {
+				updateDescriptionMoreButton()
+			}
 			containerBottomSheet?.let { sheet ->
 				val peekHeight = BottomSheetBehavior.from(sheet).peekHeight
 				if (scrollView.paddingBottom != peekHeight) {
@@ -414,6 +418,19 @@ class DetailsActivity :
 				}
 			}
 		}
+	}
+
+	private fun updateDescriptionMoreButton() {
+		viewBinding.run {
+			buttonDescriptionMore.isVisible = textViewDescription.maxLines == Int.MAX_VALUE ||
+				textViewDescription.isTextTruncated
+		}
+	}
+
+	private fun scheduleDescriptionMoreButtonUpdate() {
+		val tv = viewBinding.textViewDescription
+		tv.removeCallbacks(updateDescriptionMoreRunnable)
+		tv.post(updateDescriptionMoreRunnable)
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -512,6 +529,7 @@ class DetailsActivity :
 			textViewNsfw16.isVisible = manga.contentRating == ContentRating.SUGGESTIVE
 			textViewNsfw18.isVisible = manga.contentRating == ContentRating.ADULT
 			textViewDescription.text = details.description.ifNullOrEmpty { getString(R.string.no_description) }
+			scheduleDescriptionMoreButtonUpdate()
 		}
 		with(infoBinding) {
 			val translation = details.getLocale()
@@ -624,30 +642,34 @@ class DetailsActivity :
 			bgView.isVisible = false
 			return
 		}
+		if (!isCoverBackgroundInitialized) {
+			isCoverBackgroundInitialized = true
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				bgView.setRenderEffect(
+					RenderEffect.createBlurEffect(16f, 16f, Shader.TileMode.CLAMP),
+				)
+			}
+			val surfaceColor = getThemeColor(materialR.attr.colorSurface)
+			val halfAlpha = ColorUtils.setAlphaComponent(surfaceColor, 128)
+			bgView.foreground = GradientDrawable(
+				GradientDrawable.Orientation.TOP_BOTTOM,
+				intArrayOf(surfaceColor, halfAlpha, Color.TRANSPARENT, Color.TRANSPARENT, halfAlpha, surfaceColor),
+			)
+			viewBinding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+				bgView.translationY = -scrollY.toFloat()
+			}
+		}
 		val manga = viewModel.getMangaOrNull()
 		ImageRequest.Builder(this)
 			.data(imageUrl)
 			.lifecycle(this)
 			.crossfade(true)
 			.allowRgb565(true)
+			.size(256, 360)
+			.precision(Precision.INEXACT)
 			.target(ImageViewTarget(bgView))
 			.mangaSourceExtra(manga?.source)
 			.enqueueWith(coil)
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-			bgView.setRenderEffect(
-				RenderEffect.createBlurEffect(16f, 16f, Shader.TileMode.CLAMP),
-			)
-		}
-		val surfaceColor = getThemeColor(materialR.attr.colorSurface)
-		val halfAlpha = ColorUtils.setAlphaComponent(surfaceColor, 128)
-		bgView.foreground = GradientDrawable(
-			GradientDrawable.Orientation.TOP_BOTTOM,
-			intArrayOf(surfaceColor, halfAlpha, Color.TRANSPARENT, Color.TRANSPARENT, halfAlpha, surfaceColor),
-		)
-		configureTransparentAppBar()
-		viewBinding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-			bgView.translationY = -scrollY.toFloat()
-		}
 		bgView.isVisible = true
 	}
 

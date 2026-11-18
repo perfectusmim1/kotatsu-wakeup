@@ -69,11 +69,14 @@ class PreviewViewModel @Inject constructor(
 		.distinctUntilChangedBy { it.description.orEmpty() }
 		.transformLatest {
 			val description = it.description
-			if (description.isNullOrEmpty()) {
-				emit(null)
-			} else {
-				emit(description.parseAsHtml().filterSpans().sanitize())
-				emit(description.parseAsHtml(imageGetter = imageGetter).filterSpans())
+			when {
+				description.isNullOrEmpty() -> emit(null)
+				description.contains("<img", ignoreCase = true) -> {
+					emit(description.parseAsHtml().filterSpans().sanitize())
+					emit(description.parseAsHtml(imageGetter = imageGetter).filterSpans())
+				}
+
+				else -> emit(description.parseAsHtml().filterSpans())
 			}
 		}.combine(isLoading) { desc, loading ->
 			if (loading) null else desc ?: ""

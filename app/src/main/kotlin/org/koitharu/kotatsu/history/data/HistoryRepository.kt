@@ -179,11 +179,34 @@ class HistoryRepository @Inject constructor(
 	}
 
 	suspend fun getProgress(mangaId: Long, mode: ProgressIndicatorMode): ReadingProgress? {
-		val entity = db.getHistoryDao().find(mangaId) ?: return null
-		val fixedPercent = if (ReadingProgress.isCompleted(entity.percent)) 1f else entity.percent
+		if (mode == ProgressIndicatorMode.NONE) {
+			return null
+		}
+		return db.getHistoryDao().find(mangaId)?.toReadingProgress(mode)
+	}
+
+	suspend fun getProgressMap(mangaIds: Collection<Long>, mode: ProgressIndicatorMode): Map<Long, ReadingProgress> {
+		if (mangaIds.isEmpty() || mode == ProgressIndicatorMode.NONE) {
+			return emptyMap()
+		}
+		val dao = db.getHistoryDao()
+		val distinctIds = mangaIds.distinct()
+		val result = HashMap<Long, ReadingProgress>(distinctIds.size)
+		for (chunk in distinctIds.chunked(500)) {
+			for (entity in dao.find(chunk)) {
+				entity.toReadingProgress(mode)?.let { progress ->
+					result[entity.mangaId] = progress
+				}
+			}
+		}
+		return result
+	}
+
+	private fun HistoryEntity.toReadingProgress(mode: ProgressIndicatorMode): ReadingProgress? {
+		val fixedPercent = if (ReadingProgress.isCompleted(percent)) 1f else percent
 		return ReadingProgress(
 			percent = fixedPercent,
-			totalChapters = entity.chaptersCount,
+			totalChapters = chaptersCount,
 			mode = mode,
 		).takeIf { it.isValid() }
 	}

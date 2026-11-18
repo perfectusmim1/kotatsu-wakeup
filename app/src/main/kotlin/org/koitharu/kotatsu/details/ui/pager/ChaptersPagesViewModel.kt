@@ -57,9 +57,10 @@ abstract class ChaptersPagesViewModel(
 	private val downloadScheduler: DownloadWorker.Scheduler,
 	private val deleteLocalMangaUseCase: DeleteLocalMangaUseCase,
 	private val localStorageChanges: SharedFlow<LocalManga?>,
+	initialMangaDetails: MangaDetails? = null,
 ) : BaseViewModel() {
 
-	val mangaDetails = MutableStateFlow<MangaDetails?>(null)
+	val mangaDetails = MutableStateFlow<MangaDetails?>(initialMangaDetails)
 	val readingState = MutableStateFlow<ReaderState?>(null)
 
 	val onActionDone = MutableEventFlow<ReversibleAction>()
@@ -71,11 +72,11 @@ abstract class ChaptersPagesViewModel(
 
 	val manga = mangaDetails.map { x -> x?.toManga() }
 		.withErrorHandling()
-		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, null)
+		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, initialMangaDetails?.toManga())
 
 	val coverUrl = mangaDetails.map { x -> x?.coverUrl }
 		.withErrorHandling()
-		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, null)
+		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, initialMangaDetails?.coverUrl)
 
 	val isChaptersReversed = settings.observeAsStateFlow(
 		scope = viewModelScope + Dispatchers.Default,

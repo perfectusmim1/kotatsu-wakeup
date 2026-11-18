@@ -88,6 +88,14 @@ fun mangaGridItemAD(
 	}
 
 	bind { payloads ->
+		if (payloads.isNotEmpty() && payloads.all { it === PAYLOAD_PROGRESS_CHANGED }) {
+			if (onDismissClick == null) {
+				binding.progressView.setProgress(item.progress, animate = true)
+			} else {
+				binding.progressView.isVisible = false
+			}
+			return@bind
+		}
 		itemView.setTooltipCompat(item.getSummary(context))
 		titleView.text = item.title
 		binding.progressView.setProgress(item.progress, PAYLOAD_PROGRESS_CHANGED in payloads)

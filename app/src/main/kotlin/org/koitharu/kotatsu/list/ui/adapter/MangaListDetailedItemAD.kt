@@ -21,6 +21,13 @@ fun mangaListDetailedItemAD(
 		.attach(itemView)
 
 	bind { payloads ->
+		if (payloads.isNotEmpty() && payloads.all { it === ListModelDiffCallback.PAYLOAD_PROGRESS_CHANGED }) {
+			binding.progressView.setProgress(
+				value = item.progress,
+				animate = true,
+			)
+			return@bind
+		}
 		binding.textViewTitle.text = item.title
 		binding.textViewAuthor.textAndVisible = item.manga.authors.joinToString(", ")
 		binding.progressView.setProgress(

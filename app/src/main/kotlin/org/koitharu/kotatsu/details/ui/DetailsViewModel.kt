@@ -99,15 +99,12 @@ class DetailsViewModel @Inject constructor(
 	downloadScheduler = downloadScheduler,
 	deleteLocalMangaUseCase = deleteLocalMangaUseCase,
 	localStorageChanges = localStorageChanges,
+	initialMangaDetails = MangaIntent(savedStateHandle).manga?.let(::MangaDetails),
 ) {
 
 	private val intent = MangaIntent(savedStateHandle)
 	private var loadingJob: Job
 	val mangaId = intent.mangaId
-
-	init {
-		mangaDetails.value = intent.manga?.let { MangaDetails(it) }
-	}
 
 	val history = historyRepository.observeOne(mangaId)
 		.onEach { h ->
@@ -212,7 +209,11 @@ class DetailsViewModel @Inject constructor(
 
 	val tags = manga.mapLatest {
 		mangaListMapper.mapTags(it?.tags.orEmpty())
-	}.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, emptyList())
+	}.stateIn(
+		scope = viewModelScope + Dispatchers.Default,
+		started = SharingStarted.Eagerly,
+		initialValue = mangaListMapper.mapTags(mangaDetails.value?.toManga()?.tags.orEmpty()),
+	)
 
 	val branches: StateFlow<List<MangaBranch>> = combine(
 		mangaDetails,

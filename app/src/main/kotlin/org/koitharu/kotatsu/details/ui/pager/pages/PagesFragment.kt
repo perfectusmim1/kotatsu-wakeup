@@ -86,6 +86,14 @@ class PagesFragment :
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		pageSaveHelper = pageSaveHelperFactory.create(this)
+	}
+
+	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): FragmentPagesBinding {
+		return FragmentPagesBinding.inflate(inflater, container, false)
+	}
+
+	override fun onViewBindingCreated(binding: FragmentPagesBinding, savedInstanceState: Bundle?) {
+		super.onViewBindingCreated(binding, savedInstanceState)
 		combine(
 			parentViewModel.mangaDetails,
 			parentViewModel.readingState,
@@ -97,15 +105,7 @@ class PagesFragment :
 				null
 			}
 		}.flowOn(Dispatchers.Default)
-			.observe(this, viewModel::updateState)
-	}
-
-	override fun onCreateViewBinding(inflater: LayoutInflater, container: ViewGroup?): FragmentPagesBinding {
-		return FragmentPagesBinding.inflate(inflater, container, false)
-	}
-
-	override fun onViewBindingCreated(binding: FragmentPagesBinding, savedInstanceState: Bundle?) {
-		super.onViewBindingCreated(binding, savedInstanceState)
+			.observe(viewLifecycleOwner, viewModel::updateState)
 		spanResolver = GridSpanResolver(binding.root.resources)
 		selectionController = ListSelectionController(
 			appCompatDelegate = checkNotNull(findAppCompatDelegate()),

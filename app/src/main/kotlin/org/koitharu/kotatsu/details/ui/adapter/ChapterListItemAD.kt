@@ -1,6 +1,9 @@
 package org.koitharu.kotatsu.details.ui.adapter
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.hannesdorfmann.adapterdelegates4.dsl.adapterDelegateViewBinding
@@ -30,41 +33,93 @@ fun chapterListItemAD(
 	val titleTypeface = binding.textViewTitle.typeface
 	val descriptionTypeface = binding.textViewDescription.typeface
 
+	val colorPrimaryContainer: Int
+	val colorOnPrimaryContainer: Int
+	val colorSecondaryContainer: Int
+	val colorOnSecondaryContainer: Int
+	val colorSurfaceContainer: Int
+	val colorOnSurface: Int
+	val colorSurfaceContainerLow: Int
+	val colorOnSurfaceVariant: Int
+
+	val textColorPrimary: ColorStateList?
+	val textColorOutline: ColorStateList?
+	val textColorHint: ColorStateList?
+	val drawableCurrent: Drawable?
+	val drawableNew: Drawable?
+	var currentDrawableStart: Drawable? = binding.textViewTitle.drawableStart
+
+	if (isExpressive) {
+		colorPrimaryContainer = context.getThemeColor(materialR.attr.colorPrimaryContainer)
+		colorOnPrimaryContainer = context.getThemeColor(materialR.attr.colorOnPrimaryContainer)
+		colorSecondaryContainer = context.getThemeColor(materialR.attr.colorSecondaryContainer)
+		colorOnSecondaryContainer = context.getThemeColor(materialR.attr.colorOnSecondaryContainer)
+		colorSurfaceContainer = context.getThemeColor(materialR.attr.colorSurfaceContainer)
+		colorOnSurface = context.getThemeColor(materialR.attr.colorOnSurface)
+		colorSurfaceContainerLow = context.getThemeColor(materialR.attr.colorSurfaceContainerLow)
+		colorOnSurfaceVariant = context.getThemeColor(materialR.attr.colorOnSurfaceVariant)
+		textColorPrimary = null
+		textColorOutline = null
+		textColorHint = null
+		drawableCurrent = null
+		drawableNew = null
+		if (currentDrawableStart != null) {
+			currentDrawableStart = null
+			binding.textViewTitle.drawableStart = null
+		}
+	} else {
+		colorPrimaryContainer = 0
+		colorOnPrimaryContainer = 0
+		colorSecondaryContainer = 0
+		colorOnSecondaryContainer = 0
+		colorSurfaceContainer = 0
+		colorOnSurface = 0
+		colorSurfaceContainerLow = 0
+		colorOnSurfaceVariant = 0
+		textColorPrimary = context.getThemeColorStateList(android.R.attr.textColorPrimary)
+		textColorOutline = context.getThemeColorStateList(materialR.attr.colorOutline)
+		textColorHint = context.getThemeColorStateList(android.R.attr.textColorHint)
+		drawableCurrent = ContextCompat.getDrawable(context, R.drawable.ic_current_chapter)
+		drawableNew = ContextCompat.getDrawable(context, R.drawable.ic_new)
+		binding.root.setCardBackgroundColor(Color.TRANSPARENT)
+		binding.imageViewNew.isVisible = false
+	}
+
 	bind {
 		binding.textViewTitle.text = item.getTitle(context.resources)
 		binding.textViewDescription.textAndVisible = item.description
 		if (isExpressive) {
-			val containerAttr: Int
-			val contentAttr: Int
-			val supportingAttr: Int
+			val containerColor: Int
+			val contentColor: Int
+			val supportingColor: Int
 			when {
 				item.isCurrent -> {
-					containerAttr = materialR.attr.colorPrimaryContainer
-					contentAttr = materialR.attr.colorOnPrimaryContainer
-					supportingAttr = materialR.attr.colorOnPrimaryContainer
+					containerColor = colorPrimaryContainer
+					contentColor = colorOnPrimaryContainer
+					supportingColor = colorOnPrimaryContainer
 				}
 
 				item.isUnread && item.isNew -> {
-					containerAttr = materialR.attr.colorSecondaryContainer
-					contentAttr = materialR.attr.colorOnSecondaryContainer
-					supportingAttr = materialR.attr.colorOnSecondaryContainer
+					containerColor = colorSecondaryContainer
+					contentColor = colorOnSecondaryContainer
+					supportingColor = colorOnSecondaryContainer
 				}
 
 				item.isUnread -> {
-					containerAttr = materialR.attr.colorSurfaceContainer
-					contentAttr = materialR.attr.colorOnSurface
-					supportingAttr = materialR.attr.colorOnSurfaceVariant
+					containerColor = colorSurfaceContainer
+					contentColor = colorOnSurface
+					supportingColor = colorOnSurfaceVariant
 				}
 
 				else -> {
-					containerAttr = materialR.attr.colorSurfaceContainerLow
-					contentAttr = materialR.attr.colorOnSurfaceVariant
-					supportingAttr = materialR.attr.colorOnSurfaceVariant
+					containerColor = colorSurfaceContainerLow
+					contentColor = colorOnSurfaceVariant
+					supportingColor = colorOnSurfaceVariant
 				}
 			}
-			binding.root.setCardBackgroundColor(context.getThemeColor(containerAttr))
-			binding.textViewTitle.setTextColor(context.getThemeColor(contentAttr))
-			binding.textViewDescription.setTextColor(context.getThemeColor(supportingAttr))
+			binding.root.setCardBackgroundColor(containerColor)
+			binding.textViewTitle.setTextColor(contentColor)
+			binding.textViewDescription.setTextColor(supportingColor)
 			binding.textViewTitle.setTypeface(
 				titleTypeface,
 				if (item.isCurrent || item.isNew) Typeface.BOLD else Typeface.NORMAL,
@@ -73,53 +128,50 @@ fun chapterListItemAD(
 				descriptionTypeface,
 				if (item.isCurrent) Typeface.BOLD else Typeface.NORMAL,
 			)
-			binding.textViewTitle.drawableStart = null
 			binding.imageViewNew.isVisible = item.isUnread && item.isNew
 		} else {
-			binding.root.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+			val targetDrawable: Drawable?
+			val titleColor: ColorStateList?
+			val descColor: ColorStateList?
+			val titleStyle: Int
+			val descStyle: Int
 			when {
 				item.isCurrent -> {
-					binding.textViewTitle.drawableStart =
-						ContextCompat.getDrawable(context, R.drawable.ic_current_chapter)
-					binding.textViewTitle.setTextColor(
-						context.getThemeColorStateList(android.R.attr.textColorPrimary),
-					)
-					binding.textViewDescription.setTextColor(
-						context.getThemeColorStateList(android.R.attr.textColorPrimary),
-					)
-					binding.textViewTitle.setTypeface(titleTypeface, Typeface.BOLD)
-					binding.textViewDescription.setTypeface(descriptionTypeface, Typeface.BOLD)
+					targetDrawable = drawableCurrent
+					titleColor = textColorPrimary
+					descColor = textColorPrimary
+					titleStyle = Typeface.BOLD
+					descStyle = Typeface.BOLD
 				}
 
 				item.isUnread -> {
-					binding.textViewTitle.drawableStart = if (item.isNew) {
-						ContextCompat.getDrawable(context, R.drawable.ic_new)
-					} else {
-						null
-					}
-					binding.textViewTitle.setTextColor(
-						context.getThemeColorStateList(android.R.attr.textColorPrimary),
-					)
-					binding.textViewDescription.setTextColor(
-						context.getThemeColorStateList(materialR.attr.colorOutline),
-					)
-					binding.textViewTitle.setTypeface(titleTypeface, Typeface.NORMAL)
-					binding.textViewDescription.setTypeface(descriptionTypeface, Typeface.NORMAL)
+					targetDrawable = if (item.isNew) drawableNew else null
+					titleColor = textColorPrimary
+					descColor = textColorOutline
+					titleStyle = Typeface.NORMAL
+					descStyle = Typeface.NORMAL
 				}
 
 				else -> {
-					binding.textViewTitle.drawableStart = null
-					binding.textViewTitle.setTextColor(
-						context.getThemeColorStateList(android.R.attr.textColorHint),
-					)
-					binding.textViewDescription.setTextColor(
-						context.getThemeColorStateList(android.R.attr.textColorHint),
-					)
-					binding.textViewTitle.setTypeface(titleTypeface, Typeface.NORMAL)
-					binding.textViewDescription.setTypeface(descriptionTypeface, Typeface.NORMAL)
+					targetDrawable = null
+					titleColor = textColorHint
+					descColor = textColorHint
+					titleStyle = Typeface.NORMAL
+					descStyle = Typeface.NORMAL
 				}
 			}
-			binding.imageViewNew.isVisible = false
+			if (currentDrawableStart !== targetDrawable) {
+				currentDrawableStart = targetDrawable
+				binding.textViewTitle.drawableStart = targetDrawable
+			}
+			if (titleColor != null) {
+				binding.textViewTitle.setTextColor(titleColor)
+			}
+			if (descColor != null) {
+				binding.textViewDescription.setTextColor(descColor)
+			}
+			binding.textViewTitle.setTypeface(titleTypeface, titleStyle)
+			binding.textViewDescription.setTypeface(descriptionTypeface, descStyle)
 		}
 		binding.imageViewBookmarked.isVisible = item.isBookmarked
 		binding.imageViewDownloaded.isVisible = item.isDownloaded

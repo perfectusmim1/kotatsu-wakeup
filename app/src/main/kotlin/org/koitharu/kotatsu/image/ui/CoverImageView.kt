@@ -161,7 +161,7 @@ class CoverImageView @JvmOverloads constructor(
 
 	private fun newRequestBuilder(applyTrim: Boolean) = super.newRequestBuilder().apply {
 		if (trimImage && applyTrim) {
-			transformations(listOf(TrimTransformation()))
+			transformations(TrimTransformation.DEFAULT_LIST)
 		}
 		if (hasAspectRatio) {
 			size(CoverSizeResolver(this@CoverImageView))

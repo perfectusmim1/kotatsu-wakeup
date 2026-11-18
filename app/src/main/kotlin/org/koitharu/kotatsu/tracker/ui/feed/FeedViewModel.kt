@@ -143,9 +143,10 @@ class FeedViewModel @Inject constructor(
 	}
 
 	private suspend fun List<TrackingLogItem>.mapListTo(destination: MutableList<ListModel>) {
+		val feedItems = mangaListMapper.toFeedItems(this)
 		var prevDate: DateTimeAgo? = null
-		for (item in this) {
-			val date = calculateTimeAgo(item.createdAt)
+		for (i in indices) {
+			val date = calculateTimeAgo(this[i].createdAt)
 			if (prevDate != date) {
 				destination += if (date != null) {
 					ListHeader(date)
@@ -154,7 +155,7 @@ class FeedViewModel @Inject constructor(
 				}
 			}
 			prevDate = date
-			destination += mangaListMapper.toFeedItem(item)
+			destination += feedItems[i]
 		}
 	}
 
@@ -167,7 +168,7 @@ class FeedViewModel @Inject constructor(
 					null
 				} else {
 					UpdatedMangaHeader(
-						mangaList.map { mangaListMapper.toListModel(it.manga, ListMode.GRID) },
+						mangaListMapper.toListModelList(mangaList.map { it.manga }, ListMode.GRID),
 					)
 				}
 			}

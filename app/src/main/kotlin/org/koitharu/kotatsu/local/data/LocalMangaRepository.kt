@@ -6,10 +6,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toCollection
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.withContext
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.model.isNsfw
@@ -172,29 +172,10 @@ class LocalMangaRepository @Inject constructor(
 			return@runCatchingCancellable cached
 		}
 		// fast path
-		LocalMangaParser.find(storageManager.getReadableDirs(), remoteManga)?.let {
-			return it.getManga(withDetails)
-		}
-		// slow path
-		val files = getAllFiles()
-		return channelFlow {
-			for (file in files) {
-				launch {
-					val mangaInput = LocalMangaParser.getOrNull(file)
-					runCatchingCancellable {
-						val mangaInfo = mangaInput?.getMangaInfo()
-						if (mangaInfo != null && mangaInfo.id == remoteManga.id) {
-							send(mangaInput)
-						}
-					}.onFailure {
-						it.printStackTraceDebug()
-					}
-				}
-			}
-		}.firstOrNull()?.getManga(withDetails)
-	}.onSuccess { x: LocalManga? ->
-		if (x != null) {
-			localMangaIndex.put(x)
+		withContext(Dispatchers.IO) {
+			LocalMangaParser.find(storageManager.getReadableDirs(), remoteManga)?.getManga(withDetails)
+		}?.also {
+			localMangaIndex.put(it)
 		}
 	}.onFailure {
 		it.printStackTraceDebug()

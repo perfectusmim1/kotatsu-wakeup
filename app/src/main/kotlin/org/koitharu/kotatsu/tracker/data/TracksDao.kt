@@ -1,6 +1,7 @@
 package org.koitharu.kotatsu.tracker.data
 
 import androidx.room.Dao
+import androidx.room.MapColumn
 import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.room.Transaction
@@ -58,6 +59,9 @@ abstract class TracksDao : MangaQueryBuilder.ConditionCallback {
 
 	@Query("SELECT IFNULL(chapters_new,0) FROM tracks WHERE manga_id = :mangaId")
 	abstract suspend fun findNewChapters(mangaId: Long): Int
+
+	@Query("SELECT manga_id, chapters_new FROM tracks WHERE manga_id IN (:mangaIds) AND chapters_new > 0")
+	abstract suspend fun findNewChapters(mangaIds: List<Long>): Map<@MapColumn(columnName = "manga_id") Long, @MapColumn(columnName = "chapters_new") Int>
 
 	@Query("SELECT COUNT(*) FROM tracks")
 	abstract suspend fun getTracksCount(): Int

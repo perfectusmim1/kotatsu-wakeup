@@ -11,6 +11,7 @@ import org.koitharu.kotatsu.core.model.FavouriteIcon
 import org.koitharu.kotatsu.core.parser.MangaDataRepository
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.prefs.ListMode
+import org.koitharu.kotatsu.core.prefs.ProgressIndicatorMode
 import org.koitharu.kotatsu.core.ui.model.MangaOverride
 import org.koitharu.kotatsu.core.ui.widgets.ChipsView
 import org.koitharu.kotatsu.favourites.domain.FavouritesRepository
@@ -59,15 +60,45 @@ class MangaListMapper @Inject constructor(
 		@Flags flags: Int = DEFAULTS,
 		pinnedIds: Set<Long> = emptySet(),
 	) {
+		if (manga.isEmpty()) {
+			return
+		}
 		val options = getOptions(flags)
+		val ids = manga.map { it.id }
 		val overrides = dataRepository.getOverrides()
-		val favouriteIcons = if (mode != ListMode.LIST && options.isBadgeEnabled(FAVORITE) && manga.isNotEmpty()) {
-			favouritesRepository.getFavouriteIcons(manga.map { it.id })
+		val counters = if (isCounterEnabled(options)) {
+			trackingRepository.getNewChaptersCounts(ids)
 		} else {
 			emptyMap()
 		}
+		val isDetailed = mode != ListMode.LIST
+		val favouriteIcons = if (isDetailed && options.isBadgeEnabled(FAVORITE)) {
+			favouritesRepository.getFavouriteIcons(ids)
+		} else {
+			emptyMap()
+		}
+		val progressMode = if (isDetailed) getProgressMode(options) else ProgressIndicatorMode.NONE
+		val progressMap = if (progressMode != ProgressIndicatorMode.NONE) {
+			historyRepository.getProgressMap(ids, progressMode)
+		} else {
+			emptyMap()
+		}
+		val savedIds = if (isDetailed && options.isBadgeEnabled(SAVED)) {
+			localMangaIndex.getSavedMangaIds(ids)
+		} else {
+			emptySet()
+		}
 		manga.mapTo(destination) {
-			toListModelImpl(it, mode, options, overrides[it.id], it.id in pinnedIds, favouriteIcons[it.id])
+			toListModelImpl(
+				manga = it,
+				mode = mode,
+				override = overrides[it.id],
+				counter = counters[it.id] ?: 0,
+				progress = progressMap[it.id],
+				isSaved = it.id in savedIds,
+				isPinned = it.id in pinnedIds,
+				favouriteIcon = favouriteIcons[it.id],
+			)
 		}
 	}
 
@@ -77,7 +108,12 @@ class MangaListMapper @Inject constructor(
 		@Flags flags: Int = DEFAULTS,
 	): MangaListModel {
 		val options = getOptions(flags)
-		val favouriteIcon = if (mode != ListMode.LIST && options.isBadgeEnabled(FAVORITE)) {
+		val override = dataRepository.getOverride(manga.id)
+		val counter = getCounter(manga.id, options)
+		if (mode == ListMode.LIST) {
+			return toCompactListModel(manga, override, counter)
+		}
+		val favouriteIcon = if (options.isBadgeEnabled(FAVORITE)) {
 			favouritesRepository.getFavouriteIcons(listOf(manga.id))[manga.id]
 		} else {
 			null
@@ -85,10 +121,28 @@ class MangaListMapper @Inject constructor(
 		return toListModelImpl(
 			manga = manga,
 			mode = mode,
-			options = options,
-			override = dataRepository.getOverride(manga.id),
+			override = override,
+			counter = counter,
+			progress = getProgress(manga.id, options),
+			isSaved = isSaved(manga.id, options),
 			favouriteIcon = favouriteIcon,
 		)
+	}
+
+	suspend fun toFeedItems(logItems: Collection<TrackingLogItem>): List<FeedItem> {
+		if (logItems.isEmpty()) {
+			return emptyList()
+		}
+		val overrides = dataRepository.getOverrides()
+		return logItems.map { logItem ->
+			FeedItem(
+				id = logItem.id,
+				override = overrides[logItem.manga.id],
+				count = logItem.chapters.size,
+				manga = logItem.manga,
+				isNew = logItem.isNew,
+			)
+		}
 	}
 
 	suspend fun toFeedItem(logItem: TrackingLogItem) = FeedItem(
@@ -107,68 +161,86 @@ class MangaListMapper @Inject constructor(
 		)
 	}
 
-	private suspend fun toCompactListModel(
+	private fun toCompactListModel(
 		manga: Manga,
-		@Options options: Int,
 		override: MangaOverride?,
+		counter: Int,
 	) = MangaCompactListModel(
 		manga = manga,
 		override = override,
 		subtitle = manga.tags.joinToString(", ") { it.title },
-		counter = getCounter(manga.id, options),
+		counter = counter,
 	)
 
-	private suspend fun toDetailedListModel(
+	private fun toDetailedListModel(
 		manga: Manga,
-		@Options options: Int,
 		override: MangaOverride?,
+		counter: Int,
+		progress: ReadingProgress?,
+		isSaved: Boolean,
 		isPinned: Boolean = false,
 		favouriteIcon: FavouriteIcon? = null,
 	) = MangaDetailedListModel(
 		subtitle = manga.altTitles.firstOrNull(),
 		manga = manga,
 		override = override,
-		counter = getCounter(manga.id, options),
-		progress = getProgress(manga.id, options),
+		counter = counter,
+		progress = progress,
 		isFavorite = favouriteIcon != null,
-		isSaved = isSaved(manga.id, options),
+		isSaved = isSaved,
 		tags = mapTags(manga.tags),
 		isPinned = isPinned,
 		favouriteIcon = favouriteIcon,
 	)
 
-	private suspend fun toGridModel(
+	private fun toGridModel(
 		manga: Manga,
-		@Options options: Int,
 		override: MangaOverride?,
+		counter: Int,
+		progress: ReadingProgress?,
+		isSaved: Boolean,
 		isPinned: Boolean = false,
 		favouriteIcon: FavouriteIcon? = null,
 	) = MangaGridModel(
 		manga = manga,
 		override = override,
-		counter = getCounter(manga.id, options),
-		progress = getProgress(manga.id, options),
+		counter = counter,
+		progress = progress,
 		isFavorite = favouriteIcon != null,
-		isSaved = isSaved(manga.id, options),
+		isSaved = isSaved,
 		isPinned = isPinned,
 		favouriteIcon = favouriteIcon,
 	)
 
-	private suspend fun toListModelImpl(
+	private fun toListModelImpl(
 		manga: Manga,
 		mode: ListMode,
-		@Options options: Int,
 		override: MangaOverride?,
+		counter: Int,
+		progress: ReadingProgress?,
+		isSaved: Boolean,
 		isPinned: Boolean = false,
 		favouriteIcon: FavouriteIcon? = null,
 	): MangaListModel = when (mode) {
-		ListMode.LIST -> toCompactListModel(manga, options, override)
-		ListMode.DETAILED_LIST -> toDetailedListModel(manga, options, override, isPinned, favouriteIcon)
-		ListMode.GRID -> toGridModel(manga, options, override, isPinned, favouriteIcon)
+		ListMode.LIST -> toCompactListModel(manga, override, counter)
+		ListMode.DETAILED_LIST -> toDetailedListModel(manga, override, counter, progress, isSaved, isPinned, favouriteIcon)
+		ListMode.GRID -> toGridModel(manga, override, counter, progress, isSaved, isPinned, favouriteIcon)
+	}
+
+	private fun isCounterEnabled(@Options options: Int): Boolean {
+		return options.isBadgeEnabled(COUNTER) && settings.isTrackerEnabled
+	}
+
+	private fun getProgressMode(@Options options: Int): ProgressIndicatorMode {
+		return if (options.isBadgeEnabled(PROGRESS)) {
+			settings.progressIndicatorMode
+		} else {
+			ProgressIndicatorMode.NONE
+		}
 	}
 
 	private suspend fun getCounter(mangaId: Long, @Options options: Int): Int {
-		return if (options.isBadgeEnabled(COUNTER) && settings.isTrackerEnabled) {
+		return if (isCounterEnabled(options)) {
 			trackingRepository.getNewChaptersCount(mangaId)
 		} else {
 			0
@@ -176,8 +248,9 @@ class MangaListMapper @Inject constructor(
 	}
 
 	private suspend fun getProgress(mangaId: Long, @Options options: Int): ReadingProgress? {
-		return if (options.isBadgeEnabled(PROGRESS)) {
-			historyRepository.getProgress(mangaId, settings.progressIndicatorMode)
+		val progressMode = getProgressMode(options)
+		return if (progressMode != ProgressIndicatorMode.NONE) {
+			historyRepository.getProgress(mangaId, progressMode)
 		} else {
 			null
 		}

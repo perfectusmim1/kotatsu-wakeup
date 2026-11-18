@@ -16,11 +16,11 @@ class MemoryContentCache @Inject constructor(application: Application) : Compone
 
 	private val isLowRam = application.isLowRamDevice()
 
-	private val detailsCache = ExpiringLruCache<SafeDeferred<Manga>>(if (isLowRam) 1 else 4, 5, TimeUnit.MINUTES)
+	private val detailsCache = ExpiringLruCache<SafeDeferred<Manga>>(if (isLowRam) 4 else 16, 5, TimeUnit.MINUTES)
 	private val pagesCache =
-		ExpiringLruCache<SafeDeferred<List<MangaPage>>>(if (isLowRam) 1 else 4, 10, TimeUnit.MINUTES)
+		ExpiringLruCache<SafeDeferred<List<MangaPage>>>(if (isLowRam) 4 else 12, 10, TimeUnit.MINUTES)
 	private val relatedMangaCache =
-		ExpiringLruCache<SafeDeferred<List<Manga>>>(if (isLowRam) 1 else 3, 10, TimeUnit.MINUTES)
+		ExpiringLruCache<SafeDeferred<List<Manga>>>(if (isLowRam) 2 else 8, 10, TimeUnit.MINUTES)
 
 	init {
 		application.registerComponentCallbacks(this)

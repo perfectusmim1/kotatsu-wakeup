@@ -61,7 +61,6 @@ import org.koitharu.kotatsu.core.util.ext.ensureRamAtLeast
 import org.koitharu.kotatsu.core.util.ext.ensureSuccess
 import org.koitharu.kotatsu.core.util.ext.getCompletionResultOrNull
 import org.koitharu.kotatsu.core.util.ext.isFileUri
-import org.koitharu.kotatsu.core.util.ext.isNotEmpty
 import org.koitharu.kotatsu.core.util.ext.isPowerSaveMode
 import org.koitharu.kotatsu.core.util.ext.isZipUri
 import org.koitharu.kotatsu.core.util.ext.lifecycleScope
@@ -83,6 +82,7 @@ import org.koitharu.kotatsu.reader.domain.erase.ImageHider
 import org.koitharu.kotatsu.reader.domain.translate.ReaderTranslationCoordinator
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
+import java.io.IOException
 import java.util.LinkedList
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipFile
@@ -245,7 +245,7 @@ class PageLoader @Inject constructor(
 		val request = ImageRequest.Builder(context)
 			.data(preview)
 			.mangaSourceExtra(page.source)
-			.transformations(TrimTransformation())
+			.transformations(TrimTransformation.DEFAULT_LIST)
 			.build()
 		return coil.execute(request).image?.toImageSource()
 	}
@@ -566,7 +566,7 @@ class PageLoader @Inject constructor(
 
 	private fun Deferred<Uri>.isValid(): Boolean {
 		return getCompletionResultOrNull()?.map { uri ->
-			uri.exists() && uri.isTargetNotEmpty()
+			uri.isTargetValid()
 		}?.getOrDefault(false) != false
 	}
 
@@ -598,22 +598,24 @@ class PageLoader @Inject constructor(
 
 
 		@Blocking
-		private fun Uri.exists(): Boolean = when {
-			isFileUri() -> toFile().exists()
+		private fun Uri.isTargetValid(): Boolean = when {
+			isFileUri() -> toFile().length() > 0L
 			isZipUri() -> {
-				val file = File(requireNotNull(schemeSpecificPart))
-				file.exists() && ZipFile(file).use { it.getEntry(fragment) != null }
-			}
-
-			else -> false
-		}
-
-		@Blocking
-		private fun Uri.isTargetNotEmpty(): Boolean = when {
-			isFileUri() -> toFile().isNotEmpty()
-			isZipUri() -> {
-				val file = File(requireNotNull(schemeSpecificPart))
-				file.exists() && ZipFile(file).use { (it.getEntry(fragment)?.size ?: 0L) != 0L }
+				val path = schemeSpecificPart
+				val entryName = fragment
+				if (path.isNullOrEmpty() || entryName.isNullOrEmpty()) {
+					false
+				} else {
+					val file = File(path)
+					file.length() > 0L && try {
+						ZipFile(file).use { zip ->
+							val entry = zip.getEntry(entryName)
+							entry != null && entry.size != 0L
+						}
+					} catch (_: IOException) {
+						false
+					}
+				}
 			}
 
 			else -> false

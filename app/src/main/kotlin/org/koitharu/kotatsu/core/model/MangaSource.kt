@@ -43,9 +43,7 @@ fun MangaSource(name: String?): MangaSource {
 		val parts = name.substringAfter(':').splitTwoParts('/') ?: return UnknownMangaSource
 		return ExternalMangaSource(packageName = parts.first, authority = parts.second)
 	}
-	ActiveParsers.sources.forEach {
-		if (it.name == name) return it
-	}
+	ActiveParsers.findSource(name)?.let { return it }
 	return UnknownMangaSource
 }
 

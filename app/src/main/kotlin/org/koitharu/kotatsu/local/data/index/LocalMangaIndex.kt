@@ -72,6 +72,24 @@ class LocalMangaIndex @Inject constructor(
 		return db.getLocalMangaIndexDao().findPath(mangaId) != null
 	}
 
+	suspend fun getSavedMangaIds(mangaIds: Collection<Long>): Set<Long> {
+		if (mangaIds.isEmpty()) {
+			return emptySet()
+		}
+		updateIfRequired()
+		val dao = db.getLocalMangaIndexDao()
+		val distinctIds = mangaIds.distinct()
+		if (distinctIds.size <= 500) {
+			val found = dao.findExistingIds(distinctIds)
+			return if (found.isEmpty()) emptySet() else found.toHashSet()
+		}
+		val result = HashSet<Long>(distinctIds.size)
+		for (chunk in distinctIds.chunked(500)) {
+			result.addAll(dao.findExistingIds(chunk))
+		}
+		return result
+	}
+
 	suspend fun put(manga: LocalManga) = mutex.withLock {
 		db.withTransaction {
 			upsert(manga)

@@ -53,19 +53,20 @@ class DetailsLoadUseCase @Inject constructor(
             "Cannot resolve intent $intent"
         }
         val override = mangaDataRepository.getOverride(manga.id)
+        val descriptionParser = DescriptionParser()
         emit(
             MangaDetails(
                 manga = manga,
                 localManga = null,
                 override = override,
-                description = manga.description?.parseAsHtml(withImages = false),
+                description = descriptionParser.parse(manga.description, withImages = false),
                 isLoaded = false,
             ),
         )
         if (manga.isLocal) {
-            loadLocal(manga, override, force)
+            loadLocal(manga, override, force, descriptionParser)
         } else {
-            loadRemote(manga, override, force)
+            loadRemote(manga, override, force, descriptionParser)
         }
     }.distinctUntilChanged()
         .flowOn(Dispatchers.Default)
@@ -74,7 +75,12 @@ class DetailsLoadUseCase @Inject constructor(
      * Load local manga + try to load the linked remote one if network is not restricted
      * Suppress any network errors
      */
-    private suspend fun FlowCollector<MangaDetails>.loadLocal(manga: Manga, override: MangaOverride?, force: Boolean) {
+    private suspend fun FlowCollector<MangaDetails>.loadLocal(
+        manga: Manga,
+        override: MangaOverride?,
+        force: Boolean,
+        descriptionParser: DescriptionParser,
+    ) {
         val skipNetworkLoad = !force && networkState.isOfflineOrRestricted()
         val localDetails = localMangaRepository.getDetails(manga)
         emit(
@@ -82,7 +88,7 @@ class DetailsLoadUseCase @Inject constructor(
                 manga = localDetails,
                 localManga = null,
                 override = override,
-                description = localDetails.description?.parseAsHtml(withImages = false),
+                description = descriptionParser.parse(localDetails.description, withImages = false),
                 isLoaded = skipNetworkLoad,
             ),
         )
@@ -96,7 +102,7 @@ class DetailsLoadUseCase @Inject constructor(
                     manga = localDetails,
                     localManga = null,
                     override = override,
-                    description = localDetails.description?.parseAsHtml(withImages = true),
+                    description = descriptionParser.parse(localDetails.description, withImages = true),
                     isLoaded = true,
                 ),
             )
@@ -106,7 +112,7 @@ class DetailsLoadUseCase @Inject constructor(
                 manga = remoteDetails ?: remoteManga,
                 localManga = LocalManga(localDetails),
                 override = override,
-                description = (remoteDetails ?: localDetails).description?.parseAsHtml(withImages = true),
+                description = descriptionParser.parse((remoteDetails ?: localDetails).description, withImages = true),
                 isLoaded = true,
             )
             emit(mangaDetails)
@@ -124,7 +130,8 @@ class DetailsLoadUseCase @Inject constructor(
     private suspend fun FlowCollector<MangaDetails>.loadRemote(
         manga: Manga,
         override: MangaOverride?,
-        force: Boolean
+        force: Boolean,
+        descriptionParser: DescriptionParser,
     ) = coroutineScope {
         val remoteDeferred = async {
             getDetails(manga, force)
@@ -136,7 +143,7 @@ class DetailsLoadUseCase @Inject constructor(
                     manga = manga,
                     localManga = localManga,
                     override = override,
-                    description = localManga.manga.description?.parseAsHtml(withImages = true),
+                    description = descriptionParser.parse(localManga.manga.description, withImages = true),
                     isLoaded = false,
                 ),
             )
@@ -146,8 +153,10 @@ class DetailsLoadUseCase @Inject constructor(
             manga = remoteDetails,
             localManga = localManga,
             override = override,
-            description = (remoteDetails.description
-                ?: localManga?.manga?.description)?.parseAsHtml(withImages = true),
+            description = descriptionParser.parse(
+                remoteDetails.description ?: localManga?.manga?.description,
+                withImages = true,
+            ),
             isLoaded = true,
         )
         emit(mangaDetails)
@@ -170,6 +179,28 @@ class DetailsLoadUseCase @Inject constructor(
         }
     }
 
+    private inner class DescriptionParser {
+
+        private var lastRaw: String? = null
+        private var lastParsed: CharSequence? = null
+        private var lastWithImages: Boolean = false
+
+        suspend fun parse(raw: String?, withImages: Boolean): CharSequence? {
+            if (raw == null) {
+                return null
+            }
+            val needsImages = withImages && raw.contains("<img", ignoreCase = true)
+            if (raw == lastRaw && (!needsImages || lastWithImages)) {
+                return lastParsed
+            }
+            return raw.parseAsHtml(needsImages).also {
+                lastRaw = raw
+                lastParsed = it
+                lastWithImages = needsImages
+            }
+        }
+    }
+
     private suspend fun String.parseAsHtml(withImages: Boolean): CharSequence? = if (withImages) {
         runInterruptible(Dispatchers.IO) {
             parseAsHtml(imageGetter = imageGetter)
@@ -177,7 +208,9 @@ class DetailsLoadUseCase @Inject constructor(
     } else {
         runInterruptible(Dispatchers.Default) {
             parseAsHtml()
-        }.filterSpans().sanitize()
+        }.filterSpans().let {
+            if (contains("<img", ignoreCase = true)) it.sanitize() else it
+        }
     }.trim().nullIfEmpty()
 
     private fun Spanned.filterSpans(): Spanned {

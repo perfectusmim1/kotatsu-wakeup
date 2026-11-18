@@ -55,7 +55,7 @@ object ActiveParsers {
 	val workingSources: Set<ParserMangaSource>
 		get() = current().working
 
-	fun findSource(name: String): ParserMangaSource? = current().bundle.findSource(name)
+	fun findSource(name: String): ParserMangaSource? = current().sourcesByName[name]
 
 	/** The current [generation], then every later one. */
 	fun observe(): Flow<Int> = generations.map { it.number }.distinctUntilChanged()
@@ -125,6 +125,10 @@ object ActiveParsers {
 
 		val working: Set<ParserMangaSource> by lazy(LazyThreadSafetyMode.PUBLICATION) {
 			Collections.unmodifiableSet(bundle.sources.filterNotTo(LinkedHashSet()) { it.isBroken })
+		}
+
+		val sourcesByName: Map<String, ParserMangaSource> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+			bundle.sources.associateBy { it.name }
 		}
 	}
 }

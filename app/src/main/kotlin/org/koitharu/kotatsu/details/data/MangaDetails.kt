@@ -69,14 +69,13 @@ data class MangaDetails(
         }
     }
 
+    private val cachedLocale: Locale? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        findAppropriateLocale(chapters.keys.singleOrNull()) ?: manga.source.getLocale()
+    }
+
     fun toManga() = mergedManga
 
-    fun getLocale(): Locale? {
-        findAppropriateLocale(chapters.keys.singleOrNull())?.let {
-            return it
-        }
-        return manga.source.getLocale()
-    }
+    fun getLocale(): Locale? = cachedLocale
 
     fun filterChapters(branch: String?) = copy(
         manga = manga.filterChapters(branch),
@@ -107,15 +106,41 @@ data class MangaDetails(
         return result
     }
 
-    private fun findAppropriateLocale(name: String?): Locale? {
-        if (name.isNullOrEmpty()) {
-            return null
+    companion object {
+
+        private val localeLookup: Map<String, Locale> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            val locales = Locale.getAvailableLocales()
+            val map = LinkedHashMap<String, Locale>(locales.size * 2)
+            for (lc in locales) {
+                if (lc.language.isEmpty()) continue
+                fun putName(raw: String) {
+                    if (raw.isNotEmpty()) {
+                        val key = raw.lowercase(Locale.ROOT)
+                        if (key !in map) {
+                            map[key] = lc
+                        }
+                    }
+                }
+                putName(lc.getDisplayName(lc))
+                putName(lc.getDisplayName(Locale.ENGLISH))
+                putName(lc.getDisplayLanguage(lc))
+                putName(lc.getDisplayLanguage(Locale.ENGLISH))
+            }
+            map
         }
-        return Locale.getAvailableLocales().find { lc ->
-            name.contains(lc.getDisplayName(lc), ignoreCase = true) ||
-                name.contains(lc.getDisplayName(Locale.ENGLISH), ignoreCase = true) ||
-                name.contains(lc.getDisplayLanguage(lc), ignoreCase = true) ||
-                name.contains(lc.getDisplayLanguage(Locale.ENGLISH), ignoreCase = true)
+
+        private fun findAppropriateLocale(name: String?): Locale? {
+            if (name.isNullOrEmpty()) {
+                return null
+            }
+            val lowerName = name.lowercase(Locale.ROOT)
+            localeLookup[lowerName]?.let { return it }
+            for ((key, locale) in localeLookup) {
+                if (lowerName.contains(key)) {
+                    return locale
+                }
+            }
+            return null
         }
     }
 }
