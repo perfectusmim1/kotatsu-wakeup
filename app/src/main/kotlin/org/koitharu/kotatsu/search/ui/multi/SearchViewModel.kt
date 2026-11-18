@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,11 +16,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.exceptions.InteractiveActionRequiredException
@@ -54,13 +56,16 @@ import org.koitharu.kotatsu.parsers.model.ParserMangaSource
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.search.domain.SearchKind
+import org.koitharu.kotatsu.search.domain.SearchResults
 import org.koitharu.kotatsu.search.domain.SearchV2Helper
+import java.net.SocketTimeoutException
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
-private const val MAX_PARALLELISM = 4
+private const val MAX_HTTP_PARALLELISM = 12
+private const val SOURCE_SEARCH_TIMEOUT_MS = 15_000L
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
@@ -203,24 +208,26 @@ class SearchViewModel @Inject constructor(
 		}
 		val generation = searchGeneration.get()
 		var job: Job? = null
-		job = launchLoadingJob(Dispatchers.Default) {
+		job = launchLoadingJob(Dispatchers.IO) {
 			try {
-				val semaphore = Semaphore(MAX_PARALLELISM)
-				eligible.map { source ->
-					launch {
-						val key = source.unwrap()
-						try {
-							semaphore.withPermit {
-								val updated = searchSource(source)
-								if (searchGeneration.get() == generation) {
-									replaceOrRemoveSourceResult(key, updated)
+				val semaphore = Semaphore(MAX_HTTP_PARALLELISM)
+				coroutineScope {
+					eligible.forEach { source ->
+						launch {
+							val key = source.unwrap()
+							try {
+								semaphore.withPermit {
+									val updated = searchSource(source)
+									if (searchGeneration.get() == generation) {
+										replaceOrRemoveSourceResult(key, updated)
+									}
 								}
+							} finally {
+								refreshingSources.remove(key)
 							}
-						} finally {
-							refreshingSources.remove(key)
 						}
 					}
-				}.joinAll()
+				}
 			} finally {
 				eligible.forEach { refreshingSources.remove(it.unwrap()) }
 				job?.let { refreshJobs.remove(it) }
@@ -257,7 +264,7 @@ class SearchViewModel @Inject constructor(
 			return
 		}
 		val prevJob = searchJob
-		searchJob = launchLoadingJob(Dispatchers.Default) {
+		searchJob = launchLoadingJob(Dispatchers.IO) {
 			includeDisabledSources.value = true
 			prevJob?.join()
 			val sources = if (pinnedOnly.value) {
@@ -265,33 +272,37 @@ class SearchViewModel @Inject constructor(
 			} else {
 				sourcesRepository.getDisabledSources().toList().rankedForSweep(batch = 1)
 			}
-			val semaphore = Semaphore(MAX_PARALLELISM)
-			sources.map { source ->
-				launch {
-					semaphore.withPermit {
-						appendResult(searchSource(source))
-					}
-				}
-			}.joinAll()
+			sweepSources(sources)
 		}
 	}
 
 	private fun doSearch() {
 		val prevJob = searchJob
-		searchJob = launchLoadingJob(Dispatchers.Default) {
+		searchJob = launchLoadingJob(Dispatchers.IO) {
 			prevJob?.cancelAndJoin()
-			appendResult(searchHistory())
-			appendResult(searchFavorites())
-			appendResult(searchLocal())
-			val sources = getPresetSourcesOrDefault().rankedForSweep(batch = 0)
-			val semaphore = Semaphore(MAX_PARALLELISM)
-			sources.map { source ->
+			coroutineScope {
+				launch { appendResult(searchHistory()) }
+				launch { appendResult(searchFavorites()) }
+				launch { appendResult(searchLocal()) }
+				val sources = getPresetSourcesOrDefault().rankedForSweep(batch = 0)
+				sweepSources(sources)
+			}
+		}
+	}
+
+	private suspend fun sweepSources(sources: List<MangaSource>) {
+		if (sources.isEmpty()) {
+			return
+		}
+		val semaphore = Semaphore(MAX_HTTP_PARALLELISM)
+		coroutineScope {
+			sources.forEach { source ->
 				launch {
 					semaphore.withPermit {
 						appendResult(searchSource(source))
 					}
 				}
-			}.joinAll()
+			}
 		}
 	}
 
@@ -300,8 +311,14 @@ class SearchViewModel @Inject constructor(
 	private suspend fun searchSource(source: MangaSource): SearchResultsListModel? {
 		val key = source.unwrap()
 		return runCatchingCancellable {
-			val searchHelper = searchHelperFactory.create(source)
-			searchHelper(query, kind)
+			withContext(Dispatchers.IO) {
+				val searchHelper = searchHelperFactory.create(source)
+				// Wrap nullable SearchResults? so an empty source response is not mistaken for a timeout.
+				val attempt = withTimeoutOrNull(SOURCE_SEARCH_TIMEOUT_MS) {
+					SearchAttempt(searchHelper(query, kind))
+				} ?: throw SocketTimeoutException("Search timed out")
+				attempt.results
+			}
 		}.fold(
 			onSuccess = { result ->
 				failedAtMs.remove(key)
@@ -495,4 +512,6 @@ class SearchViewModel @Inject constructor(
 			sourcesRepository.getEnabledSources()
 		}
 	}
+
+	private class SearchAttempt(val results: SearchResults?)
 }

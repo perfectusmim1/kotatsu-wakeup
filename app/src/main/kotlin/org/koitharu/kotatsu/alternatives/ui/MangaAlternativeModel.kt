@@ -1,14 +1,17 @@
 package org.koitharu.kotatsu.alternatives.ui
 
 import org.koitharu.kotatsu.core.model.chaptersCount
+import org.koitharu.kotatsu.list.ui.ListModelDiffCallback
 import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.list.ui.model.MangaGridModel
 import org.koitharu.kotatsu.parsers.model.Manga
 
 data class MangaAlternativeModel(
 	val mangaModel: MangaGridModel,
-	private val referenceChapters: Int,
+	val referenceChapters: Int,
 	val isMigrationEnabled: Boolean = true,
+	val titleMatchScore: Int = 0,
+	val sourcePriority: Int = 0,
 ) : ListModel {
 
 	val manga: Manga
@@ -25,6 +28,11 @@ data class MangaAlternativeModel(
 
 	override fun getChangePayload(previousState: ListModel): Any? = if (previousState is MangaAlternativeModel) {
 		mangaModel.getChangePayload(previousState.mangaModel)
+			?: ListModelDiffCallback.PAYLOAD_ANYTHING_CHANGED.takeIf {
+				referenceChapters != previousState.referenceChapters ||
+					isMigrationEnabled != previousState.isMigrationEnabled ||
+					chaptersCount != previousState.chaptersCount
+			}
 	} else {
 		null
 	}

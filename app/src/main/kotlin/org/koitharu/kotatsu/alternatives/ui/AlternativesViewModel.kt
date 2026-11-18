@@ -6,6 +6,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.alternatives.domain.AlternativeSearchEvent
 import org.koitharu.kotatsu.alternatives.domain.AlternativeSearchStatus
@@ -70,8 +74,9 @@ class AlternativesViewModel @Inject constructor(
 
 	private var migrationJob: Job? = null
 	private var searchJob: Job? = null
+	private var referenceDetailsJob: Job? = null
 
-	private val mangaDetails = suspendLazy {
+	private val mangaDetails = suspendLazy(Dispatchers.IO) {
 		mangaRepositoryFactory.create(manga.source).getDetails(manga)
 	}
 
@@ -93,7 +98,7 @@ class AlternativesViewModel @Inject constructor(
 	) { results, loading, options, reference ->
 		val filtered = results
 			.filterNot { options.hideNoChapters && it.chaptersCount == 0 }
-			.sortedWith(alternativeComparator(options, reference.manga, reference.chaptersCount))
+			.sortedWith(alternativeComparator(options, reference.chaptersCount))
 		when {
 			filtered.isEmpty() -> listOf(
 				if (loading) {
@@ -178,48 +183,141 @@ class AlternativesViewModel @Inject constructor(
 		doSearch()
 	}
 
+	private fun launchReferenceDetailsIfNeeded() {
+		val cached = mangaDetails.peek()
+		if (cached != null) {
+			val chapters = cached.chaptersCount()
+			referenceManga.value = MangaAlternativeReference(cached, chapters)
+			return
+		}
+		if (referenceDetailsJob?.isActive == true) {
+			return
+		}
+		referenceDetailsJob = launchJob(Dispatchers.IO + SkipErrors) {
+			val loaded = withTimeoutOrNull(REFERENCE_DETAILS_TIMEOUT_MS) {
+				mangaDetails.getOrDefault(manga)
+			} ?: return@launchJob
+			val loadedChapters = loaded.chaptersCount()
+			referenceManga.value = MangaAlternativeReference(loaded, loadedChapters)
+			results.update { current ->
+				if (current.isEmpty()) {
+					current
+				} else {
+					var changed = false
+					val updated = current.map { model ->
+						if (model.referenceChapters == loadedChapters) {
+							model
+						} else {
+							changed = true
+							model.copy(referenceChapters = loadedChapters)
+						}
+					}
+					if (changed) updated else current
+				}
+			}
+		}
+	}
+
 	private fun doSearch() {
-		results.update { current -> current.map { it.copy(isMigrationEnabled = false) } }
+		val pendingQuery = PrecomputedQuery.from(options.value.query)
+		results.update { current ->
+			if (current.isEmpty()) {
+				current
+			} else {
+				current.map {
+					it.copy(
+						isMigrationEnabled = false,
+						titleMatchScore = it.manga.titleMatchScore(pendingQuery),
+					)
+				}
+			}
+		}
 		val previousJob = searchJob
 		searchJob = launchLoadingJob(Dispatchers.Default) {
 			previousJob?.cancelAndJoin()
 			sourceSearchStatus.value = AlternativeSearchStatus(isRunning = true)
 			var receivedResult = false
 			try {
-				val reference = mangaDetails.getOrDefault(manga)
-				val referenceChapters = reference.chaptersCount()
-				referenceManga.value = MangaAlternativeReference(reference, referenceChapters)
+				launchReferenceDetailsIfNeeded()
 				if (!sourceScopeInitialized) {
-					val scopeOptions = alternativesUseCase.getSourceScopeOptions(reference.source)
+					val scopeOptions = alternativesUseCase.getSourceScopeOptions(manga.source)
 					defaultSourceScope = scopeOptions.defaultScope
 					_scopeOptions.value = scopeOptions
 					options.update { it.copy(sourceScope = defaultSourceScope) }
 					sourceScopeInitialized = true
 				}
 				val searchOptions = options.value
-				alternativesUseCase(reference, searchOptions).collect { event ->
-					when (event) {
-						is AlternativeSearchEvent.Progress -> sourceSearchStatus.update {
-							it.copy(
-								completedSources = maxOf(it.completedSources, event.completedSources),
-								totalSources = event.totalSources,
-							)
-						}
-
-						is AlternativeSearchEvent.Result -> {
-							if (!receivedResult) {
-								results.value = emptyList()
-								receivedResult = true
+				val precomputedQuery = PrecomputedQuery.from(searchOptions.query)
+				val defaultLocale = Locale.getDefault()
+				coroutineScope {
+					val resultChannel = Channel<Manga>(Channel.UNLIMITED)
+					val batchProcessor = launch(Dispatchers.Default) {
+						val batch = LinkedHashMap<Long, Manga>()
+						while (true) {
+							val first = resultChannel.receiveCatching().getOrNull() ?: break
+							batch[first.id] = first
+							withTimeoutOrNull(
+								if (receivedResult) STREAM_BATCH_WINDOW_MS else INITIAL_BATCH_WINDOW_MS,
+							) {
+								while (batch.size < MAX_STREAM_BATCH_SIZE) {
+									val next = resultChannel.receiveCatching().getOrNull()
+										?: return@withTimeoutOrNull
+									batch[next.id] = next
+								}
 							}
-							val model = MangaAlternativeModel(
-								mangaModel = mangaListMapper.toListModel(event.manga, ListMode.GRID) as MangaGridModel,
-								referenceChapters = referenceChapters,
-							)
+							val batchList = batch.values.toList()
+							batch.clear()
+							val mapped = mangaListMapper.toListModelList(batchList, ListMode.GRID)
+							val refChaptersAtMap = referenceManga.value.chaptersCount
+							val models = mapped.map { listModel ->
+								val gridModel = listModel as MangaGridModel
+								MangaAlternativeModel(
+									mangaModel = gridModel,
+									referenceChapters = refChaptersAtMap,
+									titleMatchScore = gridModel.manga.titleMatchScore(precomputedQuery),
+									sourcePriority = gridModel.manga.source.priority(manga.source, defaultLocale),
+								)
+							}
+							val newIds = models.mapTo(HashSet(models.size)) { it.manga.id }
 							results.update { current ->
-								current.filterNot { it.manga.id == model.manga.id } + model
+								val latestRefChapters = referenceManga.value.chaptersCount
+								val adjustedModels = if (latestRefChapters == refChaptersAtMap) {
+									models
+								} else {
+									models.map { it.copy(referenceChapters = latestRefChapters) }
+								}
+								val base = if (!receivedResult) {
+									emptyList()
+								} else {
+									current.filterNot { it.manga.id in newIds }
+								}
+								base + adjustedModels
 							}
+							receivedResult = true
 						}
 					}
+					try {
+						alternativesUseCase(
+							manga = manga,
+							options = searchOptions,
+							loadDetails = true,
+							emitSearchMatchesBeforeDetails = true,
+						).collect { event ->
+							when (event) {
+								is AlternativeSearchEvent.Progress -> sourceSearchStatus.update {
+									it.copy(
+										completedSources = maxOf(it.completedSources, event.completedSources),
+										totalSources = event.totalSources,
+									)
+								}
+
+								is AlternativeSearchEvent.Result -> resultChannel.trySend(event.manga)
+							}
+						}
+					} finally {
+						resultChannel.close()
+					}
+					batchProcessor.join()
 				}
 				if (!receivedResult) results.value = emptyList()
 			} finally {
@@ -230,19 +328,18 @@ class AlternativesViewModel @Inject constructor(
 
 	private fun alternativeComparator(
 		options: AlternativesSearchOptions,
-		reference: Manga,
 		referenceChapters: Int,
 	): Comparator<MangaAlternativeModel> = Comparator { left, right ->
 		val primary = when (options.sortOrder) {
 			AlternativeSortOrder.BEST_MATCH -> compareValues(
-				right.manga.titleMatchScore(options.query),
-				left.manga.titleMatchScore(options.query),
+				right.titleMatchScore,
+				left.titleMatchScore,
 			).takeUnless { it == 0 } ?: compareValues(
 				right.chaptersCount > 0,
 				left.chaptersCount > 0,
 			).takeUnless { it == 0 } ?: compareValues(
-				right.manga.source.priority(reference.source),
-				left.manga.source.priority(reference.source),
+				right.sourcePriority,
+				left.sourcePriority,
 			)
 
 			AlternativeSortOrder.MOST_CHAPTERS -> compareValues(right.chaptersCount, left.chaptersCount)
@@ -251,8 +348,8 @@ class AlternativesViewModel @Inject constructor(
 				right.chapterDistanceFrom(referenceChapters),
 			)
 			AlternativeSortOrder.SOURCE_PRIORITY -> compareValues(
-				right.manga.source.priority(reference.source),
-				left.manga.source.priority(reference.source),
+				right.sourcePriority,
+				left.sourcePriority,
 			)
 		}
 		primary.takeUnless { it == 0 }
@@ -265,40 +362,79 @@ class AlternativesViewModel @Inject constructor(
 	private fun MangaAlternativeModel.chapterDistanceFrom(referenceChapters: Int): Int =
 		if (chaptersCount == 0) Int.MAX_VALUE else abs(chaptersCount - referenceChapters)
 
-	private fun Manga.titleMatchScore(query: String): Int {
-		val normalizedQuery = query.normalizeTitle()
-		if (normalizedQuery.isEmpty()) return 0
-		return (sequenceOf(title) + altTitles.asSequence()).maxOf { candidate ->
-			val normalizedCandidate = candidate.normalizeTitle()
-			when {
-				normalizedCandidate == normalizedQuery -> 100
-				normalizedCandidate.startsWith(normalizedQuery) || normalizedQuery.startsWith(normalizedCandidate) -> 85
-				normalizedCandidate.contains(normalizedQuery) || normalizedQuery.contains(normalizedCandidate) -> 75
-				else -> {
-					val queryTokens = normalizedQuery.splitToSequence(' ').filter(String::isNotEmpty).toSet()
-					val candidateTokens = normalizedCandidate.splitToSequence(' ').filter(String::isNotEmpty).toSet()
-					val total = maxOf(queryTokens.size, candidateTokens.size)
-					if (total == 0) 0 else queryTokens.intersect(candidateTokens).size * 60 / total
+	private fun Manga.titleMatchScore(query: PrecomputedQuery): Int {
+		if (query.normalized.isEmpty()) return 0
+		var best = scoreCandidate(title, query)
+		if (best == 100) return 100
+		for (altTitle in altTitles) {
+			val score = scoreCandidate(altTitle, query)
+			if (score > best) {
+				best = score
+				if (best == 100) return 100
+			}
+		}
+		return best
+	}
+
+	private fun scoreCandidate(candidate: String, query: PrecomputedQuery): Int {
+		val normalizedCandidate = candidate.normalizeTitle()
+		if (normalizedCandidate.isEmpty()) return 0
+		val normalizedQuery = query.normalized
+		return when {
+			normalizedCandidate == normalizedQuery -> 100
+			normalizedCandidate.startsWith(normalizedQuery) || normalizedQuery.startsWith(normalizedCandidate) -> 85
+			normalizedCandidate.contains(normalizedQuery) || normalizedQuery.contains(normalizedCandidate) -> 75
+			else -> {
+				val queryTokens = query.tokens
+				val candidateTokens = normalizedCandidate.splitToSequence(' ').filter(String::isNotEmpty).toSet()
+				val total = maxOf(queryTokens.size, candidateTokens.size)
+				if (total == 0) {
+					0
+				} else {
+					var matchedTokens = 0
+					for (token in candidateTokens) {
+						if (token in queryTokens) matchedTokens++
+					}
+					matchedTokens * 60 / total
 				}
 			}
 		}
 	}
 
-	private fun String.normalizeTitle(): String = lowercase(Locale.ROOT)
-		.replace(NON_TITLE_CHARACTER, " ")
-		.trim()
-		.replace(MULTIPLE_SPACES, " ")
-
-	private fun MangaSource.priority(ref: MangaSource): Int {
+	private fun MangaSource.priority(ref: MangaSource, defaultLocale: Locale): Int {
 		if (this !is ParserMangaSource || ref !is ParserMangaSource) return 0
 		var result = 0
-		if (locale == ref.locale) result += 4 else if (locale.toLocale() == Locale.getDefault()) result += 2
+		if (locale == ref.locale) result += 4 else if (locale.toLocale() == defaultLocale) result += 2
 		if (contentType == ref.contentType) result++
 		return result
 	}
 
+	private class PrecomputedQuery(
+		val normalized: String,
+		val tokens: Set<String>,
+	) {
+		companion object {
+			fun from(query: String): PrecomputedQuery {
+				val normalized = query.normalizeTitle()
+				val tokens = if (normalized.isEmpty()) {
+					emptySet()
+				} else {
+					normalized.split(' ').filterTo(HashSet()) { it.isNotEmpty() }
+				}
+				return PrecomputedQuery(normalized, tokens)
+			}
+		}
+	}
+
 	private companion object {
+		const val REFERENCE_DETAILS_TIMEOUT_MS = 12_000L
+		const val INITIAL_BATCH_WINDOW_MS = 25L
+		const val STREAM_BATCH_WINDOW_MS = 75L
+		const val MAX_STREAM_BATCH_SIZE = 32
 		val NON_TITLE_CHARACTER = Regex("[^\\p{L}\\p{N}]+")
-		val MULTIPLE_SPACES = Regex("\\s+")
+
+		fun String.normalizeTitle(): String = lowercase(Locale.ROOT)
+			.replace(NON_TITLE_CHARACTER, " ")
+			.trim()
 	}
 }
