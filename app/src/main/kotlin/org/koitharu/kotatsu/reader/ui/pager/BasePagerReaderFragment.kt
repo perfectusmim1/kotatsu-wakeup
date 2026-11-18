@@ -13,9 +13,6 @@ import androidx.viewpager2.widget.ViewPager2
 import androidx.viewpager2.widget.ViewPager2.PageTransformer
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.prefs.ReaderAnimation
@@ -60,7 +57,6 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 		binding: FragmentReaderPagerBinding,
 		savedInstanceState: Bundle?,
 	) {
-		super.onViewBindingCreated(binding, savedInstanceState)
 		with(binding.pager) {
 			onInitPager(this)
 			doOnPageChanged { position ->
@@ -76,7 +72,7 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 			pagerLifecycleDispatcher = PagerLifecycleDispatcher(this).also {
 				registerOnPageChangeCallback(it)
 			}
-			adapter = readerAdapter
+			adapter = ensureAdapter()
 		}
 
 		viewModel.pageAnimation.observe(viewLifecycleOwner) {
@@ -92,6 +88,8 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 				}
 			}
 		}
+
+		super.onViewBindingCreated(binding, savedInstanceState)
 	}
 
 	override fun onDestroyView() {
@@ -122,7 +120,7 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 		return false
 	}
 
-	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
+	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) {
 		val adapter = requireAdapter()
 		val pager = viewBinding?.pager
 		val anchorPage = if (pendingState == null && pager != null && adapter.hasItems) {
@@ -134,14 +132,9 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 		var restoredPosition = -1
 		isUpdatingItems = true
 		try {
-			val items = launch {
-				adapter.setItems(pages)
-				yield()
-				pagerLifecycleDispatcher?.postInvalidate()
-			}
+			adapter.setItems(pages)
 			if (pendingState != null) {
 				val position = pages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
-				items.join()
 				if (position != -1) {
 					requireViewBinding().pager.setCurrentItem(position, false)
 					restoredPosition = position
@@ -150,7 +143,6 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 						.show()
 				}
 			} else {
-				items.join()
 				val targetPosition = anchorPage?.let { anchor ->
 					pages.indexOfFirst { it.id == anchor.id && it.chapterId == anchor.chapterId }
 						.takeIf { it != -1 }
@@ -165,6 +157,7 @@ abstract class BasePagerReaderFragment : BaseReaderFragment<FragmentReaderPagerB
 					restoredPosition = targetPosition
 				}
 			}
+			pagerLifecycleDispatcher?.postInvalidate()
 		} finally {
 			isUpdatingItems = false
 		}

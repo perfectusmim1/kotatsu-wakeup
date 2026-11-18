@@ -25,7 +25,7 @@ abstract class BaseReaderFragment<B : ViewBinding> : BaseFragment<B>(), ZoomCont
 
 	override fun onViewBindingCreated(binding: B, savedInstanceState: Bundle?) {
 		super.onViewBindingCreated(binding, savedInstanceState)
-		readerAdapter = onCreateAdapter()
+		ensureAdapter()
 
 		viewModel.content.observe(viewLifecycleOwner) {
 			// Determine which state to use for restoring position:
@@ -62,6 +62,10 @@ abstract class BaseReaderFragment<B : ViewBinding> : BaseFragment<B>(), ZoomCont
 		viewModel.saveCurrentState(getCurrentState())
 		readerAdapter = null
 		super.onDestroyView()
+	}
+
+	protected fun ensureAdapter(): BaseReaderAdapter<*> = readerAdapter ?: onCreateAdapter().also {
+		readerAdapter = it
 	}
 
 	protected fun requireAdapter() = checkNotNull(readerAdapter) {

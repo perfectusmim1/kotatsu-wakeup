@@ -13,10 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.ui.list.lifecycle.RecyclerViewLifecycleDispatcher
@@ -48,6 +45,8 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 	private val scrollInterpolator = DecelerateInterpolator()
 
 	private var recyclerLifecycleDispatcher: RecyclerViewLifecycleDispatcher? = null
+	private var pendingLayoutRestoreListener: View.OnLayoutChangeListener? = null
+	private var pendingPostRestoreRunnable: Runnable? = null
 	private var canGoPrev = true
 	private var canGoNext = true
 	private var isUpdatingItems = false
@@ -58,7 +57,6 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 	) = FragmentReaderWebtoonBinding.inflate(inflater, container, false)
 
 	override fun onViewBindingCreated(binding: FragmentReaderWebtoonBinding, savedInstanceState: Bundle?) {
-		super.onViewBindingCreated(binding, savedInstanceState)
 		with(binding.recyclerView) {
 			setHasFixedSize(true)
 			// One continuous strip: pages joining or leaving it must not fade in and out over what is being read
@@ -66,7 +64,7 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 			// Pages just read stay as they are rather than loading all over again on going back a little. Pages ahead come
 			// from what is laid out in the direction of scrolling. Only as many as memory allows
 			setItemViewCacheSize(if (context.isLowRamDevice()) PAGES_KEPT_LOW_RAM else PAGES_KEPT)
-			adapter = readerAdapter
+			adapter = ensureAdapter()
 			addOnPageScrollListener(this@WebtoonReaderFragment)
 			recyclerLifecycleDispatcher = RecyclerViewLifecycleDispatcher().also {
 				addOnScrollListener(it)
@@ -101,11 +99,15 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 				canGoNext = true
 			}
 		}
+		super.onViewBindingCreated(binding, savedInstanceState)
 	}
 
 	override fun onDestroyView() {
+		viewBinding?.recyclerView?.let { rv ->
+			cancelPendingPostLayoutRestore(rv)
+			rv.adapter = null
+		}
 		recyclerLifecycleDispatcher = null
-		requireViewBinding().recyclerView.adapter = null
 		super.onDestroyView()
 	}
 
@@ -148,7 +150,7 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 		}
 	}
 
-	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
+	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) {
 		val adapter = requireAdapter()
 		val rv = viewBinding?.recyclerView
 		val lm = rv?.layoutManager as? LinearLayoutManager
@@ -171,16 +173,9 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 		var notifyPosition = -1
 		isUpdatingItems = true
 		try {
-			val setItems = launch {
-				adapter.setItems(pages)
-				yield()
-				viewBinding?.recyclerView?.let { recycler ->
-					recyclerLifecycleDispatcher?.invalidate(recycler)
-				}
-			}
+			adapter.setItems(pages)
 			if (pendingState != null) {
 				val position = pages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
-				setItems.join()
 				if (position != -1) {
 					with(requireViewBinding().recyclerView) {
 						stopScroll()
@@ -195,86 +190,78 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 						} else {
 							firstVisibleItemPosition = position
 						}
-						val targetChapterId = pendingState.chapterId
-						val targetPageIndex = pendingState.page
-						val targetScroll = pendingState.scroll
-						post {
-							val targetPos = readerAdapter?.findPagePosition(targetChapterId, targetPageIndex) ?: -1
-							if (targetPos != -1) {
-								(findViewHolderForAdapterPosition(targetPos) as? WebtoonHolder)
-									?.restoreScroll(targetScroll)
-							}
-							notifyScrollChanged()
-						}
+						schedulePostLayoutRestore(
+							rv = this,
+							targetChapterId = pendingState.chapterId,
+							targetPageIndex = pendingState.page,
+							targetScroll = pendingState.scroll,
+						)
 					}
 					notifyPosition = position
 				} else {
+					rv?.let { recyclerLifecycleDispatcher?.invalidate(it) }
 					Snackbar.make(requireView(), R.string.not_found_404, Snackbar.LENGTH_SHORT)
 						.show()
 				}
-			} else {
-				setItems.join()
-				if (rv != null && lm != null) {
-					val savedAnchor = anchorPage
-					if (savedAnchor != null) {
-						val newPosition = pages.indexOfFirst {
-							it.id == savedAnchor.id && it.chapterId == savedAnchor.chapterId
-						}.takeIf { it != -1 }
-							?: pages.indexOfPosition(savedAnchor.chapterId, savedAnchor.index)
-							?: -1
-						if (newPosition != -1 && (newPosition != anchorPos || anchorPos == RecyclerView.NO_POSITION)) {
-							if (anchorPos == RecyclerView.NO_POSITION && fallbackState != null && fallbackState.scroll > 0) {
-								val gap = if (newPosition > 0 && viewModel.isWebtoonGapsEnabled.value) {
-									resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
-								} else {
-									0
-								}
-								val targetChapterId = fallbackState.chapterId
-								val targetPageIndex = fallbackState.page
-								val targetScroll = fallbackState.scroll
-								lm.scrollToPositionWithOffset(newPosition, -gap)
-								rv.post {
-									val targetPos = readerAdapter?.findPagePosition(targetChapterId, targetPageIndex) ?: -1
-									if (targetPos != -1) {
-										(rv.findViewHolderForAdapterPosition(targetPos) as? WebtoonHolder)
-											?.restoreScroll(targetScroll)
-									}
-									rv.notifyScrollChanged()
-								}
-							} else {
-								lm.scrollToPositionWithOffset(newPosition, anchorTop)
-								rv.updateChildrenScroll()
-							}
-							notifyPosition = newPosition
-						}
-					} else if (fallbackState != null) {
-						val newPosition = pages.indexOfPosition(fallbackState.chapterId, fallbackState.page) ?: -1
-						if (newPosition != -1) {
-							val gap = if (fallbackState.scroll > 0 && newPosition > 0 && viewModel.isWebtoonGapsEnabled.value) {
+			} else if (rv != null && lm != null) {
+				val savedAnchor = anchorPage
+				if (savedAnchor != null) {
+					val newPosition = pages.indexOfFirst {
+						it.id == savedAnchor.id && it.chapterId == savedAnchor.chapterId
+					}.takeIf { it != -1 }
+						?: pages.indexOfPosition(savedAnchor.chapterId, savedAnchor.index)
+						?: -1
+					if (newPosition != -1 && (newPosition != anchorPos || anchorPos == RecyclerView.NO_POSITION)) {
+						if (anchorPos == RecyclerView.NO_POSITION && fallbackState != null && fallbackState.scroll > 0) {
+							val gap = if (newPosition > 0 && viewModel.isWebtoonGapsEnabled.value) {
 								resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
 							} else {
 								0
 							}
-							if (gap != 0) {
-								lm.scrollToPositionWithOffset(newPosition, -gap)
-							} else {
-								rv.firstVisibleItemPosition = newPosition
-							}
-							val targetChapterId = fallbackState.chapterId
-							val targetPageIndex = fallbackState.page
-							val targetScroll = fallbackState.scroll
-							rv.post {
-								val targetPos = readerAdapter?.findPagePosition(targetChapterId, targetPageIndex) ?: -1
-								if (targetPos != -1) {
-									(rv.findViewHolderForAdapterPosition(targetPos) as? WebtoonHolder)
-										?.restoreScroll(targetScroll)
-								}
-								rv.notifyScrollChanged()
-							}
-							notifyPosition = newPosition
+							lm.scrollToPositionWithOffset(newPosition, -gap)
+							schedulePostLayoutRestore(
+								rv = rv,
+								targetChapterId = fallbackState.chapterId,
+								targetPageIndex = fallbackState.page,
+								targetScroll = fallbackState.scroll,
+							)
+						} else {
+							lm.scrollToPositionWithOffset(newPosition, anchorTop)
+							rv.updateChildrenScroll()
+							schedulePostLayoutRestore(rv = rv, targetScroll = null)
 						}
+						notifyPosition = newPosition
+					} else {
+						recyclerLifecycleDispatcher?.invalidate(rv)
 					}
+				} else if (fallbackState != null) {
+					val newPosition = pages.indexOfPosition(fallbackState.chapterId, fallbackState.page) ?: -1
+					if (newPosition != -1) {
+						val gap = if (fallbackState.scroll > 0 && newPosition > 0 && viewModel.isWebtoonGapsEnabled.value) {
+							resources.getDimensionPixelSize(R.dimen.webtoon_pages_gap)
+						} else {
+							0
+						}
+						if (gap != 0) {
+							lm.scrollToPositionWithOffset(newPosition, -gap)
+						} else {
+							rv.firstVisibleItemPosition = newPosition
+						}
+						schedulePostLayoutRestore(
+							rv = rv,
+							targetChapterId = fallbackState.chapterId,
+							targetPageIndex = fallbackState.page,
+							targetScroll = fallbackState.scroll,
+						)
+						notifyPosition = newPosition
+					} else {
+						recyclerLifecycleDispatcher?.invalidate(rv)
+					}
+				} else {
+					recyclerLifecycleDispatcher?.invalidate(rv)
 				}
+			} else {
+				rv?.let { recyclerLifecycleDispatcher?.invalidate(it) }
 			}
 		} finally {
 			isUpdatingItems = false
@@ -325,10 +312,79 @@ class WebtoonReaderFragment : BaseReaderFragment<FragmentReaderWebtoonBinding>()
 		with(requireViewBinding().recyclerView) {
 			stopScroll()
 			firstVisibleItemPosition = position
-			post {
-				(findViewHolderForAdapterPosition(position) as? WebtoonHolder)?.restoreScroll(0)
-				notifyScrollChanged()
+			schedulePostLayoutRestore(
+				rv = this,
+				directAdapterPosition = position,
+				targetScroll = 0,
+			)
+		}
+	}
+
+	private fun cancelPendingPostLayoutRestore(rv: WebtoonRecyclerView) {
+		pendingLayoutRestoreListener?.let { rv.removeOnLayoutChangeListener(it) }
+		pendingLayoutRestoreListener = null
+		pendingPostRestoreRunnable?.let { rv.removeCallbacks(it) }
+		pendingPostRestoreRunnable = null
+	}
+
+	private fun schedulePostLayoutRestore(
+		rv: WebtoonRecyclerView,
+		targetChapterId: Long? = null,
+		targetPageIndex: Int = -1,
+		directAdapterPosition: Int = -1,
+		targetScroll: Int? = 0,
+	) {
+		cancelPendingPostLayoutRestore(rv)
+		val applyRestore = {
+			if (targetScroll != null) {
+				val targetPos = if (directAdapterPosition >= 0) {
+					directAdapterPosition
+				} else if (targetChapterId != null) {
+					readerAdapter?.findPagePosition(targetChapterId, targetPageIndex) ?: -1
+				} else {
+					-1
+				}
+				if (targetPos != -1) {
+					(rv.findViewHolderForAdapterPosition(targetPos) as? WebtoonHolder)
+						?.restoreScroll(targetScroll)
+				}
 			}
+			recyclerLifecycleDispatcher?.invalidate(rv)
+			rv.notifyScrollChanged()
+		}
+		if (rv.isAttachedToWindow && rv.isLaidOut && !rv.isLayoutRequested) {
+			val runnable = Runnable {
+				pendingPostRestoreRunnable = null
+				applyRestore()
+			}
+			pendingPostRestoreRunnable = runnable
+			rv.post(runnable)
+		} else {
+			val listener = object : View.OnLayoutChangeListener {
+				override fun onLayoutChange(
+					v: View?,
+					left: Int,
+					top: Int,
+					right: Int,
+					bottom: Int,
+					oldLeft: Int,
+					oldTop: Int,
+					oldRight: Int,
+					oldBottom: Int,
+				) {
+					if (pendingLayoutRestoreListener !== this) return
+					rv.removeOnLayoutChangeListener(this)
+					pendingLayoutRestoreListener = null
+					val runnable = Runnable {
+						pendingPostRestoreRunnable = null
+						applyRestore()
+					}
+					pendingPostRestoreRunnable = runnable
+					rv.post(runnable)
+				}
+			}
+			pendingLayoutRestoreListener = listener
+			rv.addOnLayoutChangeListener(listener)
 		}
 	}
 

@@ -206,6 +206,9 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 					continue // repinPage() is about to place it without moving what is on screen
 				}
 				val ssiv = frame.target
+				if (shouldSkipSwapScrollClamp(ssiv.isReady, ssiv.isSwapHeightFrozen)) {
+					continue
+				}
 				val range = ssiv.getScrollRange()
 				val topEdge = padTop + (lm?.getTopDecorationHeight(child) ?: 0)
 				val bottomEdge = padBottom - (lm?.getBottomDecorationHeight(child) ?: 0)
@@ -458,5 +461,11 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 		fun onPullTriggeredTop()
 		fun onPullTriggeredBottom()
 		fun onPullCancelled()
+	}
+
+	companion object {
+		internal fun shouldSkipSwapScrollClamp(isReady: Boolean, isSwapHeightFrozen: Boolean): Boolean {
+			return !isReady && isSwapHeightFrozen
+		}
 	}
 }

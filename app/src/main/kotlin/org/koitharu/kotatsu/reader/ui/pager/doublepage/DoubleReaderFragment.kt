@@ -8,9 +8,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.os.NetworkState
 import org.koitharu.kotatsu.core.prefs.AppSettings
@@ -62,17 +59,17 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 		binding: FragmentReaderDoubleBinding,
 		savedInstanceState: Bundle?,
 	) {
-		super.onViewBindingCreated(binding, savedInstanceState)
 		with(binding.recyclerView) {
 			clipChildren = false
 			clipToPadding = false
-			adapter = readerAdapter
+			adapter = ensureAdapter()
 			recyclerLifecycleDispatcher = RecyclerViewLifecycleDispatcher().also {
 				addOnScrollListener(it)
 			}
 			addOnScrollListener(PageScrollListener())
 			DoublePageSnapHelper(settings).attachToRecyclerView(this)
 		}
+		super.onViewBindingCreated(binding, savedInstanceState)
 	}
 
 	override fun onDestroyView() {
@@ -81,7 +78,7 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 		super.onDestroyView()
 	}
 
-	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) = coroutineScope {
+	override suspend fun onPagesChanged(pages: List<ReaderPage>, pendingState: ReaderState?) {
 		val adapter = requireAdapter()
 		val rv = viewBinding?.recyclerView
 		val lm = rv?.layoutManager as? LinearLayoutManager
@@ -117,16 +114,9 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 		var restoredPosition = -1
 		isUpdatingItems = true
 		try {
-			val items = launch {
-				adapter.setItems(paddedPages)
-				yield()
-				viewBinding?.recyclerView?.let { recycler ->
-					recyclerLifecycleDispatcher?.invalidate(recycler)
-				}
-			}
+			adapter.setItems(paddedPages)
 			if (pendingState != null) {
 				var position = paddedPages.indexOfPosition(pendingState.chapterId, pendingState.page) ?: -1
-				items.join()
 				if (position != -1) {
 					position = position.toPagePosition()
 					requireViewBinding().recyclerView.firstVisibleItemPosition = position
@@ -136,7 +126,6 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 						.show()
 				}
 			} else {
-				items.join()
 				val targetRawPos = anchorPage?.let { anchor ->
 					paddedPages.indexOfFirst { it.id == anchor.id && it.chapterId == anchor.chapterId }
 						.takeIf { it != -1 }
@@ -151,6 +140,9 @@ open class DoubleReaderFragment : BaseReaderFragment<FragmentReaderDoubleBinding
 					}
 					restoredPosition = targetPosition
 				}
+			}
+			viewBinding?.recyclerView?.let { recycler ->
+				recyclerLifecycleDispatcher?.invalidate(recycler)
 			}
 		} finally {
 			isUpdatingItems = false

@@ -182,6 +182,7 @@ class WebtoonHolder(
 		binding.ssiv.colorFilter = settings.colorFilter?.toColorFilter()
 		val restore = scrollToRestore
 		scrollToRestore = 0
+		val wasSwap = binding.ssiv.consumeWasSwapInProgress()
 		val recyclerView = itemView.parent as? WebtoonRecyclerView
 		val rowToKeep = rowToKeepAtTop
 		rowToKeepAtTop = null
@@ -191,6 +192,11 @@ class WebtoonHolder(
 				// After the layout it is about to have, as the view's height is part of how far it can scroll
 				putRowAtTop(rowToKeep, recyclerView)
 				recyclerView.onPageReady(itemView as WebtoonFrameLayout)
+			}
+			wasSwap && recyclerView != null -> itemView.post {
+				if (itemView.parent === recyclerView) {
+					recyclerView.updateChildrenScroll()
+				}
 			}
 			// Also reached on every settings change, so this must leave an already placed page alone
 			recyclerView != null -> recyclerView.onPageReady(itemView as WebtoonFrameLayout)

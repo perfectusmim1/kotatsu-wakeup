@@ -9,6 +9,7 @@ import androidx.core.view.ancestors
 import androidx.recyclerview.widget.RecyclerView
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import org.koitharu.kotatsu.core.util.ext.resolveDp
+import kotlin.math.roundToInt
 
 class WebtoonImageView @JvmOverloads constructor(
 	context: Context,
@@ -20,13 +21,32 @@ class WebtoonImageView @JvmOverloads constructor(
 	private var scrollPos = 0
 	private var debugPaint: Paint? = null
 	private var frozenSwapHeight = 0
+	private var pendingSwapScroll: Int? = null
+	private var pendingSwapScrollRange = 0
+	private var isSwapPendingOnReady = false
+
+	val isSwapHeightFrozen: Boolean
+		get() = frozenSwapHeight > 0
 
 	fun freezeHeightDuringSwap(heightPx: Int) {
+		if (frozenSwapHeight == 0) {
+			pendingSwapScroll = scrollPos
+			pendingSwapScrollRange = getScrollRange()
+		}
 		frozenSwapHeight = heightPx.coerceAtLeast(0)
 	}
 
 	fun clearFrozenSwapHeight() {
 		frozenSwapHeight = 0
+		pendingSwapScroll = null
+		pendingSwapScrollRange = 0
+		isSwapPendingOnReady = false
+	}
+
+	fun consumeWasSwapInProgress(): Boolean {
+		val wasSwap = isSwapPendingOnReady
+		isSwapPendingOnReady = false
+		return wasSwap
 	}
 
 	override fun onDraw(canvas: Canvas) {
@@ -51,6 +71,7 @@ class WebtoonImageView @JvmOverloads constructor(
 			scrollToInternal(0)
 			return
 		}
+		pendingSwapScroll = null
 		scrollToInternal(y.coerceIn(0, maxScroll))
 	}
 
@@ -68,13 +89,13 @@ class WebtoonImageView @JvmOverloads constructor(
 
 	override fun recycle() {
 		scrollPos = 0
-		frozenSwapHeight = 0
+		clearFrozenSwapHeight()
 		super.recycle()
 	}
 
 	override fun getSuggestedMinimumHeight(): Int {
 		var desiredHeight = super.getSuggestedMinimumHeight()
-		if (sHeight == 0) {
+		if (sHeight == 0 && frozenSwapHeight == 0) {
 			val parentHeight = parentHeight()
 			if (desiredHeight < parentHeight) {
 				desiredHeight = parentHeight
@@ -126,9 +147,20 @@ class WebtoonImageView @JvmOverloads constructor(
 	}
 
 	override fun onReady() {
-		frozenSwapHeight = 0
+		val savedScroll = pendingSwapScroll
+		val savedRange = pendingSwapScrollRange
+		val wasSwap = frozenSwapHeight > 0 || savedScroll != null
+		clearFrozenSwapHeight()
+		isSwapPendingOnReady = wasSwap
 		super.onReady()
 		adjustScale()
+		if (savedScroll != null) {
+			scrollPos = if (width > 0 && height > 0) {
+				remapSwapScroll(savedScroll, savedRange, getScrollRange())
+			} else {
+				savedScroll
+			}
+		}
 		applyScroll()
 	}
 
@@ -205,5 +237,21 @@ class WebtoonImageView @JvmOverloads constructor(
 		canvas.drawRect(1f, 1f, width.toFloat() - 1f, height.toFloat() - 1f, paint)
 		paint.style = Paint.Style.FILL
 		canvas.drawText("${getScroll()} / ${getScrollRange()}", 100f, 100f, paint)
+	}
+
+	companion object {
+		internal fun remapSwapScroll(savedScroll: Int, savedRange: Int, newRange: Int): Int {
+			val clampedNewRange = newRange.coerceAtLeast(0)
+			val clampedSaved = savedScroll.coerceAtLeast(0)
+			if (clampedNewRange == 0) {
+				return 0
+			}
+			if (savedRange <= 0 || savedRange == clampedNewRange) {
+				return clampedSaved.coerceIn(0, clampedNewRange)
+			}
+			return ((clampedSaved.toDouble() * clampedNewRange.toDouble()) / savedRange.toDouble())
+				.roundToInt()
+				.coerceIn(0, clampedNewRange)
+		}
 	}
 }

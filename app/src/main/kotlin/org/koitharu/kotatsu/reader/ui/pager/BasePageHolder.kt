@@ -92,6 +92,8 @@ abstract class BasePageHolder<B : ViewBinding>(
 
 	private var pendingSwapScale: Float? = null
 	private var pendingSwapCenter: android.graphics.PointF? = null
+	private var pendingSwapSourceWidth = 0
+	private var pendingSwapSourceHeight = 0
 	private var swapSnapshotOverlay: ImageView? = null
 	private var swapSnapshotBitmap: Bitmap? = null
 	private var awaitingSwapImageLoad = false
@@ -110,15 +112,30 @@ abstract class BasePageHolder<B : ViewBinding>(
 					override fun onReady() {
 						val scale = pendingSwapScale
 						val center = pendingSwapCenter
+						val prevWidth = pendingSwapSourceWidth
+						val prevHeight = pendingSwapSourceHeight
 						pendingSwapScale = null
 						pendingSwapCenter = null
+						pendingSwapSourceWidth = 0
+						pendingSwapSourceHeight = 0
 						if (
 							scale != null &&
 							center != null &&
 							this@BasePageHolder !is org.koitharu.kotatsu.reader.ui.pager.webtoon.WebtoonHolder &&
 							ssiv.isReady
 						) {
-							ssiv.setScaleAndCenter(scale, center)
+							if (prevWidth > 0 && prevHeight > 0 && ssiv.sWidth > 0 && ssiv.sHeight > 0 &&
+								(prevWidth != ssiv.sWidth || prevHeight != ssiv.sHeight)
+							) {
+								val ratioX = ssiv.sWidth.toFloat() / prevWidth.toFloat()
+								val ratioY = ssiv.sHeight.toFloat() / prevHeight.toFloat()
+								val scaledCenter = android.graphics.PointF(center.x * ratioX, center.y * ratioY)
+								val adjustedScale = (scale * (prevWidth.toFloat() / ssiv.sWidth.toFloat()))
+									.coerceIn(ssiv.minScale, ssiv.maxScale)
+								ssiv.setScaleAndCenter(adjustedScale, scaledCenter)
+							} else {
+								ssiv.setScaleAndCenter(scale, center)
+							}
 						}
 					}
 
@@ -286,6 +303,11 @@ abstract class BasePageHolder<B : ViewBinding>(
 
 			is PageState.Error -> {
 				clearSwapSnapshotOverlay()
+				(ssiv as? WebtoonImageView)?.clearFrozenSwapHeight()
+				pendingSwapScale = null
+				pendingSwapCenter = null
+				pendingSwapSourceWidth = 0
+				pendingSwapSourceHeight = 0
 				val e = state.error
 				bindingInfo.textViewError.text = e.getDisplayMessage(context.resources)
 				bindingInfo.buttonRetry.setText(
@@ -299,8 +321,11 @@ abstract class BasePageHolder<B : ViewBinding>(
 			is PageState.Loaded -> {
 				val preserveView = viewModel.consumePreserveViewState()
 				val savedState = if (preserveView) ssiv.getState() else null
-				pendingSwapScale = if (preserveView && ssiv.isReady) ssiv.scale else null
-				pendingSwapCenter = if (preserveView && ssiv.isReady) ssiv.getCenter() else null
+				val canPreserveReadyState = preserveView && ssiv.isReady
+				pendingSwapScale = if (canPreserveReadyState) ssiv.scale else null
+				pendingSwapCenter = if (canPreserveReadyState) ssiv.getCenter() else null
+				pendingSwapSourceWidth = if (canPreserveReadyState) ssiv.sWidth else 0
+				pendingSwapSourceHeight = if (canPreserveReadyState) ssiv.sHeight else 0
 				if (preserveView) {
 					captureAndShowSwapSnapshot()
 					(ssiv as? WebtoonImageView)?.freezeHeightDuringSwap(ssiv.height)
