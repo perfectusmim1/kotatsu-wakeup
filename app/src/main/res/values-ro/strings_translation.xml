@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">Setări traducere</string>
+	<string name="translation_toggle">Comută traducerea</string>
+	<string name="translation_enable">Activează traducerea</string>
+	<string name="translation_disable">Dezactivează traducerea</string>
+	<string name="translation_active">Activă</string>
+	<string name="translation_off">Oprit</string>
+	<string name="translation_provider">Furnizor de traducere</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Nivel de gândire</string>
+	<string name="translation_thinking_minimal">Minim</string>
+	<string name="translation_thinking_low">Scăzut</string>
+	<string name="translation_thinking_medium">Mediu</string>
+	<string name="translation_thinking_high">Ridicat</string>
+	<string name="translation_source_lang">Limba sursă (OCR)</string>
+	<string name="translation_target_lang">Limba țintă</string>
+	<string name="translation_api_keys">Chei API Gemini</string>
+	<string name="translation_deepl_api_keys">Chei API DeepL</string>
+	<string name="translation_api_keys_hint">Separă cheile multiple prin virgulă sau linie nouă</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d cheie activă configurată</item>
+		<item quantity="other">%1$d chei active configurate</item>
+	</plurals>
+	<string name="translation_api_keys_empty">Nicio cheie API configurată</string>
+	<string name="translation_api_key_required">Adaugă o cheie API Gemini sau schimbă furnizorul</string>
+	<string name="translation_deepl_api_key_required">Adaugă o cheie API DeepL sau schimbă furnizorul</string>
+	<string name="translation_auto_translate">Traducere automată a paginilor</string>
+	<string name="translation_skip_sfx">Omite efectele sonore</string>
+	<string name="translation_filter_promo">Omite paginile promo și de credite</string>
+	<string name="translation_ocr_ready">Model OCR pregătit</string>
+	<string name="translation_ocr_auto_ready">Detectare automată OCR pregătită</string>
+	<string name="translation_ocr_not_downloaded">Modelul OCR se descarcă la prima utilizare</string>
+	<string name="translation_ocr_download">Descarcă modelul</string>
+	<string name="translation_ocr_downloading">Se descarcă modelul OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Se recunoaște textul…</string>
+	<string name="translation_translating_text">Se traduce…</string>
+	<string name="translation_rendering_page">Se randează pagina…</string>
+	<string name="translation_clear_cache">Șterge cache-ul de traduceri</string>
+	<string name="translation_cache_cleared">Cache-ul de traduceri a fost șters</string>
+	<string name="translation_cache_cleared_size">S-au șters %1$s de traduceri din cache</string>
+	<string name="translation_error_generic">Traducerea a eșuat: %1$s</string>
+</resources>

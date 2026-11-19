@@ -1,21 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-	<string name="community_comment_dislike">Не подобається</string>
-	<string name="community_comment_like">Подобається</string>
-	<string name="community_comment_delete">Видалити</string>
-	<string name="community_comment_edit">Редагувати</string>
-	<string name="community_comment_reply">Відповісти</string>
-	<string name="community_comment_send">Надіслати</string>
-	<string name="community_comment_spoiler">Спойлер</string>
-	<string name="community_comment_hint">Додати коментар</string>
-	<string name="community_comments_empty">Коментарів ще немає. Залиште перший!</string>
-	<string name="community_comments_sort_new">Нові</string>
-	<string name="community_comments_sort_top">Найкращі</string>
-	<string name="community_comments">Коментарі</string>
-	<string name="community_rating_none">Поки що без оцінок</string>
-	<string name="community_rating_summary">%1$s · %2$s</string>
-	<string name="community_rating">Оцінка читачів</string>
-	<string name="community">Спільнота</string>
 	<string name="community_rate">Оцінити</string>
 	<string name="community_rating_title">Оцінка спільноти</string>
 	<string name="community_your_rating">Ваша оцінка: %1$d / %2$d</string>
@@ -45,4 +29,6 @@
 	<string name="community_widget_load_error">Не вдалося завантажити віджет коментарів. Перевірте з\'єднання або відкрийте в браузері.</string>
 	<string name="community_widget_unavailable">WebView недоступний на цьому пристрої. Відкрийте коментарі в браузері.</string>
 	<string name="community_more_options">Інші параметри</string>
+	<string name="community_comment_translate">Перекласти</string>
+	<string name="community_comment_show_original">Оригінал</string>
 </resources>

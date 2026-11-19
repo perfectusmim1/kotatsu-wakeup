@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_accounts">Iturrien kontuak</string>
+    <string name="source_accounts_summary">%1$d saio hasita · %2$d onartuta</string>
+    <string name="source_accounts_summary_none">Saio aktiborik ez · %1$d onartuta</string>
+    <string name="source_accounts_empty">Ez da kontu-euskarria duen iturririk aurkitu</string>
+    <string name="source_account_signed_in">Saioa hasita</string>
+    <string name="source_account_not_signed_in">Saioa hasi gabe</string>
+    <string name="source_account_switch">Aldatu kontua</string>
+    <string name="source_signed_out">Saioa itxita</string>
+    <string name="sign_up">Eman izena</string>
+    <string name="auth_verify">Egiaztatu</string>
+    <string name="auth_refresh">Freskatu</string>
+    <string name="auth_not_verified_yet">Saioa ez da oraindik egiaztatu. Amaitu saioa hasten eta saiatu berriro.</string>
+</resources>

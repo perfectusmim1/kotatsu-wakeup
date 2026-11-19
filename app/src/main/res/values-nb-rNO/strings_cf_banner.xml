@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="cf_banner_required">Bekreftelse kreves for %1$s</string>
+	<string name="cf_banner_multiple_required">Bekreftelse kreves for %1$s (+%2$d til)</string>
+	<string name="cf_banner_solve">Løs</string>
+	<string name="cf_banner_dismiss">Avvis</string>
+</resources>

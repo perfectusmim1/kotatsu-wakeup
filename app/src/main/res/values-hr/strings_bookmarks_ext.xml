@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">Zabilješke dodane</string>
+    <string name="bookmarks_sort_newest">Najnovije dodano</string>
+    <string name="bookmarks_sort_oldest">Najstarije dodano</string>
+    <string name="bookmarks_sort_chapter">Redoslijed poglavlja</string>
+    <string name="search_bookmarks_hint">Pretraži seriju ili poglavlje</string>
+    <string name="search_bookmarked_chapters_hint">Pretraži zabilježena poglavlja</string>
+    <string name="no_bookmarks_matching_query">Nema podudarnih zabilješki</string>
+    <string name="no_bookmarks_matching_summary">Nijedna zabilješka ne odgovara vašem trenutnom filtru</string>
+    <string name="download_bookmarked_chapters">Preuzmi zabilježena poglavlja</string>
+    <string name="download_bookmarked_only">Samo zabilježena poglavlja</string>
+    <string name="download_bookmarked_next_2">Zabilježeno + sljedeća 2 poglavlja</string>
+    <string name="download_bookmarked_next_3">Zabilježeno + sljedeća 3 poglavlja</string>
+    <string name="no_bookmarked_chapters_to_download">Nema zabilježenih poglavlja za preuzimanje</string>
+    <string name="migrate_bookmarks">Migriraj zabilješke na drugi izvor</string>
+    <string name="bookmark_migration_choose_series">Odaberite seriju za migraciju</string>
+    <string name="bookmark_migration_searching">Pretraživanje aktivnih izvora…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d izvora · %3$d podudaranja</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d poglavlja podudarno</string>
+    <string name="bookmark_migration_total_chapters">%1$d poglavlja</string>
+    <string name="bookmark_migration_no_candidates">Nisu pronađeni kompatibilni izvori</string>
+    <string name="bookmark_migration_no_candidates_summary">Nijedan omogućeni izvor ne podudara se s ovom serijom i njezinim zabilježenim poglavljima</string>
+    <string name="bookmark_migration_confirm">Migrirati %1$d zabilješku(i) iz \"%2$s\" (%3$s) u \"%4$s\" (%5$s)?\n%6$d od %7$d zabilježenih poglavlja je podudarno.</string>
+    <string name="bookmark_migration_confirm_no_overlap">Migrirati %1$d zabilješku(i) iz \"%2$s\" (%3$s) u \"%4$s\" (%5$s)?\nPoglavlja će biti procijenjena prema napretku čitanja.</string>
+    <string name="bookmark_migration_success">Zabilješke migrirane na %1$s</string>
+    <string name="bookmark_migration_no_bookmarks">Nema pronađenih zabilješki za ovu seriju</string>
+    <string name="bookmark_migration_rescan">Ponovo skeniraj</string>
+    <string name="bookmark_migration_unavailable_no_chapters">Nema poglavlja</string>
+    <string name="bookmarks_count_badge">%1$d zabilješki</string>
+</resources>

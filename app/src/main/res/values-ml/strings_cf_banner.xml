@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$s-ന് സ്ഥിരീകരണം ആവശ്യമാണ്</string>
+	<string name="cf_banner_multiple_required">%1$s (+%2$d എണ്ണം കൂടി)-ന് സ്ഥിരീകരണം ആവശ്യമാണ്</string>
+	<string name="cf_banner_solve">പരിഹരിക്കുക</string>
+	<string name="cf_banner_dismiss">ഒഴിവാക്കുക</string>
+</resources>

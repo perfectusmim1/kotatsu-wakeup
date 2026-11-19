@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Ikona</string>
+	<string name="fav_icon_default">Sirds</string>
+	<string name="fav_icon_star">Zvaigzne</string>
+	<string name="fav_icon_fire">Ugunsgrēks</string>
+	<string name="fav_icon_crown">Kronis</string>
+	<string name="fav_icon_book">Grāmata</string>
+	<string name="fav_icon_bookmark">Grāmatzīme</string>
+	<string name="fav_icon_eye">Acs</string>
+	<string name="fav_icon_bolt">Skrūve</string>
+	<string name="fav_icon_clock">Pulkstenis</string>
+	<string name="fav_icon_folder">Mape</string>
+	<string name="fav_icon_check">Pārbaudiet</string>
+	<string name="fav_icon_sparkles">Dzirksti</string>
+</resources>

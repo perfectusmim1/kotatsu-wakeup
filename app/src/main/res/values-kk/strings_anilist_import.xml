@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">AniList-тен импорттау</string>
+	<string name="anilist_import_mode_label">Импорттау орны</string>
+	<string name="anilist_import_by_status">Күйі бойынша</string>
+	<string name="anilist_import_single_category">Бір санат</string>
+	<string name="anilist_import_new_category">Жаңа санат</string>
+	<string name="anilist_import_new_category_hint">Санат атауы</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">AniList кітапханаңыз жүктелуде…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Аяқталды (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Импортталды: %1$d · Бар: %2$d · Табылмады: %3$d</string>
+	<string name="anilist_import_empty">AniList манга тізіміңіз бос.</string>
+	<string name="anilist_import_unmatched_title">Сәйкес келмеген туындылар</string>
+	<string name="anilist_import_start">Импортты бастау</string>
+	<string name="anilist_import_retry">Қайта импорттау</string>
+	<string name="anilist_import_error_no_sources">Импорттау алдында кемінде бір манга дереккөзін қосыңыз.</string>
+</resources>

@@ -36,4 +36,16 @@
         <item quantity="one">%1$d ساعت</item>
         <item quantity="other">%1$d ساعت</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d نتیجه</item>
+        <item quantity="other">%1$d نتیجه</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d صفحه</item>
+        <item quantity="other">%1$d صفحه</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d منبع</item>
+        <item quantity="other">%1$d منبع</item>
+    </plurals>
 </resources>

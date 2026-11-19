@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Záložky přidány</string>
+	<string name="bookmarks_sort_newest">Od nejnovějších</string>
+	<string name="bookmarks_sort_oldest">Od nejstarších</string>
+	<string name="bookmarks_sort_chapter">Pořadí kapitol</string>
+	<string name="search_bookmarks_hint">Hledat sérii nebo kapitolu</string>
+	<string name="search_bookmarked_chapters_hint">Hledat kapitoly se záložkou</string>
+	<string name="no_bookmarks_matching_query">Žádné odpovídající záložky</string>
+	<string name="no_bookmarks_matching_summary">Aktuálnímu filtru neodpovídají žádné záložky</string>
+	<string name="download_bookmarked_chapters">Stáhnout kapitoly se záložkou</string>
+	<string name="download_bookmarked_only">Pouze kapitoly se záložkou</string>
+	<string name="download_bookmarked_next_2">Se záložkou + další 2 kapitoly</string>
+	<string name="download_bookmarked_next_3">Se záložkou + další 3 kapitoly</string>
+	<string name="no_bookmarked_chapters_to_download">Žádné kapitoly se záložkou ke stažení</string>
+	<string name="migrate_bookmarks">Migrovat záložky do jiného zdroje</string>
+	<string name="bookmark_migration_choose_series">Vyberte sérii k migraci</string>
+	<string name="bookmark_migration_searching">Prohledávání aktivních zdrojů…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d zdrojů · %3$d shod</string>
+	<string name="bookmark_migration_chapters_matched">Spárováno %1$d/%2$d kapitol</string>
+	<string name="bookmark_migration_total_chapters">%1$d kapitol</string>
+	<string name="bookmark_migration_no_candidates">Nebyly nalezeny žádné kompatibilní zdroje</string>
+	<string name="bookmark_migration_no_candidates_summary">Žádný povolený zdroj neodpovídal této sérii a jejím kapitolám se záložkou</string>
+	<string name="bookmark_migration_confirm">Migrovat %1$d záložek z \"%2$s\" (%3$s) do \"%4$s\" (%5$s)?\nSpárováno %6$d ze %7$d kapitol se záložkou.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Migrovat %1$d záložek z \"%2$s\" (%3$s) do \"%4$s\" (%5$s)?\nKapitoly budou odhadnuty podle postupu čtení.</string>
+	<string name="bookmark_migration_success">Záložky migrovány do %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Pro tuto sérii nebyly nalezeny žádné záložky</string>
+	<string name="bookmark_migration_rescan">Znovu prohledat</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Žádné kapitoly</string>
+	<string name="bookmarks_count_badge">%1$d záložek</string>
+</resources>

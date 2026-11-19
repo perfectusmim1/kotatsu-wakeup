@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Vertimo nustatymai</string>
+	<string name="translation_toggle">Perjungti vertimą</string>
+	<string name="translation_enable">Įjungti vertimą</string>
+	<string name="translation_disable">Išjungti vertimą</string>
+	<string name="translation_active">Aktyvus</string>
+	<string name="translation_off">Išjungtas</string>
+	<string name="translation_provider">Vertimo teikėjas</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Mąstymo lygis</string>
+	<string name="translation_thinking_minimal">Minimalus</string>
+	<string name="translation_thinking_low">Žemas</string>
+	<string name="translation_thinking_medium">Vidutinis</string>
+	<string name="translation_thinking_high">Aukštas</string>
+	<string name="translation_source_lang">Šaltinio kalba (OCR)</string>
+	<string name="translation_target_lang">Tikslinė kalba</string>
+	<string name="translation_api_keys">Gemini API raktai</string>
+	<string name="translation_deepl_api_keys">DeepL API raktai</string>
+	<string name="translation_api_keys_hint">Keli raktai atskiriami kableliais arba naujomis eilutėmis</string>
+	<string name="translation_api_keys_empty">API raktas nesukonfigūruotas</string>
+	<string name="translation_api_key_required">Pridėkite Gemini API raktą arba pakeiskite teikėją</string>
+	<string name="translation_deepl_api_key_required">Pridėkite DeepL API raktą arba pakeiskite teikėją</string>
+	<string name="translation_auto_translate">Automatiškai versti puslapius</string>
+	<string name="translation_skip_sfx">Praleisti garso efektus</string>
+	<string name="translation_filter_promo">Praleisti reklamos ir titrų puslapius</string>
+	<string name="translation_ocr_ready">OCR modelis paruoštas</string>
+	<string name="translation_ocr_auto_ready">Automatinis OCR aptikimas paruoštas</string>
+	<string name="translation_ocr_not_downloaded">OCR modelis atsisiunčiamas pirmą kartą naudojant</string>
+	<string name="translation_ocr_download">Atsisiųsti modelį</string>
+	<string name="translation_ocr_downloading">Atsisiunčiamas OCR modelis… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Atpažįstamas tekstas…</string>
+	<string name="translation_translating_text">Verčiama…</string>
+	<string name="translation_rendering_page">Atvaizduojamas puslapis…</string>
+	<string name="translation_clear_cache">Išvalyti vertimų talpyklą</string>
+	<string name="translation_cache_cleared">Vertimų talpykla išvalyta</string>
+	<string name="translation_cache_cleared_size">Išvalyta %1$s talpyklos vertimų</string>
+	<string name="translation_error_generic">Vertimo klaida: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d aktyvus raktas sukonfigūruotas</item>
+		<item quantity="other">%1$d aktyvūs raktai sukonfigūruoti</item>
+	</plurals>
+</resources>

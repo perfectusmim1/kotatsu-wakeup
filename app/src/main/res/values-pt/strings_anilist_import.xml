@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="import_from_anilist">Importar do AniList</string>
 	<string name="anilist_import_mode_label">Destino da importação</string>

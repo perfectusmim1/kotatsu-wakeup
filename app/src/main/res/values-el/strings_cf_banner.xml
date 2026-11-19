@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">Απαιτείται επαλήθευση για %1$s</string>
+    <string name="cf_banner_multiple_required">Απαιτείται επαλήθευση για %1$s (+%2$d ακόμα)</string>
+    <string name="cf_banner_solve">Επίλυση</string>
+    <string name="cf_banner_dismiss">Απόρριψη</string>
+</resources>

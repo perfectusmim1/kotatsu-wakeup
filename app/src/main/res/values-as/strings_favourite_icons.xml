@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">আইকন</string>
+	<string name="fav_icon_default">হৃদয়</string>
+	<string name="fav_icon_star">তৰা</string>
+	<string name="fav_icon_fire">জুই</string>
+	<string name="fav_icon_crown">মুকুট</string>
+	<string name="fav_icon_book">কিতাপ</string>
+	<string name="fav_icon_bookmark">বুকমাৰ্ক</string>
+	<string name="fav_icon_eye">চকু</string>
+	<string name="fav_icon_bolt">বজ্ৰ</string>
+	<string name="fav_icon_clock">ঘড়ী</string>
+	<string name="fav_icon_folder">ফ\'ল্ডাৰ</string>
+	<string name="fav_icon_check">টিক</string>
+	<string name="fav_icon_sparkles">চমক</string>
+</resources>

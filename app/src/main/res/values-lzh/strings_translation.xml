@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">譯文設定</string>
+	<string name="translation_toggle">切換譯文</string>
+	<string name="translation_enable">啟譯</string>
+	<string name="translation_disable">停譯</string>
+	<string name="translation_active">已啟</string>
+	<string name="translation_off">關</string>
+	<string name="translation_provider">譯務之源</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google 翻譯</string>
+	<string name="translation_gemini_thinking_level">思維之度</string>
+	<string name="translation_thinking_minimal">至微</string>
+	<string name="translation_thinking_low">低</string>
+	<string name="translation_thinking_medium">中</string>
+	<string name="translation_thinking_high">高</string>
+	<string name="translation_source_lang">原文之語（OCR）</string>
+	<string name="translation_target_lang">目標之語</string>
+	<string name="translation_api_keys">Gemini API 密鑰</string>
+	<string name="translation_deepl_api_keys">DeepL API 密鑰</string>
+	<string name="translation_api_keys_hint">多鑰之間，以逗號或換行隔之</string>
+	<string name="translation_api_keys_empty">尚未設 API 密鑰</string>
+	<string name="translation_api_key_required">請增 Gemini API 密鑰或易他源</string>
+	<string name="translation_deepl_api_key_required">請增 DeepL API 密鑰或易他源</string>
+	<string name="translation_auto_translate">自動譯頁</string>
+	<string name="translation_skip_sfx">略擬聲詞</string>
+	<string name="translation_filter_promo">略宣傳暨鳴謝頁</string>
+	<string name="translation_ocr_ready">OCR 模型已備</string>
+	<string name="translation_ocr_auto_ready">自動辨識 OCR 已備</string>
+	<string name="translation_ocr_not_downloaded">初用時將下 OCR 模型</string>
+	<string name="translation_ocr_download">下模型</string>
+	<string name="translation_ocr_downloading">方下 OCR 模型… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">方辨文字…</string>
+	<string name="translation_translating_text">方譯…</string>
+	<string name="translation_rendering_page">方繪頁…</string>
+	<string name="translation_clear_cache">清譯文快取</string>
+	<string name="translation_cache_cleared">譯文快取已清</string>
+	<string name="translation_cache_cleared_size">已清 %1$s 之譯文快取</string>
+	<string name="translation_error_generic">譯文失敗：%1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">已設 %1$d 有效密鑰</item>
+		<item quantity="other">已設 %1$d 有效密鑰</item>
+	</plurals>
+</resources>

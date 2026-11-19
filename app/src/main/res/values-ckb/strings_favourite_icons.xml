@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">ئایکۆن</string>
+	<string name="fav_icon_default">دڵ</string>
+	<string name="fav_icon_star">ئەستێرە</string>
+	<string name="fav_icon_fire">ئاگر</string>
+	<string name="fav_icon_crown">تاج</string>
+	<string name="fav_icon_book">کتێب</string>
+	<string name="fav_icon_bookmark">نیشانە</string>
+	<string name="fav_icon_eye">چاو</string>
+	<string name="fav_icon_bolt">هەورەبروسکە</string>
+	<string name="fav_icon_clock">کاتژمێر</string>
+	<string name="fav_icon_folder">فۆڵدەر</string>
+	<string name="fav_icon_check">نیشانەی ڕاست</string>
+	<string name="fav_icon_sparkles">پڕشنگ</string>
+</resources>

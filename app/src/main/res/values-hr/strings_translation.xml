@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">Postavke prijevoda</string>
+    <string name="translation_toggle">Uključi/isključi prijevod</string>
+    <string name="translation_enable">Omogući prijevod</string>
+    <string name="translation_disable">Onemogući prijevod</string>
+    <string name="translation_active">Aktivno</string>
+    <string name="translation_off">Isključeno</string>
+    <string name="translation_provider">Pružatelj prijevoda</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google Prevoditelj</string>
+    <string name="translation_gemini_thinking_level">Razina razmišljanja</string>
+    <string name="translation_thinking_minimal">Minimalno</string>
+    <string name="translation_thinking_low">Nisko</string>
+    <string name="translation_thinking_medium">Srednje</string>
+    <string name="translation_thinking_high">Visoko</string>
+    <string name="translation_source_lang">Izvorni jezik (OCR)</string>
+    <string name="translation_target_lang">Ciljni jezik</string>
+    <string name="translation_api_keys">Gemini API ključevi</string>
+    <string name="translation_deepl_api_keys">DeepL API ključevi</string>
+    <string name="translation_api_keys_hint">Odvojite više ključeva zarezima ili novim retcima</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">Konfiguriran %1$d aktivni ključ</item>
+        <item quantity="few">Konfigurirana %1$d aktivna ključa</item>
+        <item quantity="other">Konfigurirano %1$d aktivnih ključeva</item>
+    </plurals>
+    <string name="translation_api_keys_empty">Nema konfiguriranog API ključa</string>
+    <string name="translation_api_key_required">Dodajte Gemini API ključ ili promijenite pružatelja</string>
+    <string name="translation_deepl_api_key_required">Dodajte DeepL API ključ ili promijenite pružatelja</string>
+    <string name="translation_auto_translate">Automatski prevodi stranice</string>
+    <string name="translation_skip_sfx">Preskoči zvučne efekte</string>
+    <string name="translation_filter_promo">Preskoči promotivne stranice i zasluge</string>
+    <string name="translation_ocr_ready">OCR model spreman</string>
+    <string name="translation_ocr_auto_ready">OCR s automatskim otkrivanjem spreman</string>
+    <string name="translation_ocr_not_downloaded">OCR model se preuzima pri prvoj upotrebi</string>
+    <string name="translation_ocr_download">Preuzmi model</string>
+    <string name="translation_ocr_downloading">Preuzimanje OCR modela… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">Prepoznavanje teksta…</string>
+    <string name="translation_translating_text">Prevođenje…</string>
+    <string name="translation_rendering_page">Iscrtavanje stranice…</string>
+    <string name="translation_clear_cache">Očisti predmemoriju prijevoda</string>
+    <string name="translation_cache_cleared">Predmemorija prijevoda očišćena</string>
+    <string name="translation_cache_cleared_size">Očišćeno %1$s predmemoriranih prijevoda</string>
+    <string name="translation_error_generic">Prijevod nije uspio: %1$s</string>
+</resources>

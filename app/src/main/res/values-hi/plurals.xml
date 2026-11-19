@@ -36,4 +36,16 @@
         <item quantity="one">%1$d मिनट</item>
         <item quantity="other">%1$d मिनट</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d परिणाम</item>
+        <item quantity="other">%1$d परिणाम</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d पृष्ठ</item>
+        <item quantity="other">%1$d पृष्ठ</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d स्रोत</item>
+        <item quantity="other">%1$d स्रोत</item>
+    </plurals>
 </resources>

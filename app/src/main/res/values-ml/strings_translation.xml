@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">വിവർത്തന ക്രമീകരണങ്ങൾ</string>
+	<string name="translation_toggle">വിവർത്തനം മാറ്റുക</string>
+	<string name="translation_enable">വിവർത്തനം പ്രവർത്തനക്ഷമമാക്കുക</string>
+	<string name="translation_disable">വിവർത്തനം പ്രവർത്തനരഹിതമാക്കുക</string>
+	<string name="translation_active">സജീവം</string>
+	<string name="translation_off">ഓഫ്</string>
+	<string name="translation_provider">വിവർത്തന ദാതാവ്</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">ചിന്താ നില</string>
+	<string name="translation_thinking_minimal">കുറഞ്ഞത്</string>
+	<string name="translation_thinking_low">താഴ്ന്നത്</string>
+	<string name="translation_thinking_medium">ഇടത്തരം</string>
+	<string name="translation_thinking_high">ഉയർന്നത്</string>
+	<string name="translation_source_lang">ഉറവിട ഭാഷ (OCR)</string>
+	<string name="translation_target_lang">ലക്ഷ്യ ഭാഷ</string>
+	<string name="translation_api_keys">Gemini API കീകൾ</string>
+	<string name="translation_deepl_api_keys">DeepL API കീകൾ</string>
+	<string name="translation_api_keys_hint">ഒന്നിലധികം കീകൾ കോമകളോ പുതിയ വരികളോ ഉപയോഗിച്ച് വേർതിരിക്കുക</string>
+	<string name="translation_api_keys_empty">API കീ ക്രമീകരിച്ചിട്ടില്ല</string>
+	<string name="translation_api_key_required">ഒരു Gemini API കീ ചേർക്കുക അല്ലെങ്കിൽ ദാതാക്കളെ മാറ്റുക</string>
+	<string name="translation_deepl_api_key_required">ഒരു DeepL API കീ ചേർക്കുക അല്ലെങ്കിൽ ദാതാക്കളെ മാറ്റുക</string>
+	<string name="translation_auto_translate">പേജുകൾ സ്വയമേവ വിവർത്തനം ചെയ്യുക</string>
+	<string name="translation_skip_sfx">ശബ്ദ ഇഫക്റ്റുകൾ ഒഴിവാക്കുക</string>
+	<string name="translation_filter_promo">പ്രൊമോ &amp; ക്രെഡിറ്റ് പേജുകൾ ഒഴിവാക്കുക</string>
+	<string name="translation_ocr_ready">OCR മോഡൽ തയ്യാറാണ്</string>
+	<string name="translation_ocr_auto_ready">സ്വയമേവയുള്ള OCR കണ്ടെത്തൽ തയ്യാറാണ്</string>
+	<string name="translation_ocr_not_downloaded">ആദ്യ ഉപയോഗത്തിൽ OCR മോഡൽ ഡൗൺലോഡ് ചെയ്യും</string>
+	<string name="translation_ocr_download">മോഡൽ ഡൗൺലോഡ് ചെയ്യുക</string>
+	<string name="translation_ocr_downloading">OCR മോഡൽ ഡൗൺലോഡ് ചെയ്യുന്നു… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">വാചകം തിരിച്ചറിയുന്നു…</string>
+	<string name="translation_translating_text">വിവർത്തനം ചെയ്യുന്നു…</string>
+	<string name="translation_rendering_page">പേജ് റെൻഡർ ചെയ്യുന്നു…</string>
+	<string name="translation_clear_cache">വിവർത്തന കാഷെ മായ്ക്കുക</string>
+	<string name="translation_cache_cleared">വിവർത്തന കാഷെ മായ്ച്ചു</string>
+	<string name="translation_cache_cleared_size">%1$s കാഷെ ചെയ്ത വിവർത്തനങ്ങൾ മായ്ച്ചു</string>
+	<string name="translation_error_generic">വിവർത്തനം പരാജയപ്പെട്ടു: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d സജീവ കീ ക്രമീകരിച്ചു</item>
+		<item quantity="other">%1$d സജീവ കീകൾ ക്രമീകരിച്ചു</item>
+	</plurals>
+</resources>

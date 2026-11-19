@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="community_rate">Baloratu</string>
+    <string name="community_rating_title">Komunitatearen balorazioa</string>
+    <string name="community_your_rating">Zure balorazioa: %1$d / %2$d</string>
+    <string name="community_your_rating_short">★%1$d</string>
+    <string name="community_submit_rating">Bidali</string>
+    <string name="community_rating_saved">Balorazioa gordeta</string>
+    <string name="community_rating_count">%1$s balorazio</string>
+    <string name="community_views_count">%1$s ikustaldi</string>
+    <string name="community_follows_count">%1$s jarraitzaile</string>
+    <string name="community_comments_count">%1$s iruzkin</string>
+    <string name="community_comments_sort_old">Zaharrak</string>
+    <string name="community_web_comments">Weba</string>
+    <string name="community_show_replies">Erakutsi erantzunak (%1$d)</string>
+    <string name="community_hide_replies">Ezkutatu erantzunak</string>
+    <string name="community_load_more">Kargatu gehiago</string>
+    <string name="community_load_more_replies">Kargatu erantzun gehiago</string>
+    <string name="community_replying_to">%1$s erabiltzaileari erantzuten</string>
+    <string name="community_editing_comment">Iruzkina editatzen</string>
+    <string name="community_comment_edited">(editatua)</string>
+    <string name="community_comment_deleted">Iruzkina ezabatuta</string>
+    <string name="community_comment_delete_confirm">Ezabatu iruzkin hau?</string>
+    <string name="community_comment_translate">Itzuli</string>
+    <string name="community_comment_show_original">Jatorrizkoa</string>
+    <string name="community_spoiler_warning">Spoilerra — Sakatu ikusteko</string>
+    <string name="community_spoiler_hide">Ezkutatu spoilerra</string>
+    <string name="community_sign_in_to_comment">Hasi saioa iruzkinak edo erreakzioak argitaratzeko</string>
+    <string name="community_sign_in_to_rate">Hasi saioa %1$s iturrian baloratzeko</string>
+    <string name="community_widget_ssl_error">Konexio seguruak huts egin du iruzkin-widget honetarako. Orria arakatzailean ireki dezakezu.</string>
+    <string name="community_widget_load_error">Ezin izan da iruzkin-widgeta kargatu. Egiaztatu konexioa edo ireki arakatzailean.</string>
+    <string name="community_widget_unavailable">WebView ez dago erabilgarri gailu honetan. Ireki iruzkinak arakatzailean.</string>
+    <string name="community_more_options">Aukera gehiago</string>
+</resources>

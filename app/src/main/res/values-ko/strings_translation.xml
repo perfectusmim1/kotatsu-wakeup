@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="translation_settings">번역 설정</string>
 	<string name="translation_toggle">번역 전환</string>
@@ -22,7 +22,7 @@
 	<string name="translation_ocr_auto_ready">자동 감지 OCR 준비됨</string>
 	<string name="translation_ocr_not_downloaded">첫 사용 시 OCR 모델이 다운로드됩니다</string>
 	<string name="translation_ocr_download">모델 다운로드</string>
-	<string name="translation_ocr_downloading">OCR 모델 다운로드 중… %1$d%%</string>
+	<string name="translation_ocr_downloading">OCR 모델 다운로드 중… %1$d%%%%%%</string>
 	<string name="translation_ocr_running">텍스트 인식 중…</string>
 	<string name="translation_translating_text">번역 중…</string>
 	<string name="translation_rendering_page">페이지 렌더링 중…</string>
@@ -31,6 +31,15 @@
 	<string name="translation_cache_cleared_size">캐시된 번역 %1$s 지워짐</string>
 	<string name="translation_error_generic">번역 실패: %1$s</string>
 	<plurals name="translation_api_keys_count">
+		<item quantity="one">활성 키 %1$d개 설정됨</item>
 		<item quantity="other">활성 키 %1$d개 설정됨</item>
 	</plurals>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_gemini_thinking_level">사고 수준</string>
+	<string name="translation_thinking_minimal">최소</string>
+	<string name="translation_thinking_low">낮음</string>
+	<string name="translation_thinking_medium">중간</string>
+	<string name="translation_thinking_high">높음</string>
+	<string name="translation_deepl_api_keys">DeepL API 키</string>
+	<string name="translation_deepl_api_key_required">DeepL API 키를 추가하거나 번역 제공자를 전환하세요</string>
 </resources>

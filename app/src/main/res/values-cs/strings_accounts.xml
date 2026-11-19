@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Účty zdrojů</string>
+	<string name="source_accounts_summary">%1$d přihlášených · %2$d podporovaných</string>
+	<string name="source_accounts_summary_none">Žádné aktivní relace · %1$d podporovaných</string>
+	<string name="source_accounts_empty">Nebyly nalezeny žádné zdroje s podporou účtů</string>
+	<string name="source_account_signed_in">Přihlášen</string>
+	<string name="source_account_not_signed_in">Nepřihlášen</string>
+	<string name="source_account_switch">Přepnout účet</string>
+	<string name="source_signed_out">Odhlášen</string>
+	<string name="sign_up">Registrovat se</string>
+	<string name="auth_verify">Ověřit</string>
+	<string name="auth_refresh">Obnovit</string>
+	<string name="auth_not_verified_yet">Relace ještě není ověřena. Dokončete přihlášení a zkuste to znovu.</string>
+</resources>

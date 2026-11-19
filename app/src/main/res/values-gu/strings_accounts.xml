@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">સ્રોત એકાઉન્ટ્સ</string>
+	<string name="source_accounts_summary">%1$d સાઇન ઇન · %2$d સમર્થિત</string>
+	<string name="source_accounts_summary_none">કોઈ સક્રિય સત્રો નથી · %1$d સમર્થિત</string>
+	<string name="source_accounts_empty">એકાઉન્ટ સપોર્ટ ધરાવતા કોઈ સ્રોત મળ્યા નથી</string>
+	<string name="source_account_signed_in">સાઇન ઇન કરેલ</string>
+	<string name="source_account_not_signed_in">સાઇન ઇન કરેલ નથી</string>
+	<string name="source_account_switch">એકાઉન્ટ બદલો</string>
+	<string name="source_signed_out">સાઇન આઉટ થયેલ</string>
+	<string name="sign_up">સાઇન અપ કરો</string>
+	<string name="auth_verify">ચકાસો</string>
+	<string name="auth_refresh">રિફ્રેશ કરો</string>
+	<string name="auth_not_verified_yet">સત્ર હજુ સુધી ચકાસાયેલ નથી. સાઇન ઇન કરવાનું પૂર્ણ કરો અને ફરી પ્રયાસ કરો.</string>
+</resources>

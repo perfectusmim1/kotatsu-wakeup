@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Mag-import mula sa AniList</string>
+	<string name="anilist_import_mode_label">Mag-import ng destinasyon</string>
+	<string name="anilist_import_by_status">Sa pamamagitan ng katayuan</string>
+	<string name="anilist_import_single_category">Isang kategorya</string>
+	<string name="anilist_import_new_category">Bagong kategorya</string>
+	<string name="anilist_import_new_category_hint">Pangalan ng kategorya</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Nilo-load ang iyong AniList library…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Nakumpleto (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Na-import: %1$d · Umiiral: %2$d · Walang kaparis: %3$d</string>
+	<string name="anilist_import_empty">Walang laman ang iyong listahan ng manga AniList.</string>
+	<string name="anilist_import_unmatched_title">Mga walang kaparis na pamagat</string>
+	<string name="anilist_import_start">Simulan ang pag-import</string>
+	<string name="anilist_import_retry">Mag-import muli</string>
+	<string name="anilist_import_error_no_sources">Paganahin ang kahit man lang isang manga source bago mag-import.</string>
+</resources>

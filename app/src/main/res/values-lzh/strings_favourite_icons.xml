@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">圖徽</string>
+	<string name="fav_icon_default">心</string>
+	<string name="fav_icon_star">星</string>
+	<string name="fav_icon_fire">火</string>
+	<string name="fav_icon_crown">冕</string>
+	<string name="fav_icon_book">書</string>
+	<string name="fav_icon_bookmark">籤</string>
+	<string name="fav_icon_eye">目</string>
+	<string name="fav_icon_bolt">電</string>
+	<string name="fav_icon_clock">鐘</string>
+	<string name="fav_icon_folder">帙</string>
+	<string name="fav_icon_check">鉤</string>
+	<string name="fav_icon_sparkles">輝</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">Увези са AniList-а</string>
+	<string name="anilist_import_mode_label">Одредиште увоза</string>
+	<string name="anilist_import_by_status">По статусу</string>
+	<string name="anilist_import_single_category">Једна категорија</string>
+	<string name="anilist_import_new_category">Нова категорија</string>
+	<string name="anilist_import_new_category_hint">Назив категорије</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Учитавање ваше AniList библиотеке…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Завршено (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Увезено: %1$d · Постојеће: %2$d · Неподударено: %3$d</string>
+	<string name="anilist_import_empty">Ваша AniList листа манги је празна.</string>
+	<string name="anilist_import_unmatched_title">Неподударени наслови</string>
+	<string name="anilist_import_start">Покрени увоз</string>
+	<string name="anilist_import_retry">Увези поново</string>
+	<string name="anilist_import_error_no_sources">Омогућите барем један извор манге пре увоза.</string>
+</resources>

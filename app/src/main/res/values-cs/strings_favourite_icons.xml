@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Ikona</string>
+	<string name="fav_icon_default">Srdce</string>
+	<string name="fav_icon_star">Hvězda</string>
+	<string name="fav_icon_fire">Oheň</string>
+	<string name="fav_icon_crown">Koruna</string>
+	<string name="fav_icon_book">Kniha</string>
+	<string name="fav_icon_bookmark">Záložka</string>
+	<string name="fav_icon_eye">Oko</string>
+	<string name="fav_icon_bolt">Blesk</string>
+	<string name="fav_icon_clock">Hodiny</string>
+	<string name="fav_icon_folder">Složka</string>
+	<string name="fav_icon_check">Fajfka</string>
+	<string name="fav_icon_sparkles">Jiskry</string>
+</resources>

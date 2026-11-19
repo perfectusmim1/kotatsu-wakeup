@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">𐌹𐌽𐌽𐌰𐍄𐌱𐌰𐌹𐍂𐌰𐌽 𐍆𐍂𐌰𐌼 𐌰𐌽𐌹𐌻𐌹𐍃𐍄</string>
+    <string name="anilist_import_mode_label">𐌹𐌽𐌽𐌰𐍄𐌱𐌰𐌹𐍂𐌰𐌽 𐌳𐌴𐍃𐍄𐌹𐌽𐌰𐍄𐌹𐍉𐌽</string>
+    <string name="anilist_import_by_status">𐌱𐌹 𐍃𐍄𐌰𐌸𐍃</string>
+    <string name="anilist_import_single_category">𐍃𐌹𐌲𐌲𐌻𐌴 𐌺𐌿𐌽𐌹</string>
+    <string name="anilist_import_new_category">𐌽𐌹𐌿𐌾𐌹𐍃 𐌺𐌿𐌽𐌹</string>
+    <string name="anilist_import_new_category_hint">𐌺𐌿𐌽𐌹 𐌽𐌰𐌼𐍉</string>
+    <string name="anilist_import_new_category_default">𐌰𐌽𐌹𐌻𐌹𐍃𐍄</string>
+    <string name="anilist_import_fetching">𐌷𐌻𐌰𐌸𐌰𐌽𐌳𐍃 𐌾𐍉𐌿𐍂 𐌰𐌽𐌹𐌻𐌹𐍃𐍄 𐌱𐍉𐌺𐌰𐌷𐌿𐍃…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">𐌺𐍉𐌼𐍀𐌻𐌴𐍄𐌴𐌳 (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">𐌹𐌼𐍀𐍉𐍂𐍄𐌴𐌳: %1$d · 𐌴𐌺𐍃𐌹𐍃𐍄𐌹𐌲𐌲: %2$d · 𐌿𐌽𐌼𐌰𐍄𐍄𐍃𐌷𐌴𐌳: %3$d</string>
+    <string name="anilist_import_empty">𐌾𐍉𐌿𐍂 𐌰𐌽𐌹𐌻𐌹𐍃𐍄 𐌼𐌰𐌲𐌲𐌰 𐍄𐌰𐌻𐌰 𐌹𐍃𐍄 𐌻𐌰𐌿𐍃.</string>
+    <string name="anilist_import_unmatched_title">𐌿𐌽𐌼𐌰𐍄𐍄𐍃𐌷𐌴𐌳 𐍄𐌹𐍄𐌻𐌴𐍃</string>
+    <string name="anilist_import_start">𐌳𐌿𐌲𐌹𐌽𐌽𐌰𐌽 𐌹𐌽𐌽𐌰𐍄𐌱𐌰𐌹𐍂𐌰𐌽</string>
+    <string name="anilist_import_retry">𐌹𐌽𐌽𐌰𐍄𐌱𐌰𐌹𐍂𐌰𐌽 𐌰𐌲𐌰𐌹𐌽</string>
+    <string name="anilist_import_error_no_sources">𐌲𐌰𐌼𐌰𐌷𐍄𐌾𐌰𐌽 𐌰𐍄 𐌻𐌴𐌰𐍃𐍄 𐍉𐌽𐌴 𐌼𐌰𐌲𐌲𐌰 𐌱𐍂𐌿𐌽𐌽𐌰 𐌱𐌴𐍆𐍉𐍂𐌴 𐌹𐌼𐍀𐍉𐍂𐍄𐌹𐌲𐌲.</string>
+</resources>

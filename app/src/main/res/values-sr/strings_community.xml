@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="community_rate">Оцени</string>
+	<string name="community_rating_title">Оцена заједнице</string>
+	<string name="community_your_rating">Ваша оцена: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Пошаљи</string>
+	<string name="community_rating_saved">Оцена је сачувана</string>
+	<string name="community_rating_count">Оцена: %1$s</string>
+	<string name="community_views_count">Прегледа: %1$s</string>
+	<string name="community_follows_count">Пратилаца: %1$s</string>
+	<string name="community_comments_count">Коментара: %1$s</string>
+	<string name="community_comments_sort_old">Стари</string>
+	<string name="community_web_comments">Веб</string>
+	<string name="community_show_replies">Прикажи одговоре (%1$d)</string>
+	<string name="community_hide_replies">Сакриј одговоре</string>
+	<string name="community_load_more">Учитај више</string>
+	<string name="community_load_more_replies">Учитај још одговора</string>
+	<string name="community_replying_to">Одговор кориснику %1$s</string>
+	<string name="community_editing_comment">Уређивање коментара</string>
+	<string name="community_comment_edited">(измењено)</string>
+	<string name="community_comment_deleted">Коментар је избрисан</string>
+	<string name="community_comment_delete_confirm">Избрисати овај коментар?</string>
+	<string name="community_comment_translate">Преведи</string>
+	<string name="community_comment_show_original">Оригинал</string>
+	<string name="community_spoiler_warning">Спојлер — Додирните за приказ</string>
+	<string name="community_spoiler_hide">Сакриј спојлер</string>
+	<string name="community_sign_in_to_comment">Пријавите се да бисте постављали коментаре или реакције</string>
+	<string name="community_sign_in_to_rate">Пријавите се да бисте оценили на %1$s</string>
+	<string name="community_widget_ssl_error">Безбедна веза није успела за овај виџет коментара. Можете отворити страницу у прегледачу.</string>
+	<string name="community_widget_load_error">Није могуће учитати виџет коментара. Проверите везу или га отворите у прегледачу.</string>
+	<string name="community_widget_unavailable">WebView није доступан на овом уређају. Отворите коментаре у прегледачу.</string>
+	<string name="community_more_options">Више опција</string>
+</resources>

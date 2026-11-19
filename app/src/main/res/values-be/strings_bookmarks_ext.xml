@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Закладкі дададзены</string>
+	<string name="bookmarks_sort_newest">Спачатку новыя</string>
+	<string name="bookmarks_sort_oldest">Спачатку старыя</string>
+	<string name="bookmarks_sort_chapter">Па парадку раздзелаў</string>
+	<string name="search_bookmarks_hint">Пошук серыі або раздзела</string>
+	<string name="search_bookmarked_chapters_hint">Пошук захаваных раздзелаў</string>
+	<string name="no_bookmarks_matching_query">Няма падыходных закладак</string>
+	<string name="no_bookmarks_matching_summary">Ніводная закладка не адпавядае бягучаму фільтру</string>
+	<string name="download_bookmarked_chapters">Спампаваць раздзелы з закладкамі</string>
+	<string name="download_bookmarked_only">Толькі раздзелы з закладкамі</string>
+	<string name="download_bookmarked_next_2">З закладкамі + наступныя 2 раздзелы</string>
+	<string name="download_bookmarked_next_3">З закладкамі + наступныя 3 раздзелы</string>
+	<string name="no_bookmarked_chapters_to_download">Няма раздзелаў з закладкамі для спампоўвання</string>
+	<string name="migrate_bookmarks">Перанесці закладкі ў іншую крыніцу</string>
+	<string name="bookmark_migration_choose_series">Выберыце серыю для пераносу</string>
+	<string name="bookmark_migration_searching">Пошук па актыўных крыніцах…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d крыніц · %3$d супадзенняў</string>
+	<string name="bookmark_migration_chapters_matched">Супала %1$d/%2$d раздзелаў</string>
+	<string name="bookmark_migration_total_chapters">%1$d раздзелаў</string>
+	<string name="bookmark_migration_no_candidates">Сумяшчальныя крыніцы не знойдзены</string>
+	<string name="bookmark_migration_no_candidates_summary">Ніводная ўключаная крыніца не супала з гэтай серыяй і яе захаванымі раздзеламі</string>
+	<string name="bookmark_migration_confirm">Перанесці %1$d закладак з «%2$s» (%3$s) у «%4$s» (%5$s)?\nСупала %6$d з %7$d раздзелаў з закладкамі.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Перанесці %1$d закладак з «%2$s» (%3$s) у «%4$s» (%5$s)?\nРаздзелы будуць падабраны прыблізна па прагрэсе чытання.</string>
+	<string name="bookmark_migration_success">Закладкі перанесены ў %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Для гэтай серыі закладкі не знойдзены</string>
+	<string name="bookmark_migration_rescan">Перасканаваць</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Няма раздзелаў</string>
+	<string name="bookmarks_count_badge">%1$d закладак</string>
+</resources>

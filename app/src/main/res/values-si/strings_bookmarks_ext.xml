@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">පිටු සලකුණු එක් කරන ලදී</string>
+	<string name="bookmarks_sort_newest">අලුතින්ම එක් කළ</string>
+	<string name="bookmarks_sort_oldest">පැරණිතම එක් කළ</string>
+	<string name="bookmarks_sort_chapter">පරිච්ඡේද අනුපිළිවෙල</string>
+	<string name="search_bookmarks_hint">කතා මාලාව හෝ පරිච්ඡේදය සොයන්න</string>
+	<string name="search_bookmarked_chapters_hint">පිටු සලකුණු කළ පරිච්ඡේද සොයන්න</string>
+	<string name="no_bookmarks_matching_query">ගැළපෙන පිටු සලකුණු නොමැත</string>
+	<string name="no_bookmarks_matching_summary">ඔබේ වත්මන් පෙරහනට කිසිදු පිටු සලකුණක් නොගැළපේ</string>
+	<string name="download_bookmarked_chapters">පිටු සලකුණු කළ පරිච්ඡේද බාගන්න</string>
+	<string name="download_bookmarked_only">පිටු සලකුණු කළ පරිච්ඡේද පමණි</string>
+	<string name="download_bookmarked_next_2">පිටු සලකුණු කළ + ඊළඟ පරිච්ඡේද 2</string>
+	<string name="download_bookmarked_next_3">පිටු සලකුණු කළ + ඊළඟ පරිච්ඡේද 3</string>
+	<string name="no_bookmarked_chapters_to_download">බාගැනීමට පිටු සලකුණු කළ පරිච්ඡේද නොමැත</string>
+	<string name="migrate_bookmarks">වෙනත් මූලාශ්‍රයකට පිටු සලකුණු සංක්‍රමණය කරන්න</string>
+	<string name="bookmark_migration_choose_series">සංක්‍රමණය කිරීමට කතා මාලාව තෝරන්න</string>
+	<string name="bookmark_migration_searching">සක්‍රිය මූලාශ්‍ර සොයමින්…</string>
+	<string name="bookmark_migration_progress">මූලාශ්‍ර %1$d/%2$d · ගැළපීම් %3$d</string>
+	<string name="bookmark_migration_chapters_matched">පරිච්ඡේද %1$d/%2$dක් ගැළපුණි</string>
+	<string name="bookmark_migration_total_chapters">පරිච්ඡේද %1$dක්</string>
+	<string name="bookmark_migration_no_candidates">අනුකූල මූලාශ්‍ර හමු නොවීය</string>
+	<string name="bookmark_migration_no_candidates_summary">මෙම කතා මාලාවට සහ එහි පිටු සලකුණු කළ පරිච්ඡේදවලට කිසිදු සබල කළ මූලාශ්‍රයක් නොගැළපේ</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s) වෙතින් \"%4$s\" (%5$s) වෙත පිටු සලකුණු %1$dක් සංක්‍රමණය කරන්නද?\nපිටු සලකුණු කළ පරිච්ඡේද %7$dන් %6$dක් ගැළපුණි.</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s) වෙතින් \"%4$s\" (%5$s) වෙත පිටු සලකුණු %1$dක් සංක්‍රමණය කරන්නද?\nකියවීමේ ප්‍රගතිය අනුව පරිච්ඡේද ආසන්න වශයෙන් ගණනය කෙරේ.</string>
+	<string name="bookmark_migration_success">පිටු සලකුණු %1$s වෙත සංක්‍රමණය කරන ලදී</string>
+	<string name="bookmark_migration_no_bookmarks">මෙම කතා මාලාව සඳහා පිටු සලකුණු හමු නොවීය</string>
+	<string name="bookmark_migration_rescan">නැවත ස්කෑන් කරන්න</string>
+	<string name="bookmark_migration_unavailable_no_chapters">පරිච්ඡේද නොමැත</string>
+	<string name="bookmarks_count_badge">පිටු සලකුණු %1$dක්</string>
+</resources>

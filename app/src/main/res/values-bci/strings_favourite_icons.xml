@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Ikɔn</string>
+	<string name="fav_icon_default">Awlɛn</string>
+	<string name="fav_icon_star">Nzraama</string>
+	<string name="fav_icon_fire">Sin</string>
+	<string name="fav_icon_crown">Famiɛn kle</string>
+	<string name="fav_icon_book">Fluwa .</string>
+	<string name="fav_icon_bookmark">Marque-page</string>
+	<string name="fav_icon_eye">Yima</string>
+	<string name="fav_icon_bolt">Boulon</string>
+	<string name="fav_icon_clock">Ɔrlo</string>
+	<string name="fav_icon_folder">Dossier</string>
+	<string name="fav_icon_check">Nian</string>
+	<string name="fav_icon_sparkles">Ɔ kpaja</string>
+</resources>

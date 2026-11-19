@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">ਐਨੀਲਿਸਟ ਤੋਂ ਆਯਾਤ ਕਰੋ</string>
+	<string name="anilist_import_mode_label">ਮੰਜ਼ਿਲ ਆਯਾਤ ਕਰੋ</string>
+	<string name="anilist_import_by_status">ਸਥਿਤੀ ਦੁਆਰਾ</string>
+	<string name="anilist_import_single_category">ਸਿੰਗਲ ਵਰਗ</string>
+	<string name="anilist_import_new_category">ਨਵੀਂ ਸ਼੍ਰੇਣੀ</string>
+	<string name="anilist_import_new_category_hint">ਸ਼੍ਰੇਣੀ ਦਾ ਨਾਮ</string>
+	<string name="anilist_import_new_category_default">ਐਨੀਲਿਸਟ</string>
+	<string name="anilist_import_fetching">ਤੁਹਾਡੀ ਐਨੀਲਿਸਟ ਲਾਇਬ੍ਰੇਰੀ ਲੋਡ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d·%3$s</string>
+	<string name="anilist_import_completed_status">ਪੂਰਾ ਹੋਇਆ (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">ਆਯਾਤ ਕੀਤਾ:%1$d· ਮੌਜੂਦਾ:%2$d· ਬੇਮੇਲ:%3$d</string>
+	<string name="anilist_import_empty">ਤੁਹਾਡੀ ਐਨੀਲਿਸਟ ਮੰਗਾ ਸੂਚੀ ਖਾਲੀ ਹੈ।</string>
+	<string name="anilist_import_unmatched_title">ਬੇਮਿਸਾਲ ਸਿਰਲੇਖ</string>
+	<string name="anilist_import_start">ਆਯਾਤ ਸ਼ੁਰੂ ਕਰੋ</string>
+	<string name="anilist_import_retry">ਦੁਬਾਰਾ ਆਯਾਤ ਕਰੋ</string>
+	<string name="anilist_import_error_no_sources">ਆਯਾਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਘੱਟੋ-ਘੱਟ ਇੱਕ ਮੰਗਾ ਸਰੋਤ ਨੂੰ ਸਮਰੱਥ ਬਣਾਓ।</string>
+</resources>

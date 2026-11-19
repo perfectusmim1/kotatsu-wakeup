@@ -28,4 +28,24 @@
         <item quantity="one">%1$d μήνας πριν</item>
         <item quantity="other">%1$d μήνες πριν</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d αποτέλεσμα</item>
+        <item quantity="other">%1$d αποτελέσματα</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d σελίδα</item>
+        <item quantity="other">%1$d σελίδες</item>
+    </plurals>
+    <plurals name="hours">
+        <item quantity="one">%1$d ώρα</item>
+        <item quantity="other">%1$d ώρες</item>
+    </plurals>
+    <plurals name="minutes">
+        <item quantity="one">%1$d λεπτό</item>
+        <item quantity="other">%1$d λεπτά</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d πηγή</item>
+        <item quantity="other">%1$d πηγές</item>
+    </plurals>
 </resources>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Bokmerker lagt til</string>
+	<string name="bookmarks_sort_newest">Nyeste først</string>
+	<string name="bookmarks_sort_oldest">Eldste først</string>
+	<string name="bookmarks_sort_chapter">Kapittelrekkefølge</string>
+	<string name="search_bookmarks_hint">Søk i serier eller kapitler</string>
+	<string name="search_bookmarked_chapters_hint">Søk i bokmerkede kapitler</string>
+	<string name="no_bookmarks_matching_query">Ingen samsvarende bokmerker</string>
+	<string name="no_bookmarks_matching_summary">Ingen bokmerker samsvarte med det gjeldende filteret</string>
+	<string name="download_bookmarked_chapters">Last ned bokmerkede kapitler</string>
+	<string name="download_bookmarked_only">Kun bokmerkede kapitler</string>
+	<string name="download_bookmarked_next_2">Bokmerket + neste 2 kapitler</string>
+	<string name="download_bookmarked_next_3">Bokmerket + neste 3 kapitler</string>
+	<string name="no_bookmarked_chapters_to_download">Ingen bokmerkede kapitler å laste ned</string>
+	<string name="migrate_bookmarks">Migrer bokmerker til en annen kilde</string>
+	<string name="bookmark_migration_choose_series">Velg serie å migrere</string>
+	<string name="bookmark_migration_searching">Søker i aktive kilder…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d kilder · %3$d treff</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d kapitler funnet</string>
+	<string name="bookmark_migration_total_chapters">%1$d kapitler</string>
+	<string name="bookmark_migration_no_candidates">Ingen kompatible kilder funnet</string>
+	<string name="bookmark_migration_no_candidates_summary">Ingen aktivert kilde samsvarte med denne serien og dens bokmerkede kapitler</string>
+	<string name="bookmark_migration_confirm">Migrere %1$d bokmerke(r) fra \"%2$s\" (%3$s) til \"%4$s\" (%5$s)?
+%6$d av %7$d bokmerkede kapitler funnet.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Migrere %1$d bokmerke(r) fra \"%2$s\" (%3$s) til \"%4$s\" (%5$s)?
+Kapitler blir beregnet ut fra lesefremdrift.</string>
+	<string name="bookmark_migration_success">Bokmerker migrert til %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Ingen bokmerker funnet for denne serien</string>
+	<string name="bookmark_migration_rescan">Skann på nytt</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Ingen kapitler</string>
+	<string name="bookmarks_count_badge">%1$d bokmerker</string>
+</resources>

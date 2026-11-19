@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">自 AniList 匯入</string>
+	<string name="anilist_import_mode_label">匯入之處</string>
+	<string name="anilist_import_by_status">依態別</string>
+	<string name="anilist_import_single_category">單一類目</string>
+	<string name="anilist_import_new_category">新立類目</string>
+	<string name="anilist_import_new_category_hint">類目之名</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">方載入汝之 AniList 書庫…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">已畢（%1$d/%2$d）</string>
+	<string name="anilist_import_counts">已入：%1$d · 已有：%2$d · 未配：%3$d</string>
+	<string name="anilist_import_empty">汝之 AniList 漫畫錄尚虛。</string>
+	<string name="anilist_import_unmatched_title">未配之題名</string>
+	<string name="anilist_import_start">始匯入</string>
+	<string name="anilist_import_retry">復匯入</string>
+	<string name="anilist_import_error_no_sources">匯入之先，請至少啟一漫畫源。</string>
+</resources>

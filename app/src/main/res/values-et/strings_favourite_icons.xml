@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">Ikoon</string>
+    <string name="fav_icon_default">Süda</string>
+    <string name="fav_icon_star">Täht</string>
+    <string name="fav_icon_fire">Tuli</string>
+    <string name="fav_icon_crown">Kroon</string>
+    <string name="fav_icon_book">Raamat</string>
+    <string name="fav_icon_bookmark">Järjehoidja</string>
+    <string name="fav_icon_eye">Silm</string>
+    <string name="fav_icon_bolt">Välk</string>
+    <string name="fav_icon_clock">Kell</string>
+    <string name="fav_icon_folder">Kaust</string>
+    <string name="fav_icon_check">Linnuke</string>
+    <string name="fav_icon_sparkles">Sädemed</string>
+</resources>

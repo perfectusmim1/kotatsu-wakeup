@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">Reikalingas patvirtinimas šaltiniui %1</string>
+	<string name="cf_banner_multiple_required">Reikalingas patvirtinimas šaltiniui %1 (ir dar +%2)</string>
+	<string name="cf_banner_solve">Išspręsti</string>
+	<string name="cf_banner_dismiss">Atmesti</string>
+</resources>

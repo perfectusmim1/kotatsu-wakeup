@@ -1,31 +1,51 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <plurals name="new_chapters">
-        <item quantity="one">%1$d nytt kapittel</item>
-        <item quantity="other">%1$d nye kapitler</item>
-    </plurals>
-    <plurals name="chapters">
-        <item quantity="one">%1$d kapittel</item>
-        <item quantity="other">%1$d kapitler</item>
-    </plurals>
-    <plurals name="hours_ago">
-        <item quantity="one">%1$d time siden</item>
-        <item quantity="other">%1$d timer siden</item>
-    </plurals>
-    <plurals name="days_ago">
-        <item quantity="one">%1$d dag siden</item>
-        <item quantity="other">%1$d dager siden</item>
-    </plurals>
-    <plurals name="items">
-        <item quantity="one">%1$d element</item>
-        <item quantity="other">%1$d elementer</item>
-    </plurals>
-    <plurals name="minutes_ago">
-        <item quantity="one">%1$d minutt siden</item>
-        <item quantity="other">%1$d minutter siden</item>
-    </plurals>
-    <plurals name="months_ago">
-        <item quantity="one">%1$d måned siden</item>
-        <item quantity="other">%1$d måneder siden</item>
-    </plurals>
+	<plurals name="new_chapters">
+		<item quantity="one">%1$d nytt kapittel</item>
+		<item quantity="other">%1$d nye kapitler</item>
+	</plurals>
+	<plurals name="chapters">
+		<item quantity="one">%1$d kapittel</item>
+		<item quantity="other">%1$d kapitler</item>
+	</plurals>
+	<plurals name="hours_ago">
+		<item quantity="one">%1$d time siden</item>
+		<item quantity="other">%1$d timer siden</item>
+	</plurals>
+	<plurals name="days_ago">
+		<item quantity="one">%1$d dag siden</item>
+		<item quantity="other">%1$d dager siden</item>
+	</plurals>
+	<plurals name="items">
+		<item quantity="one">%1$d element</item>
+		<item quantity="other">%1$d elementer</item>
+	</plurals>
+	<plurals name="minutes_ago">
+		<item quantity="one">%1$d minutt siden</item>
+		<item quantity="other">%1$d minutter siden</item>
+	</plurals>
+	<plurals name="months_ago">
+		<item quantity="one">%1$d måned siden</item>
+		<item quantity="other">%1$d måneder siden</item>
+	</plurals>
+	<plurals name="search_results_count">
+		<item quantity="one">%1$d resultat</item>
+		<item quantity="other">%1$d resultater</item>
+	</plurals>
+	<plurals name="pages">
+		<item quantity="one">%1$d side</item>
+		<item quantity="other">%1$d sider</item>
+	</plurals>
+	<plurals name="hours">
+		<item quantity="one">%1$d time</item>
+		<item quantity="other">%1$d timer</item>
+	</plurals>
+	<plurals name="minutes">
+		<item quantity="one">%1$d minutt</item>
+		<item quantity="other">%1$d minutter</item>
+	</plurals>
+	<plurals name="sources_count">
+		<item quantity="one">%1$d kilde</item>
+		<item quantity="other">%1$d kilder</item>
+	</plurals>
 </resources>

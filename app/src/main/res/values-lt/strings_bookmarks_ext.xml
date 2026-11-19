@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Žymės pridėtos</string>
+	<string name="bookmarks_sort_newest">Naujausios</string>
+	<string name="bookmarks_sort_oldest">Seniausios</string>
+	<string name="bookmarks_sort_chapter">Pagal skyrių tvarką</string>
+	<string name="search_bookmarks_hint">Ieškoti serijos arba skyriaus</string>
+	<string name="search_bookmarked_chapters_hint">Ieškoti pažymėtų skyrių</string>
+	<string name="no_bookmarks_matching_query">Nėra atitinkančių žymių</string>
+	<string name="no_bookmarks_matching_summary">Nėra žymių, atitinkančių dabartinį filtrą</string>
+	<string name="download_bookmarked_chapters">Atsisiųsti pažymėtus skyrius</string>
+	<string name="download_bookmarked_only">Tik pažymėtus skyrius</string>
+	<string name="download_bookmarked_next_2">Pažymėtą + kitus 2 skyrius</string>
+	<string name="download_bookmarked_next_3">Pažymėtą + kitus 3 skyrius</string>
+	<string name="no_bookmarked_chapters_to_download">Nėra pažymėtų skyrių atsisiuntimui</string>
+	<string name="migrate_bookmarks">Perkelti žymes į kitą šaltinį</string>
+	<string name="bookmark_migration_choose_series">Pasirinkite seriją perkėlimui</string>
+	<string name="bookmark_migration_searching">Ieškoma aktyviuose šaltiniuose…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d šaltinių · %3$d atitikmenų</string>
+	<string name="bookmark_migration_chapters_matched">Sutapo %1$d/%2$d skyrių</string>
+	<string name="bookmark_migration_total_chapters">%1$d skyrių</string>
+	<string name="bookmark_migration_no_candidates">Nerasta suderinamų šaltinių</string>
+	<string name="bookmark_migration_no_candidates_summary">Nė vienas įjungtas šaltinis neatitiko šios serijos ir jos pažymėtų skyrių</string>
+	<string name="bookmark_migration_confirm">Perkelti %1$d žymę (-es) iš \"%2$s\" (%3$s) į \"%4$s\" (%5$s)?\nSutapo %6$d iš %7$d pažymėtų skyrių.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Perkelti %1$d žymę (-es) iš \"%2$s\" (%3$s) į \"%4$s\" (%5$s)?\nSkyriai bus apytiksliai parinkti pagal skaitymo pažangą.</string>
+	<string name="bookmark_migration_success">Žymės perkeltos į %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Šiai serijai žymių nerasta</string>
+	<string name="bookmark_migration_rescan">Nuskaityti iš naujo</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Nėra skyrių</string>
+	<string name="bookmarks_count_badge">%1$d žymių</string>
+</resources>

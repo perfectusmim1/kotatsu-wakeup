@@ -29,9 +29,6 @@ class PagerLifecycleDispatcher(
 		pendingUpdate = null
 		var hasResumedItem = false
 		val rv = pager.recyclerView ?: return
-		if (rv.isEmpty()) {
-			return
-		}
 		for (child in rv.children) {
 			val wh = rv.getChildViewHolder(child) ?: continue
 			val isCurrent = wh.absoluteAdapterPosition == position

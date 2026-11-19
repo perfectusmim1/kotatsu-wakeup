@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="bookmark_added_many">ブックマークを追加しました</string>
 	<string name="bookmarks_sort_newest">新しい順</string>

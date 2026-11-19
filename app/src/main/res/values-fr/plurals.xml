@@ -55,4 +55,8 @@
         <item quantity="many">%1$d sources</item>
         <item quantity="other">%1$d sources</item>
     </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d page</item>
+        <item quantity="other">%1$d pages</item>
+    </plurals>
 </resources>

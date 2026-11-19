@@ -63,6 +63,21 @@ class UpscaleFeatureTest {
 		assertEquals(2048, oversized.inputWidth)
 		assertEquals(4096, oversized.outWidth)
 		assertTrue(oversized.outHeight <= 4096)
+
+		val aiOptimized = StripPlanner.computeStripOutputSize(
+			srcW = 1080,
+			validH = StripPlanner.AI_STRIP_HEIGHT,
+			maxTexSize = 4096,
+			maxInputWidthOverride = StripPlanner.AI_MAX_INPUT_WIDTH,
+		)
+		assertEquals(512, aiOptimized.inputWidth)
+		assertEquals(1024, aiOptimized.outWidth)
+		val aiStrips = StripPlanner.planStripsForMode(4800, UpscaleMode.AI)
+		assertEquals(10, aiStrips.size)
+		val firstAiStrip = aiStrips.first()
+		val scaledAiInH = ((firstAiStrip.y1 - firstAiStrip.y0) * aiOptimized.inputScale).toInt()
+		val aiTiles = StripPlanner.planTiles(aiOptimized.inputWidth, scaledAiInH)
+		assertTrue("AI strip must fit in at most 4 ONNX tiles, got ${aiTiles.size}", aiTiles.size <= 4)
 	}
 
 	@Test
@@ -112,6 +127,8 @@ class UpscaleFeatureTest {
 		}
 
 		repeat(5) { yield() }
+		assertTrue(gate.hasWaiterWithPriorityBelow(100f))
+		assertFalse(gate.hasWaiterWithPriorityBelow(5f))
 		cancelledJob.cancelAndJoin()
 		releaseFirst.complete(Unit)
 

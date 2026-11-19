@@ -542,11 +542,6 @@ class ReaderActivity :
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        when (eraseController.onTouchEvent(ev)) {
-            EraseController.TouchResult.NOT_CLAIMED -> Unit
-            EraseController.TouchResult.CONSUMED -> return true
-            EraseController.TouchResult.TO_OVERLAY -> return super.dispatchTouchEvent(ev)
-        }
         if (viewBinding.upscaleCompareOverlay.isVisible) {
             val rawX = ev.rawX.toInt()
             val rawY = ev.rawY.toInt()
@@ -556,6 +551,12 @@ class ReaderActivity :
                 )
             if (!overChrome && viewBinding.upscaleCompareOverlay.onInterceptOrDispatchTouch(ev)) {
                 return true
+            }
+        } else {
+            when (eraseController.onTouchEvent(ev)) {
+                EraseController.TouchResult.NOT_CLAIMED -> Unit
+                EraseController.TouchResult.CONSUMED -> return true
+                EraseController.TouchResult.TO_OVERLAY -> return super.dispatchTouchEvent(ev)
             }
         }
         touchHelper.dispatchTouchEvent(ev)

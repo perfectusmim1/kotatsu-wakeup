@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="cf_banner_required">%1$s အတွက် အတည်ပြုချက် လိုအပ်သည်</string>
+	<string name="cf_banner_multiple_required">%1$s (+%2$d နောက်ထပ်) အတွက် အတည်ပြုချက် လိုအပ်သည်</string>
+	<string name="cf_banner_solve">ဖြေရှင်းပါ။</string>
+	<string name="cf_banner_dismiss">ပယ်ရန်</string>
+</resources>

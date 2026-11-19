@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">Icôna</string>
+    <string name="fav_icon_default">Cuer</string>
+    <string name="fav_icon_star">Ètêla</string>
+    <string name="fav_icon_fire">Fuè</string>
+    <string name="fav_icon_crown">Corona</string>
+    <string name="fav_icon_book">Livro</string>
+    <string name="fav_icon_bookmark">Mârco-pâge</string>
+    <string name="fav_icon_eye">Uely</string>
+    <string name="fav_icon_bolt">Ècllèro</string>
+    <string name="fav_icon_clock">Rèloge</string>
+    <string name="fav_icon_folder">Dossiér</string>
+    <string name="fav_icon_check">Cochet</string>
+    <string name="fav_icon_sparkles">Ètincèles</string>
+</resources>

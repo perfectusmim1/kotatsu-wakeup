@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">Itzulpen-ezarpenak</string>
+    <string name="translation_toggle">Txandakatu itzulpena</string>
+    <string name="translation_enable">Gaitu itzulpena</string>
+    <string name="translation_disable">Desgaitu itzulpena</string>
+    <string name="translation_active">Aktibo</string>
+    <string name="translation_off">Itzalita</string>
+    <string name="translation_provider">Itzulpen-hornitzailea</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google Translate</string>
+    <string name="translation_gemini_thinking_level">Pentsamendu-maila</string>
+    <string name="translation_thinking_minimal">Gutxienekoa</string>
+    <string name="translation_thinking_low">Baxua</string>
+    <string name="translation_thinking_medium">Ertaina</string>
+    <string name="translation_thinking_high">Altua</string>
+    <string name="translation_source_lang">Jatorrizko hizkuntza (OCR)</string>
+    <string name="translation_target_lang">Helburuko hizkuntza</string>
+    <string name="translation_api_keys">Gemini API gakoak</string>
+    <string name="translation_deepl_api_keys">DeepL API gakoak</string>
+    <string name="translation_api_keys_hint">Bereizi hainbat gako komaz edo lerro berriz</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">Gako aktibo %1$d konfiguratuta</item>
+        <item quantity="other">%1$d gako aktibo konfiguratuta</item>
+    </plurals>
+    <string name="translation_api_keys_empty">Ez dago API gakorik konfiguratuta</string>
+    <string name="translation_api_key_required">Gehitu Gemini API gako bat edo aldatu hornitzailea</string>
+    <string name="translation_deepl_api_key_required">Gehitu DeepL API gako bat edo aldatu hornitzailea</string>
+    <string name="translation_auto_translate">Itzuli orrialdeak automatikoki</string>
+    <string name="translation_skip_sfx">Saltatu soinu-efektuak</string>
+    <string name="translation_filter_promo">Saltatu promozio- eta kreditu-orriak</string>
+    <string name="translation_ocr_ready">OCR eredua prest</string>
+    <string name="translation_ocr_auto_ready">Detekzio automatikoko OCR prest</string>
+    <string name="translation_ocr_not_downloaded">OCR eredua lehen erabileran deskargatuko da</string>
+    <string name="translation_ocr_download">Deskargatu eredua</string>
+    <string name="translation_ocr_downloading">OCR eredua deskargatzen… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">Testua ezagutzen…</string>
+    <string name="translation_translating_text">Itzultzen…</string>
+    <string name="translation_rendering_page">Orrialdea errendatzen…</string>
+    <string name="translation_clear_cache">Garbitu itzulpen-cachea</string>
+    <string name="translation_cache_cleared">Itzulpen-cachea garbituta</string>
+    <string name="translation_cache_cleared_size">Cacheko itzulpenen %1$s garbitu da</string>
+    <string name="translation_error_generic">Itzulpenak huts egin du: %1$s</string>
+</resources>

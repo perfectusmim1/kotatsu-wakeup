@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">已增書籤</string>
+	<string name="bookmarks_sort_newest">新入者先</string>
+	<string name="bookmarks_sort_oldest">舊入者先</string>
+	<string name="bookmarks_sort_chapter">依章次</string>
+	<string name="search_bookmarks_hint">尋書或章</string>
+	<string name="search_bookmarked_chapters_hint">尋已籤之章</string>
+	<string name="no_bookmarks_matching_query">無相合之書籤</string>
+	<string name="no_bookmarks_matching_summary">無書籤合於今之篩選</string>
+	<string name="download_bookmarked_chapters">下已籤之章</string>
+	<string name="download_bookmarked_only">僅下已籤之章</string>
+	<string name="download_bookmarked_next_2">已籤暨後二章</string>
+	<string name="download_bookmarked_next_3">已籤暨後三章</string>
+	<string name="no_bookmarked_chapters_to_download">無已籤之章可下</string>
+	<string name="migrate_bookmarks">遷書籤至他源</string>
+	<string name="bookmark_migration_choose_series">擇欲遷之書</string>
+	<string name="bookmark_migration_searching">方尋已啟之源…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d 源 · %3$d 合</string>
+	<string name="bookmark_migration_chapters_matched">合 %1$d/%2$d 章</string>
+	<string name="bookmark_migration_total_chapters">凡 %1$d 章</string>
+	<string name="bookmark_migration_no_candidates">未覓相容之源</string>
+	<string name="bookmark_migration_no_candidates_summary">已啟之源中，無合此書及其已籤之章者</string>
+	<string name="bookmark_migration_confirm">欲遷 %1$d 書籤自「%2$s」（%3$s）至「%4$s」（%5$s）乎？\n已籤 %7$d 章中，合者 %6$d 章。</string>
+	<string name="bookmark_migration_confirm_no_overlap">欲遷 %1$d 書籤自「%2$s」（%3$s）至「%4$s」（%5$s）乎？\n將依閱覽之進度約略定章。</string>
+	<string name="bookmark_migration_success">書籤已遷至 %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">此書無書籤</string>
+	<string name="bookmark_migration_rescan">復掃</string>
+	<string name="bookmark_migration_unavailable_no_chapters">無章節</string>
+	<string name="bookmarks_count_badge">%1$d 書籤</string>
+</resources>

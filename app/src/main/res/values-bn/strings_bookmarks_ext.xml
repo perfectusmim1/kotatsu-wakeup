@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">বুকমার্ক যোগ করা হয়েছে</string>
+    <string name="bookmarks_sort_newest">নতুন যোগ করা</string>
+    <string name="bookmarks_sort_oldest">পুরনো যোগ করা</string>
+    <string name="bookmarks_sort_chapter">অধ্যায় ক্রম</string>
+    <string name="search_bookmarks_hint">সিরিজ বা অধ্যায় খুঁজুন</string>
+    <string name="search_bookmarked_chapters_hint">বুকমার্ক করা অধ্যায় খুঁজুন</string>
+    <string name="no_bookmarks_matching_query">কোনো মিল পাওয়া বুকমার্ক নেই</string>
+    <string name="no_bookmarks_matching_summary">আপনার বর্তমান ফিল্টারের সাথে কোনো বুকমার্ক মেলেনি</string>
+    <string name="download_bookmarked_chapters">বুকমার্ক করা অধ্যায় ডাউনলোড করুন</string>
+    <string name="download_bookmarked_only">শুধুমাত্র বুকমার্ক করা অধ্যায়</string>
+    <string name="download_bookmarked_next_2">বুকমার্ক করা + পরবর্তী ২টি অধ্যায়</string>
+    <string name="download_bookmarked_next_3">বুকমার্ক করা + পরবর্তী ৩টি অধ্যায়</string>
+    <string name="no_bookmarked_chapters_to_download">ডাউনলোড করার জন্য কোনো বুকমার্ক করা অধ্যায় নেই</string>
+    <string name="migrate_bookmarks">অন্য উৎসে বুকমার্ক স্থানান্তর করুন</string>
+    <string name="bookmark_migration_choose_series">স্থানান্তরের জন্য সিরিজ নির্বাচন করুন</string>
+    <string name="bookmark_migration_searching">সক্রিয় উৎসগুলোতে খোঁজা হচ্ছে…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$dটি উৎস · %3$dটি মিল</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$dটি অধ্যায় মিলেছে</string>
+    <string name="bookmark_migration_total_chapters">%1$dটি অধ্যায়</string>
+    <string name="bookmark_migration_no_candidates">কোনো সামঞ্জস্যপূর্ণ উৎস পাওয়া যায়নি</string>
+    <string name="bookmark_migration_no_candidates_summary">কোনো সক্রিয় উৎস এই সিরিজ এবং এর বুকমার্ক করা অধ্যায়ের সাথে মেলেনি</string>
+    <string name="bookmark_migration_confirm">"%2$s" (%3$s) থেকে "%4$s" (%5$s)-এ %1$dটি বুকমার্ক স্থানান্তর করবেন?\n%7$dটি বুকমার্ক করা অধ্যায়ের মধ্যে %6$dটি মিলেছে।</string>
+    <string name="bookmark_migration_confirm_no_overlap">"%2$s" (%3$s) থেকে "%4$s" (%5$s)-এ %1$dটি বুকমার্ক স্থানান্তর করবেন?\nপড়ার অগ্রগতি অনুযায়ী অধ্যায় অনুমান করা হবে।</string>
+    <string name="bookmark_migration_success">বুকমার্ক %1$s-এ স্থানান্তরিত হয়েছে</string>
+    <string name="bookmark_migration_no_bookmarks">এই সিরিজের জন্য কোনো বুকমার্ক পাওয়া যায়নি</string>
+    <string name="bookmark_migration_rescan">পুনরায় স্ক্যান করুন</string>
+    <string name="bookmark_migration_unavailable_no_chapters">কোনো অধ্যায় নেই</string>
+    <string name="bookmarks_count_badge">%1$dটি বুকমার্ক</string>
+</resources>

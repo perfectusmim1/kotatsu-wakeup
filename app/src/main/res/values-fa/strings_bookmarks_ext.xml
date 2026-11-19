@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">نشانه‌ها اضافه شدند</string>
+    <string name="bookmarks_sort_newest">جدیدترین افزوده‌شده</string>
+    <string name="bookmarks_sort_oldest">قدیمی‌ترین افزوده‌شده</string>
+    <string name="bookmarks_sort_chapter">ترتیب چپتر</string>
+    <string name="search_bookmarks_hint">جستجوی مجموعه یا چپتر</string>
+    <string name="search_bookmarked_chapters_hint">جستجوی چپترهای نشانه‌گذاری شده</string>
+    <string name="no_bookmarks_matching_query">نشانه‌ای مطابق یافت نشد</string>
+    <string name="no_bookmarks_matching_summary">هیچ نشانه‌ای با فیلتر فعلی شما مطابقت نداشت</string>
+    <string name="download_bookmarked_chapters">دانلود چپترهای نشانه‌گذاری شده</string>
+    <string name="download_bookmarked_only">فقط چپترهای نشانه‌گذاری شده</string>
+    <string name="download_bookmarked_next_2">نشانه‌گذاری شده + 2 چپتر بعدی</string>
+    <string name="download_bookmarked_next_3">نشانه‌گذاری شده + 3 چپتر بعدی</string>
+    <string name="no_bookmarked_chapters_to_download">چپتر نشانه‌گذاری شده‌ای برای دانلود وجود ندارد</string>
+    <string name="migrate_bookmarks">انتقال نشانه‌ها به منبع دیگر</string>
+    <string name="bookmark_migration_choose_series">مجموعه مورد نظر برای انتقال را انتخاب کنید</string>
+    <string name="bookmark_migration_searching">در حال جستجوی منابع فعال…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d منبع · %3$d تطابق</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d چپتر تطابق یافت</string>
+    <string name="bookmark_migration_total_chapters">%1$d چپتر</string>
+    <string name="bookmark_migration_no_candidates">منبع سازگاری یافت نشد</string>
+    <string name="bookmark_migration_no_candidates_summary">هیچ منبع فعالی با این مجموعه و چپترهای نشانه‌گذاری شده آن تطابق نداشت</string>
+    <string name="bookmark_migration_confirm">%1$d نشانه از \"%2$s\" (%3$s) به \"%4$s\" (%5$s) منتقل شود؟\n%6$d از %7$d چپتر نشانه‌گذاری شده تطابق یافت.</string>
+    <string name="bookmark_migration_confirm_no_overlap">%1$d نشانه از \"%2$s\" (%3$s) به \"%4$s\" (%5$s) منتقل شود؟\nچپترها بر اساس پیشرفت خواندن تخمین زده خواهند شد.</string>
+    <string name="bookmark_migration_success">نشانه‌ها به %1$s منتقل شدند</string>
+    <string name="bookmark_migration_no_bookmarks">نشانه‌ای برای این مجموعه یافت نشد</string>
+    <string name="bookmark_migration_rescan">اسکن مجدد</string>
+    <string name="bookmark_migration_unavailable_no_chapters">بدون چپتر</string>
+    <string name="bookmarks_count_badge">%1$d نشانه</string>
+</resources>

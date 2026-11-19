@@ -22,7 +22,7 @@
 	<string name="translation_ocr_auto_ready">Automatische OCR bereit</string>
 	<string name="translation_ocr_not_downloaded">OCR-Modell wird bei erster Nutzung geladen</string>
 	<string name="translation_ocr_download">Modell herunterladen</string>
-	<string name="translation_ocr_downloading">OCR-Modell wird geladen… %1$d%%</string>
+	<string name="translation_ocr_downloading">OCR-Modell wird geladen… %1$d%%%%%%</string>
 	<string name="translation_ocr_running">Text wird erkannt…</string>
 	<string name="translation_translating_text">Wird übersetzt…</string>
 	<string name="translation_rendering_page">Seite wird erstellt…</string>
@@ -34,4 +34,12 @@
 		<item quantity="one">%1$d aktiver Schlüssel konfiguriert</item>
 		<item quantity="other">%1$d aktive Schlüssel konfiguriert</item>
 	</plurals>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_gemini_thinking_level">Denkstufe</string>
+	<string name="translation_thinking_minimal">Minimal</string>
+	<string name="translation_thinking_low">Niedrig</string>
+	<string name="translation_thinking_medium">Mittel</string>
+	<string name="translation_thinking_high">Hoch</string>
+	<string name="translation_deepl_api_keys">DeepL-API-Schlüssel</string>
+	<string name="translation_deepl_api_key_required">DeepL-API-Schlüssel hinzufügen oder Anbieter wechseln</string>
 </resources>

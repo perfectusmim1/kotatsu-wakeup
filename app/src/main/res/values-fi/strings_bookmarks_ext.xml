@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">Kirjanmerkit lisätty</string>
+    <string name="bookmarks_sort_newest">Uusin ensin</string>
+    <string name="bookmarks_sort_oldest">Vanhin ensin</string>
+    <string name="bookmarks_sort_chapter">Lukujärjestys</string>
+    <string name="search_bookmarks_hint">Hae sarjaa tai lukua</string>
+    <string name="search_bookmarked_chapters_hint">Hae kirjanmerkittyjä lukuja</string>
+    <string name="no_bookmarks_matching_query">Ei vastaavia kirjanmerkkejä</string>
+    <string name="no_bookmarks_matching_summary">Mikään kirjanmerkki ei vastannut nykyistä suodatinta</string>
+    <string name="download_bookmarked_chapters">Lataa kirjanmerkityt luvut</string>
+    <string name="download_bookmarked_only">Vain kirjanmerkityt luvut</string>
+    <string name="download_bookmarked_next_2">Kirjanmerkitty + seuraavat 2 lukua</string>
+    <string name="download_bookmarked_next_3">Kirjanmerkitty + seuraavat 3 lukua</string>
+    <string name="no_bookmarked_chapters_to_download">Ei ladattavia kirjanmerkittyjä lukuja</string>
+    <string name="migrate_bookmarks">Siirrä kirjanmerkit toiseen lähteeseen</string>
+    <string name="bookmark_migration_choose_series">Valitse siirrettävä sarja</string>
+    <string name="bookmark_migration_searching">Haetaan aktiivisista lähteistä…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d lähdettä · %3$d osumaa</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d lukua täsmäsi</string>
+    <string name="bookmark_migration_total_chapters">%1$d lukua</string>
+    <string name="bookmark_migration_no_candidates">Yhteensopivia lähteitä ei löytynyt</string>
+    <string name="bookmark_migration_no_candidates_summary">Mikään käytössä oleva lähde ei täsmännyt tähän sarjaan ja sen kirjanmerkittyihin lukuihin</string>
+    <string name="bookmark_migration_confirm">Siirretäänkö %1$d kirjanmerkki(ä) lähteestä "%2$s" (%3$s) lähteeseen "%4$s" (%5$s)?\n%6$d / %7$d kirjanmerkitystä luvusta täsmäsi.</string>
+    <string name="bookmark_migration_confirm_no_overlap">Siirretäänkö %1$d kirjanmerkki(ä) lähteestä "%2$s" (%3$s) lähteeseen "%4$s" (%5$s)?\nLuvut arvioidaan lukemisen edistymisen perusteella.</string>
+    <string name="bookmark_migration_success">Kirjanmerkit siirretty lähteeseen %1$s</string>
+    <string name="bookmark_migration_no_bookmarks">Tälle sarjalle ei löytynyt kirjanmerkkejä</string>
+    <string name="bookmark_migration_rescan">Hae uudelleen</string>
+    <string name="bookmark_migration_unavailable_no_chapters">Ei lukuja</string>
+    <string name="bookmarks_count_badge">%1$d kirjanmerkkiä</string>
+</resources>

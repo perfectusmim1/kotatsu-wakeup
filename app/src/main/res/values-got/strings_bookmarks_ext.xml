@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽𐌰 𐌰𐌳𐌳𐌴𐌳</string>
+    <string name="bookmarks_sort_newest">𐌽𐌴𐍅𐌴𐍃𐍄 𐌰𐌳𐌳𐌴𐌳</string>
+    <string name="bookmarks_sort_oldest">𐍉𐌻𐌳𐌴𐍃𐍄 𐌰𐌳𐌳𐌴𐌳</string>
+    <string name="bookmarks_sort_chapter">𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐌿𐍃 𐍄𐌴𐍅𐌰</string>
+    <string name="search_bookmarks_hint">𐍃𐍉𐌺𐌾𐌰𐌽 𐍃𐌴𐍂𐌹𐌴𐍃 𐌰𐌹𐌸𐌸𐌰𐌿 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐌿𐍃</string>
+    <string name="search_bookmarked_chapters_hint">𐍃𐍉𐌺𐌾𐌰𐌽 𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</string>
+    <string name="no_bookmarks_matching_query">𐌽𐌴 𐌼𐌰𐍄𐍄𐍃𐌷𐌹𐌲𐌲 𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽𐌰</string>
+    <string name="no_bookmarks_matching_summary">𐌽𐌴 𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽𐌰 𐌼𐌰𐍄𐍄𐍃𐌷𐌴𐌳 𐌾𐍉𐌿𐍂 𐌺𐌿𐍂𐍂𐌴𐌽𐍄 𐍃𐌴𐌹𐍅𐌰𐌽</string>
+    <string name="download_bookmarked_chapters">𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌰𐌽 𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</string>
+    <string name="download_bookmarked_only">𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃 𐍉𐌽𐌻𐌾</string>
+    <string name="download_bookmarked_next_2">𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 + 𐌽𐌴𐍈𐌹𐍃𐍄𐍃 2 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</string>
+    <string name="download_bookmarked_next_3">𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 + 𐌽𐌴𐍈𐌹𐍃𐍄𐍃 3 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</string>
+    <string name="no_bookmarked_chapters_to_download">𐌽𐌴 𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃 𐌳𐌿 𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌰𐌽</string>
+    <string name="migrate_bookmarks">𐌼𐌹𐌲𐍂𐌰𐍄𐌴 𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽𐌰 𐌳𐌿 𐌰𐌽𐍉𐌸𐌴𐍂 𐌱𐍂𐌿𐌽𐌽𐌰</string>
+    <string name="bookmark_migration_choose_series">𐍄𐍃𐌷𐍉𐍃𐌴 𐍃𐌴𐍂𐌹𐌴𐍃 𐌳𐌿 𐌼𐌹𐌲𐍂𐌰𐍄𐌴</string>
+    <string name="bookmark_migration_searching">𐍃𐌴𐌰𐍂𐍄𐍃𐌷𐌹𐌲𐌲 𐌰𐌺𐍄𐌹𐍅𐌴 𐌱𐍂𐌿𐌽𐌽𐌰𐌽𐍃…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d 𐌱𐍂𐌿𐌽𐌽𐌰𐌽𐍃 · %3$d 𐌼𐌰𐍄𐍄𐍃𐌷𐌴𐍃</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃 𐌼𐌰𐍄𐍄𐍃𐌷𐌴𐌳</string>
+    <string name="bookmark_migration_total_chapters">%1$d 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</string>
+    <string name="bookmark_migration_no_candidates">𐌽𐌴 𐌺𐍉𐌼𐍀𐌰𐍄𐌹𐌱𐌻𐌴 𐌱𐍂𐌿𐌽𐌽𐌰𐌽𐍃 𐌱𐌹𐌲𐌹𐍄𐌰𐌽𐍃</string>
+    <string name="bookmark_migration_no_candidates_summary">𐌽𐌴 𐌲𐌰𐌼𐌰𐌷𐍄𐌹𐌸𐍃 𐌱𐍂𐌿𐌽𐌽𐌰 𐌼𐌰𐍄𐍄𐍃𐌷𐌴𐌳 𐌸𐌹𐍃 𐍃𐌴𐍂𐌹𐌴𐍃 𐌾𐌰𐌷 𐌹𐍄𐍃 𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</string>
+    <string name="bookmark_migration_confirm">𐌼𐌹𐌲𐍂𐌰𐍄𐌴 %1$d 𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽(𐍃) 𐍆𐍂𐌰𐌼 \"%2$s\" (%3$s) 𐌳𐌿 \"%4$s\" (%5$s)?\n%6$d 𐌰𐍆 %7$d 𐌱𐍉𐌺𐌼𐌰𐍂𐌺𐌴𐌳 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃 𐌼𐌰𐍄𐍄𐍃𐌷𐌴𐌳.</string>
+    <string name="bookmark_migration_confirm_no_overlap">𐌼𐌹𐌲𐍂𐌰𐍄𐌴 %1$d 𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽(𐍃) 𐍆𐍂𐌰𐌼 \"%2$s\" (%3$s) 𐌳𐌿 \"%4$s\" (%5$s)?\n𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃 𐍅𐌹𐌻𐌾𐌰𐌿 𐌱𐌴 𐌰𐍀𐍀𐍂𐍉𐌺𐍃𐌹𐌼𐌰𐍄𐌴𐌳 𐌱𐌹 𐌰𐌽𐌰𐌺𐌿𐌽𐌽𐌰𐌽𐌳𐍃 𐍀𐍂𐍉𐌲𐍂𐌴𐍃𐍃.</string>
+    <string name="bookmark_migration_success">𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽𐌰 𐌼𐌹𐌲𐍂𐌰𐍄𐌴𐌳 𐌳𐌿 %1$s</string>
+    <string name="bookmark_migration_no_bookmarks">𐌽𐌴 𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽𐌰 𐌱𐌹𐌲𐌹𐍄𐌰𐌽𐍃 𐍆𐌰𐌿𐍂 𐌸𐌹𐍃 𐍃𐌴𐍂𐌹𐌴𐍃</string>
+    <string name="bookmark_migration_rescan">𐍂𐌴𐍃𐌺𐌰𐌽</string>
+    <string name="bookmark_migration_unavailable_no_chapters">𐌽𐌴 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</string>
+    <string name="bookmarks_count_badge">%1$d 𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽𐌰</string>
+</resources>

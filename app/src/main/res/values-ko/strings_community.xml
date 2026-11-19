@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="community_comment_dislike">싫어요</string>
 	<string name="community_comment_like">좋아요</string>
@@ -45,4 +45,6 @@
 	<string name="community_widget_load_error">댓글 위젯을 불러올 수 없습니다. 연결을 확인하거나 브라우저에서 열어보세요.</string>
 	<string name="community_widget_unavailable">이 기기에서 WebView를 사용할 수 없습니다. 브라우저에서 댓글을 여세요.</string>
 	<string name="community_more_options">옵션 더보기</string>
+	<string name="community_comment_translate">번역</string>
+	<string name="community_comment_show_original">원본</string>
 </resources>

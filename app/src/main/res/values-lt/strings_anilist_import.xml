@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Importuoti iš AniList</string>
+	<string name="anilist_import_mode_label">Importavimo paskirtis</string>
+	<string name="anilist_import_by_status">Pagal būseną</string>
+	<string name="anilist_import_single_category">Viena kategorija</string>
+	<string name="anilist_import_new_category">Nauja kategorija</string>
+	<string name="anilist_import_new_category_hint">Kategorijos pavadinimas</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Įkeliama jūsų AniList biblioteka…</string>
+	<string name="anilist_import_progress_status">%1/%2 · %3</string>
+	<string name="anilist_import_completed_status">Baigta (%1/%2)</string>
+	<string name="anilist_import_counts">Importuota: %1 · Esamų: %2 · Nesutapusių: %3</string>
+	<string name="anilist_import_empty">Jūsų AniList mangų sąrašas tuščias.</string>
+	<string name="anilist_import_unmatched_title">Nesutapę pavadinimai</string>
+	<string name="anilist_import_start">Pradėti importavimą</string>
+	<string name="anilist_import_retry">Importuoti dar kartą</string>
+	<string name="anilist_import_error_no_sources">Prieš importuodami įjunkite bent vieną mangų šaltinį.</string>
+</resources>

@@ -1,21 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-	<string name="community_comment_dislike">よくないね</string>
-	<string name="community_comment_like">いいね</string>
-	<string name="community_comment_delete">削除</string>
-	<string name="community_comment_edit">編集</string>
-	<string name="community_comment_reply">返信</string>
-	<string name="community_comment_send">送信</string>
-	<string name="community_comment_spoiler">ネタバレ</string>
-	<string name="community_comment_hint">コメントを追加</string>
-	<string name="community_comments_empty">まだコメントはありません。最初のコメントを投稿しましょう。</string>
-	<string name="community_comments_sort_new">新着順</string>
-	<string name="community_comments_sort_top">人気順</string>
-	<string name="community_comments">コメント</string>
-	<string name="community_rating_none">まだ評価はありません</string>
-	<string name="community_rating_summary">%1$s · %2$s</string>
-	<string name="community_rating">読者評価</string>
-	<string name="community">コミュニティ</string>
 	<string name="community_rate">評価する</string>
 	<string name="community_rating_title">コミュニティ評価</string>
 	<string name="community_your_rating">あなたの評価: %1$d / %2$d</string>
@@ -45,4 +29,6 @@
 	<string name="community_widget_load_error">コメントウィジェットを読み込めませんでした。接続を確認するかブラウザで開いてください。</string>
 	<string name="community_widget_unavailable">この端末ではWebViewを利用できません。ブラウザでコメントを開いてください。</string>
 	<string name="community_more_options">その他のオプション</string>
+	<string name="community_comment_translate">翻訳</string>
+	<string name="community_comment_show_original">原文</string>
 </resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Impor saka AniList</string>
+	<string name="anilist_import_mode_label">Tujuan impor</string>
+	<string name="anilist_import_by_status">Miturut status</string>
+	<string name="anilist_import_single_category">Kategori tunggal</string>
+	<string name="anilist_import_new_category">Kategori anyar</string>
+	<string name="anilist_import_new_category_hint">Jeneng kategori</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Ngundhuh perpustakaan AniList sampeyan…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Rampung (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Diimpor: %1$d · Ana: %2$d · Ora cocog: %3$d</string>
+	<string name="anilist_import_empty">Dhaptar manga AniList sampeyan kosong.</string>
+	<string name="anilist_import_unmatched_title">Judhul sing ora cocog</string>
+	<string name="anilist_import_start">Wiwiti impor</string>
+	<string name="anilist_import_retry">Impor maneh</string>
+	<string name="anilist_import_error_no_sources">Aktifake paling ora siji sumber manga sadurunge ngimpor.</string>
+</resources>

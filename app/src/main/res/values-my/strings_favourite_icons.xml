@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">အိုင်ကွန်</string>
+	<string name="fav_icon_default">နှလုံး</string>
+	<string name="fav_icon_star">ကြယ်ပွင့်</string>
+	<string name="fav_icon_fire">မီး</string>
+	<string name="fav_icon_crown">သရဖူ</string>
+	<string name="fav_icon_book">စာအုပ်</string>
+	<string name="fav_icon_bookmark">ညှပ်</string>
+	<string name="fav_icon_eye">မျက်လုံး</string>
+	<string name="fav_icon_bolt">မင်းတုံး</string>
+	<string name="fav_icon_clock">နာရီ</string>
+	<string name="fav_icon_folder">ဖိုလ်</string>
+	<string name="fav_icon_check">စစ်ဆေးပါ။</string>
+	<string name="fav_icon_sparkles">တောက်ပ</string>
+</resources>

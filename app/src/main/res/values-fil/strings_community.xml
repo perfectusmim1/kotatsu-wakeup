@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">Rate</string>
+	<string name="community_rating_title">Rating ng komunidad</string>
+	<string name="community_your_rating">Ang iyong rating: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Isumite</string>
+	<string name="community_rating_saved">Na-save ang rating</string>
+	<string name="community_rating_count">%1$s na mga rating</string>
+	<string name="community_views_count">%1$s view</string>
+	<string name="community_follows_count">%1$s ang sumusunod</string>
+	<string name="community_comments_count">%1$s komento</string>
+	<string name="community_comments_sort_old">Luma</string>
+	<string name="community_web_comments">Web</string>
+	<string name="community_show_replies">Ipakita ang mga tugon (%1$d)</string>
+	<string name="community_hide_replies">Itago ang mga tugon</string>
+	<string name="community_load_more">Mag-load pa</string>
+	<string name="community_load_more_replies">Mag-load ng higit pang mga tugon</string>
+	<string name="community_replying_to">Sumasagot sa %1$s</string>
+	<string name="community_editing_comment">Pag-edit ng komento</string>
+	<string name="community_comment_edited">(na-edit)</string>
+	<string name="community_comment_deleted">Na-delete ang komento</string>
+	<string name="community_comment_delete_confirm">Tanggalin ang komentong ito?</string>
+	<string name="community_comment_translate">Isalin</string>
+	<string name="community_comment_show_original">Orihinal</string>
+	<string name="community_spoiler_warning">Spoiler — I-tap para ipakita</string>
+	<string name="community_spoiler_hide">Itago ang spoiler</string>
+	<string name="community_sign_in_to_comment">Mag-sign in para mag-post ng mga komento o reaksyon</string>
+	<string name="community_sign_in_to_rate">Mag-sign in para mag-rate sa %1$s</string>
+	<string name="community_widget_ssl_error">Nabigo ang secure na koneksyon para sa widget ng komentong ito. Sa halip, maaari mong buksan ang pahina sa iyong browser.</string>
+	<string name="community_widget_load_error">Hindi ma-load ang widget ng komento. Suriin ang iyong koneksyon o buksan ito sa iyong browser.</string>
+	<string name="community_widget_unavailable">Hindi available ang WebView sa device na ito. Buksan ang mga komento sa iyong browser sa halip.</string>
+	<string name="community_more_options">Higit pang mga pagpipilian</string>
+</resources>

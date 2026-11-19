@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">נדרש אימות עבור %1$s</string>
+	<string name="cf_banner_multiple_required">נדרש אימות עבור %1$s (+%2$d נוספים)</string>
+	<string name="cf_banner_solve">פתור</string>
+	<string name="cf_banner_dismiss">סגור</string>
+</resources>

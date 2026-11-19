@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Importâr dês AniList</string>
+    <string name="anilist_import_mode_label">Dèstinacion de l\'importacion</string>
+    <string name="anilist_import_by_status">Per statut</string>
+    <string name="anilist_import_single_category">Catègoria solèta</string>
+    <string name="anilist_import_new_category">Novèla catègoria</string>
+    <string name="anilist_import_new_category_hint">Nom de la catègoria</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">Chargement de voutra bibliotèca AniList…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Chavonâ (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Importâs : %1$d · Èxistents : %2$d · Sens correspondance : %3$d</string>
+    <string name="anilist_import_empty">Voutra lista de mangâs AniList est vouida.</string>
+    <string name="anilist_import_unmatched_title">Titros sens correspondance</string>
+    <string name="anilist_import_start">Comenciér l\'importacion</string>
+    <string name="anilist_import_retry">Tornâr importâr</string>
+    <string name="anilist_import_error_no_sources">Activâd u muens yona sôrsa de mangâ devant que d\'importâr.</string>
+</resources>

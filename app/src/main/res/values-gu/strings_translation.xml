@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">અનુવાદ સેટિંગ્સ</string>
+	<string name="translation_toggle">અનુવાદ ટૉગલ કરો</string>
+	<string name="translation_enable">અનુવાદ સક્ષમ કરો</string>
+	<string name="translation_disable">અનુવાદ અક્ષમ કરો</string>
+	<string name="translation_active">સક્રિય</string>
+	<string name="translation_off">બંધ</string>
+	<string name="translation_provider">અનુવાદ પ્રદાતા</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">વિચાર સ્તર</string>
+	<string name="translation_thinking_minimal">ન્યૂનતમ</string>
+	<string name="translation_thinking_low">ઓછું</string>
+	<string name="translation_thinking_medium">મધ્યમ</string>
+	<string name="translation_thinking_high">ઉચ્ચ</string>
+	<string name="translation_source_lang">સ્રોત ભાષા (OCR)</string>
+	<string name="translation_target_lang">લક્ષ્ય ભાષા</string>
+	<string name="translation_api_keys">Gemini API કીઝ</string>
+	<string name="translation_deepl_api_keys">DeepL API કીઝ</string>
+	<string name="translation_api_keys_hint">અલ્પવિરામ અથવા નવી લાઇનથી બહુવિધ કી અલગ કરો</string>
+	<string name="translation_api_keys_empty">કોઈ API કી ગોઠવેલ નથી</string>
+	<string name="translation_api_key_required">Gemini API કી ઉમેરો અથવા પ્રદાતાઓ બદલો</string>
+	<string name="translation_deepl_api_key_required">DeepL API કી ઉમેરો અથવા પ્રદાતાઓ બદલો</string>
+	<string name="translation_auto_translate">પૃષ્ઠોનો સ્વતઃ-અનુવાદ કરો</string>
+	<string name="translation_skip_sfx">સાઉન્ડ ઇફેક્ટ્સ છોડો</string>
+	<string name="translation_filter_promo">પ્રોમો અને ક્રેડિટ્સ પૃષ્ઠો છોડો</string>
+	<string name="translation_ocr_ready">OCR મોડેલ તૈયાર છે</string>
+	<string name="translation_ocr_auto_ready">સ્વતઃ-શોધ OCR તૈયાર છે</string>
+	<string name="translation_ocr_not_downloaded">પ્રથમ ઉપયોગ પર OCR મોડેલ ડાઉનલોડ થાય છે</string>
+	<string name="translation_ocr_download">મોડેલ ડાઉનલોડ કરો</string>
+	<string name="translation_ocr_downloading">OCR મોડેલ ડાઉનલોડ થઈ રહ્યું છે… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">ટેક્સ્ટ ઓળખી રહ્યું છે…</string>
+	<string name="translation_translating_text">અનુવાદ થઈ રહ્યો છે…</string>
+	<string name="translation_rendering_page">પૃષ્ઠ રેન્ડર થઈ રહ્યું છે…</string>
+	<string name="translation_clear_cache">અનુવાદ કેશ સાફ કરો</string>
+	<string name="translation_cache_cleared">અનુવાદ કેશ સાફ થઈ ગયો</string>
+	<string name="translation_cache_cleared_size">કેશ કરેલા અનુવાદોમાંથી %1$s સાફ કર્યું</string>
+	<string name="translation_error_generic">અનુવાદ નિષ્ફળ ગયો: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d સક્રિય કી ગોઠવેલ છે</item>
+		<item quantity="other">%1$d સક્રિય કી ગોઠવેલ છે</item>
+	</plurals>
+</resources>

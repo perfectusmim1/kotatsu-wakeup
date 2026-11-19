@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Comptes de fonts</string>
+	<string name="source_accounts_summary">%1$d amb sessió iniciada · %2$d compatibles</string>
+	<string name="source_accounts_summary_none">Cap sessió activa · %1$d compatibles</string>
+	<string name="source_accounts_empty">No s\'han trobat fonts compatibles amb comptes</string>
+	<string name="source_account_signed_in">Sessió iniciada</string>
+	<string name="source_account_not_signed_in">Sessió no iniciada</string>
+	<string name="source_account_switch">Canvia de compte</string>
+	<string name="source_signed_out">Sessió tancada</string>
+	<string name="sign_up">Registra-t\'hi</string>
+	<string name="auth_verify">Verifica</string>
+	<string name="auth_refresh">Actualitza</string>
+	<string name="auth_not_verified_yet">La sessió encara no s\'ha verificat. Acaba d\'iniciar sessió i torna-ho a provar.</string>
+</resources>

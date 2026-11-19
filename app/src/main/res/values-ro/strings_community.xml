@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="community_rate">Evaluează</string>
+	<string name="community_rating_title">Evaluarea comunității</string>
+	<string name="community_your_rating">Evaluarea ta: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Trimite</string>
+	<string name="community_rating_saved">Evaluare salvată</string>
+	<string name="community_rating_count">%1$s evaluări</string>
+	<string name="community_views_count">%1$s vizualizări</string>
+	<string name="community_follows_count">%1$s urmăritori</string>
+	<string name="community_comments_count">%1$s comentarii</string>
+	<string name="community_comments_sort_old">Vechi</string>
+	<string name="community_web_comments">Web</string>
+	<string name="community_show_replies">Arată răspunsurile (%1$d)</string>
+	<string name="community_hide_replies">Ascunde răspunsurile</string>
+	<string name="community_load_more">Încarcă mai multe</string>
+	<string name="community_load_more_replies">Încarcă mai multe răspunsuri</string>
+	<string name="community_replying_to">Răspuns la %1$s</string>
+	<string name="community_editing_comment">Editare comentariu</string>
+	<string name="community_comment_edited">(editat)</string>
+	<string name="community_comment_deleted">Comentariu șters</string>
+	<string name="community_comment_delete_confirm">Ștergi acest comentariu?</string>
+	<string name="community_comment_translate">Tradu</string>
+	<string name="community_comment_show_original">Original</string>
+	<string name="community_spoiler_warning">Spoiler — Atinge pentru a dezvălui</string>
+	<string name="community_spoiler_hide">Ascunde spoilerul</string>
+	<string name="community_sign_in_to_comment">Conectează-te pentru a posta comentarii sau reacții</string>
+	<string name="community_sign_in_to_rate">Conectează-te pentru a evalua pe %1$s</string>
+	<string name="community_widget_ssl_error">Conexiunea securizată a eșuat pentru acest widget de comentarii. Poți deschide pagina în browser.</string>
+	<string name="community_widget_load_error">Nu s-a putut încărca widgetul de comentarii. Verifică conexiunea sau deschide-l în browser.</string>
+	<string name="community_widget_unavailable">WebView nu este disponibil pe acest dispozitiv. Deschide comentariile în browser.</string>
+	<string name="community_more_options">Mai multe opțiuni</string>
+</resources>

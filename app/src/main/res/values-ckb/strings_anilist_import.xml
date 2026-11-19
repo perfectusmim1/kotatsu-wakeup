@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">هاوردەکردن لە AniList</string>
+	<string name="anilist_import_mode_label">شوێنی هاوردەکردن</string>
+	<string name="anilist_import_by_status">بەپێی دۆخ</string>
+	<string name="anilist_import_single_category">تاکە هاوپۆل</string>
+	<string name="anilist_import_new_category">هاوپۆلی نوێ</string>
+	<string name="anilist_import_new_category_hint">ناوی هاوپۆل</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">بارکردنی کتێبخانەی AniListـەکەت…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">تەواوبوو (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">هاوردەکراو: %1$d · هەبوو: %2$d · نەگونجاو: %3$d</string>
+	<string name="anilist_import_empty">لیستی مانگای AniListـەکەت بەتاڵە.</string>
+	<string name="anilist_import_unmatched_title">ناونیشانە نەگونجاوەکان</string>
+	<string name="anilist_import_start">دەستپێکردنی هاوردەکردن</string>
+	<string name="anilist_import_retry">دووبارە هاوردەکردن</string>
+	<string name="anilist_import_error_no_sources">پێش هاوردەکردن لانیکەم یەک سەرچاوەی مانگا چالاک بکە.</string>
+</resources>

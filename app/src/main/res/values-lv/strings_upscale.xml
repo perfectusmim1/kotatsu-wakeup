@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="upscale_title">Attēla uzlabošana (Upscale)</string>
+	<string name="upscale_mode_label">Režīms</string>
+	<string name="upscale_mode_off">Izslēgts</string>
+	<string name="upscale_mode_fast">Ātri</string>
+	<string name="upscale_mode_ai">AI</string>
+	<string name="upscale_hint_off">Lapas tiek parādītas to sākotnējā izšķirtspējā</string>
+	<string name="upscale_hint_fast">Akumulatoram draudzīgs, tūlītējs (Anime4K 2x)</string>
+	<string name="upscale_hint_ai">Augstākā kvalitāte, lēnāk (Real-ESRGAN 2x)</string>
+	<string name="upscale_low_ram_hint">Ierīcēs ar zemu specifikāciju ieteicams izmantot ātro režīmu.</string>
+	<string name="upscale_low_ram_ai_hint">Var sasildīt ierīci; Ātrais režīms ir ieteicams zemas specifikācijas aparatūrai.</string>
+	<string name="upscale_processing">Notiek apstrāde…</string>
+	<string name="upscale_compare_toggle">Salīdziniet pirms/pēc</string>
+	<string name="upscale_high_res_toggle">Apstrādājiet arī augstas izšķirtspējas lapas</string>
+	<string name="upscale_high_res_hint">Ja tas ir izslēgts, lapas, kas ir platākas par ekrāna izšķirtspēju, tiek izlaistas.</string>
+	<string name="upscale_compare_original">Oriģināls</string>
+	<string name="upscale_compare_enhanced">Uzlabota</string>
+	<string name="upscale_model_ready">Real-ESRGAN 2x modelis gatavs</string>
+	<string name="upscale_model_not_downloaded">AI modeļa lejupielādes pirmajā lietošanas reizē (~2,3 MB)</string>
+	<string name="upscale_model_download">Lejupielādēt modeli</string>
+	<string name="upscale_model_downloading">Notiek mākslīgā intelekta modeļa lejupielāde… %1$d%%%%%%</string>
+	<string name="upscale_model_initializing">Notiek mākslīgā intelekta modeļa sagatavošana…</string>
+	<string name="upscale_clear_cache">Notīrīt augstas klases kešatmiņu</string>
+	<string name="upscale_cache_cleared">Izsmalcināta kešatmiņa ir notīrīta</string>
+	<string name="upscale_cache_cleared_size">Notīrīts %1$s no kešatmiņā saglabātajām augstas kvalitātes sloksnēm</string>
+	<string name="upscale_error_generic">Augstākās kvalitātes kļūda: %1$s</string>
+</resources>

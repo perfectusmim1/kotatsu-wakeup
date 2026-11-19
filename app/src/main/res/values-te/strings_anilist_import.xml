@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">AniList నుండి దిగుమతి చేయండి</string>
+	<string name="anilist_import_mode_label">దిగుమతి గమ్యస్థానం</string>
+	<string name="anilist_import_by_status">స్థితి ఆధారంగా</string>
+	<string name="anilist_import_single_category">ఒకే వర్గం</string>
+	<string name="anilist_import_new_category">కొత్త వర్గం</string>
+	<string name="anilist_import_new_category_hint">వర్గం పేరు</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">మీ AniList లైబ్రరీ లోడ్ అవుతోంది…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">పూర్తయింది (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">దిగుమతి: %1$d · ఉన్నవి: %2$d · సరిపోలనివి: %3$d</string>
+	<string name="anilist_import_empty">మీ AniList మాంగా జాబితా ఖాళీగా ఉంది.</string>
+	<string name="anilist_import_unmatched_title">సరిపోలని శీర్షికలు</string>
+	<string name="anilist_import_start">దిగుమతి ప్రారంభించండి</string>
+	<string name="anilist_import_retry">మళ్లీ దిగుమతి చేయండి</string>
+	<string name="anilist_import_error_no_sources">దిగుమతి చేయడానికి ముందు కనీసం ఒక మాంగా మూలాన్ని ప్రారంభించండి.</string>
+</resources>

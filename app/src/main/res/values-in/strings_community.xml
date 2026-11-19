@@ -45,4 +45,6 @@
 	<string name="community_widget_load_error">Tidak dapat memuat widget komentar. Periksa koneksi Anda atau buka di peramban.</string>
 	<string name="community_widget_unavailable">WebView tidak tersedia di perangkat ini. Buka komentar di peramban.</string>
 	<string name="community_more_options">Opsi lainnya</string>
+	<string name="community_comment_translate">Terjemahkan</string>
+	<string name="community_comment_show_original">Asli</string>
 </resources>

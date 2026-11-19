@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">बुकमार्क जोड़े गए</string>
+    <string name="bookmarks_sort_newest">नवीनतम जोड़ा गया</string>
+    <string name="bookmarks_sort_oldest">सबसे पुराना जोड़ा गया</string>
+    <string name="bookmarks_sort_chapter">अध्याय क्रम</string>
+    <string name="search_bookmarks_hint">श्रृंखला या अध्याय खोजें</string>
+    <string name="search_bookmarked_chapters_hint">बुकमार्क किए गए अध्याय खोजें</string>
+    <string name="no_bookmarks_matching_query">कोई मेल खाने वाला बुकमार्क नहीं</string>
+    <string name="no_bookmarks_matching_summary">कोई भी बुकमार्क आपके वर्तमान फ़िल्टर से मेल नहीं खाता</string>
+    <string name="download_bookmarked_chapters">बुकमार्क किए गए अध्याय डाउनलोड करें</string>
+    <string name="download_bookmarked_only">केवल बुकमार्क किए गए अध्याय</string>
+    <string name="download_bookmarked_next_2">बुकमार्क + अगले 2 अध्याय</string>
+    <string name="download_bookmarked_next_3">बुकमार्क + अगले 3 अध्याय</string>
+    <string name="no_bookmarked_chapters_to_download">डाउनलोड करने के लिए कोई बुकमार्क किया गया अध्याय नहीं</string>
+    <string name="migrate_bookmarks">बुकमार्क को दूसरे स्रोत पर माइग्रेट करें</string>
+    <string name="bookmark_migration_choose_series">माइग्रेट करने के लिए श्रृंखला चुनें</string>
+    <string name="bookmark_migration_searching">सक्रिय स्रोतों में खोजा जा रहा है…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d स्रोत · %3$d मिलान</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d अध्याय मेल खाए</string>
+    <string name="bookmark_migration_total_chapters">%1$d अध्याय</string>
+    <string name="bookmark_migration_no_candidates">कोई संगत स्रोत नहीं मिला</string>
+    <string name="bookmark_migration_no_candidates_summary">कोई भी सक्षम स्रोत इस श्रृंखला और इसके बुकमार्क किए गए अध्यायों से मेल नहीं खाया</string>
+    <string name="bookmark_migration_confirm">\"%2$s\" (%3$s) से \"%4$s\" (%5$s) में %1$d बुकमार्क माइग्रेट करें?\n%7$d में से %6$d बुकमार्क किए गए अध्याय मेल खाए।</string>
+    <string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s) से \"%4$s\" (%5$s) में %1$d बुकमार्क माइग्रेट करें?\nअध्यायों का अनुमान पढ़ने की प्रगति से लगाया जाएगा।</string>
+    <string name="bookmark_migration_success">बुकमार्क %1$s पर माइग्रेट किए गए</string>
+    <string name="bookmark_migration_no_bookmarks">इस श्रृंखला के लिए कोई बुकमार्क नहीं मिला</string>
+    <string name="bookmark_migration_rescan">पुनः स्कैन करें</string>
+    <string name="bookmark_migration_unavailable_no_chapters">कोई अध्याय नहीं</string>
+    <string name="bookmarks_count_badge">%1$d बुकमार्क</string>
+</resources>

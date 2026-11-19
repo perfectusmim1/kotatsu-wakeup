@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">အရင်းအမြစ်အကောင့်များ</string>
+	<string name="source_accounts_summary">%1$d ဝင်ရောက်ခဲ့သည် · %2$d ပံ့ပိုးထားသည်။</string>
+	<string name="source_accounts_summary_none">အသက်ဝင်သော ဆက်ရှင်များ မရှိပါ · %1$d ကို ပံ့ပိုးထားသည်။</string>
+	<string name="source_accounts_empty">အကောင့်ပံ့ပိုးမှုရှိသော အရင်းအမြစ်များ မတွေ့ပါ။</string>
+	<string name="source_account_signed_in">ဝင်ရောက်ခဲ့သည်။</string>
+	<string name="source_account_not_signed_in">ဝင်ရောက်မထားပါ။</string>
+	<string name="source_account_switch">အကောင့်ပြောင်းပါ။</string>
+	<string name="source_signed_out">ထွက်သွားပြီ</string>
+	<string name="sign_up">ဆိုင်းအပ်</string>
+	<string name="auth_verify">စိစစ်ပါ။</string>
+	<string name="auth_refresh">ပြန်လည်စတင်ပါ။</string>
+	<string name="auth_not_verified_yet">စက်ရှင်ကို မစစ်ဆေးရသေးပါ။ လက်မှတ်ထိုးဝင်ခြင်းကို အပြီးသတ်ပြီး ထပ်စမ်းကြည့်ပါ။</string>
+</resources>

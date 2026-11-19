@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_accounts">𐌱𐍂𐌿𐌽𐌽𐌰 𐍂𐌰𐌷𐌽𐌾𐍉𐍃</string>
+    <string name="source_accounts_summary">%1$d 𐍄𐌰𐌹𐌺𐌽𐌹𐌸𐍃 𐌹𐌽 · %2$d 𐍃𐍄𐌹𐌿𐍂𐌹𐌸𐍃</string>
+    <string name="source_accounts_summary_none">𐌽𐌴 𐌰𐌺𐍄𐌹𐍅𐌴 𐍃𐌴𐍃𐍃𐌹𐍉𐌽𐍃 · %1$d 𐍃𐍄𐌹𐌿𐍂𐌹𐌸𐍃</string>
+    <string name="source_accounts_empty">𐌽𐌴 𐌱𐍂𐌿𐌽𐌽𐌰𐌽𐍃 𐌼𐌹𐌸 𐍂𐌰𐌷𐌽𐌾𐍉 𐍃𐌿𐍀𐍀𐍉𐍂𐍄 𐌱𐌹𐌲𐌹𐍄𐌰𐌽𐍃</string>
+    <string name="source_account_signed_in">𐍄𐌰𐌹𐌺𐌽𐌹𐌸𐍃 𐌹𐌽</string>
+    <string name="source_account_not_signed_in">𐌽𐌹 𐍄𐌰𐌹𐌺𐌽𐌹𐌸𐍃 𐌹𐌽</string>
+    <string name="source_account_switch">𐍃𐍅𐌹𐍄𐍄𐍃𐌷 𐍂𐌰𐌷𐌽𐌾𐍉</string>
+    <string name="source_signed_out">𐍄𐌰𐌹𐌺𐌽𐌹𐌸𐍃 𐌿𐍄</string>
+    <string name="sign_up">𐍄𐌰𐌹𐌺𐌽𐌾𐌰𐌽 𐌿𐍀</string>
+    <string name="auth_verify">𐍅𐌴𐍂𐌹𐍆𐌾</string>
+    <string name="auth_refresh">𐌰𐌽𐌰𐌽𐌹𐌿𐌾𐌰𐌽</string>
+    <string name="auth_not_verified_yet">𐍃𐌴𐍃𐍃𐌹𐍉𐌽 𐌽𐌹 𐍅𐌴𐍂𐌹𐍆𐌹𐌴𐌳 𐌾𐌴𐍄. 𐍆𐌹𐌽𐌹𐍃𐌷 𐍃𐌹𐌲𐌽𐌹𐌲𐌲 𐌹𐌽 𐌾𐌰𐌷 𐍄𐍂𐌾 𐌰𐌲𐌰𐌹𐌽.</string>
+</resources>

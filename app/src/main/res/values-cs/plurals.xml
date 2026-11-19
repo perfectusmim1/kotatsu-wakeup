@@ -45,4 +45,22 @@
         <item quantity="few">%1$d minuty</item>
         <item quantity="other">%1$d minut</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d výsledek</item>
+        <item quantity="few">%1$d výsledky</item>
+        <item quantity="many">%1$d výsledku</item>
+        <item quantity="other">%1$d výsledků</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d stránka</item>
+        <item quantity="few">%1$d stránky</item>
+        <item quantity="many">%1$d stránky</item>
+        <item quantity="other">%1$d stránek</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d zdroj</item>
+        <item quantity="few">%1$d zdroje</item>
+        <item quantity="many">%1$d zdroje</item>
+        <item quantity="other">%1$d zdrojů</item>
+    </plurals>
 </resources>

@@ -36,4 +36,16 @@
         <item quantity="one">%1$d Stunde</item>
         <item quantity="other">%1$d Stunden</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d Ergebnis</item>
+        <item quantity="other">%1$d Ergebnisse</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d Seite</item>
+        <item quantity="other">%1$d Seiten</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d Quelle</item>
+        <item quantity="other">%1$d Quellen</item>
+    </plurals>
 </resources>

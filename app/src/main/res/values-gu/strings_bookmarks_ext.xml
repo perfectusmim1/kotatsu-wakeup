@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">બુકમાર્ક્સ ઉમેરાયા</string>
+	<string name="bookmarks_sort_newest">સૌથી નવા ઉમેરેલા</string>
+	<string name="bookmarks_sort_oldest">સૌથી જૂના ઉમેરેલા</string>
+	<string name="bookmarks_sort_chapter">પ્રકરણ ક્રમ</string>
+	<string name="search_bookmarks_hint">શ્રેણી અથવા પ્રકરણ શોધો</string>
+	<string name="search_bookmarked_chapters_hint">બુકમાર્ક કરેલા પ્રકરણો શોધો</string>
+	<string name="no_bookmarks_matching_query">કોઈ મેળ ખાતા બુકમાર્ક્સ નથી</string>
+	<string name="no_bookmarks_matching_summary">તમારા વર્તમાન ફિલ્ટર સાથે કોઈ બુકમાર્ક્સ મેળ ખાતા નથી</string>
+	<string name="download_bookmarked_chapters">બુકમાર્ક કરેલા પ્રકરણો ડાઉનલોડ કરો</string>
+	<string name="download_bookmarked_only">ફક્ત બુકમાર્ક કરેલા પ્રકરણો</string>
+	<string name="download_bookmarked_next_2">બુકમાર્ક કરેલા + આગામી 2 પ્રકરણો</string>
+	<string name="download_bookmarked_next_3">બુકમાર્ક કરેલા + આગામી 3 પ્રકરણો</string>
+	<string name="no_bookmarked_chapters_to_download">ડાઉનલોડ કરવા માટે કોઈ બુકમાર્ક કરેલા પ્રકરણો નથી</string>
+	<string name="migrate_bookmarks">બુકમાર્ક્સને અન્ય સ્રોત પર સ્થાનાંતરિત કરો</string>
+	<string name="bookmark_migration_choose_series">સ્થાનાંતરિત કરવા માટે શ્રેણી પસંદ કરો</string>
+	<string name="bookmark_migration_searching">સક્રિય સ્રોતો શોધી રહ્યું છે…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d સ્રોતો · %3$d મેળ</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d પ્રકરણો મેળ ખાધા</string>
+	<string name="bookmark_migration_total_chapters">%1$d પ્રકરણો</string>
+	<string name="bookmark_migration_no_candidates">કોઈ સુસંગત સ્રોતો મળ્યા નથી</string>
+	<string name="bookmark_migration_no_candidates_summary">કોઈ સક્ષમ સ્રોત આ શ્રેણી અને તેના બુકમાર્ક કરેલા પ્રકરણો સાથે મેળ ખાતો નથી</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s) માંથી \"%4$s\" (%5$s) પર %1$d બુકમાર્ક સ્થાનાંતરિત કરીએ?\n%7$d માંથી %6$d બુકમાર્ક કરેલા પ્રકરણો મેળ ખાધા.</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s) માંથી \"%4$s\" (%5$s) પર %1$d બુકમાર્ક સ્થાનાંતરિત કરીએ?\nવાંચન પ્રગતિ દ્વારા પ્રકરણોનો અંદાજ લગાવવામાં આવશે.</string>
+	<string name="bookmark_migration_success">બુકમાર્ક્સ %1$s પર સ્થાનાંતરિત થયા</string>
+	<string name="bookmark_migration_no_bookmarks">આ શ્રેણી માટે કોઈ બુકમાર્ક્સ મળ્યા નથી</string>
+	<string name="bookmark_migration_rescan">ફરીથી સ્કેન કરો</string>
+	<string name="bookmark_migration_unavailable_no_chapters">કોઈ પ્રકરણો નથી</string>
+	<string name="bookmarks_count_badge">%1$d બુકમાર્ક્સ</string>
+</resources>

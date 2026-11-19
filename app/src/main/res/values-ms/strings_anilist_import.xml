@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Import daripada AniList</string>
+	<string name="anilist_import_mode_label">Destinasi import</string>
+	<string name="anilist_import_by_status">Mengikut status</string>
+	<string name="anilist_import_single_category">Kategori tunggal</string>
+	<string name="anilist_import_new_category">Kategori baharu</string>
+	<string name="anilist_import_new_category_hint">Nama kategori</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Memuatkan pustaka AniList anda…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Selesai (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Diimport: %1$d · Sedia Ada: %2$d · Tidak Ditandingi: %3$d</string>
+	<string name="anilist_import_empty">Senarai manga AniList anda kosong.</string>
+	<string name="anilist_import_unmatched_title">Tajuk yang tiada tandingan</string>
+	<string name="anilist_import_start">Mulakan import</string>
+	<string name="anilist_import_retry">Import semula</string>
+	<string name="anilist_import_error_no_sources">Dayakan sekurang-kurangnya satu sumber manga sebelum mengimport.</string>
+</resources>

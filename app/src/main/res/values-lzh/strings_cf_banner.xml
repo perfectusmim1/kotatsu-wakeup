@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">須驗 %1$s</string>
+	<string name="cf_banner_multiple_required">須驗 %1$s（餘 %2$d）</string>
+	<string name="cf_banner_solve">解之</string>
+	<string name="cf_banner_dismiss">罷</string>
+</resources>

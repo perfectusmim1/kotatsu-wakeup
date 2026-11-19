@@ -16,4 +16,36 @@
         <item quantity="one">𐍆𐌰𐌿𐍂𐌰 𐌼𐌴𐌽𐍉𐌸 %1$d</item>
         <item quantity="other">𐍆𐌰𐌿𐍂𐌰 𐌼𐌴𐌽𐍉𐌸𐌿𐌼 %1$d</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d 𐌰𐌽𐌳𐌴𐌹𐍃</item>
+        <item quantity="other">%1$d 𐌰𐌽𐌳𐌾𐍉𐍃</item>
+    </plurals>
+    <plurals name="items">
+        <item quantity="one">%1$d 𐍅𐌰𐌹𐌷𐍄𐍃</item>
+        <item quantity="other">%1$d 𐍅𐌰𐌹𐌷𐍄𐌴𐌹𐍃</item>
+    </plurals>
+    <plurals name="new_chapters">
+        <item quantity="one">%1$d 𐌽𐌹𐌿𐌾𐌹𐍃 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐌿𐍃</item>
+        <item quantity="other">%1$d 𐌽𐌹𐌿𐌾𐌹𐍃 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</item>
+    </plurals>
+    <plurals name="chapters">
+        <item quantity="one">%1$d 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐌿𐍃</item>
+        <item quantity="other">%1$d 𐌺𐌰𐍀𐌹𐍄𐌿𐌻𐍉𐍃</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d 𐌻𐌰𐌿𐍆𐍃</item>
+        <item quantity="other">%1$d 𐌻𐌰𐌿𐌱𐍉𐍃</item>
+    </plurals>
+    <plurals name="minutes_ago">
+        <item quantity="one">%1$d 𐌼𐌹𐌽𐌿𐍄𐌿𐍃 𐍆𐌰𐌿𐍂𐌰</item>
+        <item quantity="other">%1$d 𐌼𐌹𐌽𐌿𐍄𐌾𐌿𐍃 𐍆𐌰𐌿𐍂𐌰</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">%1$d 𐍈𐌴𐌹𐌻𐌰 𐍆𐌰𐌿𐍂𐌰</item>
+        <item quantity="other">%1$d 𐍈𐌴𐌹𐌻𐍉𐍃 𐍆𐌰𐌿𐍂𐌰</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d 𐌱𐍂𐌿𐌽𐌽𐌰</item>
+        <item quantity="other">%1$d 𐌱𐍂𐌿𐌽𐌽𐌰𐌽𐍃</item>
+    </plurals>
 </resources>

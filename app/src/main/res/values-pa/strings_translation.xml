@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">ਅਨੁਵਾਦ ਸੈਟਿੰਗਾਂ</string>
+	<string name="translation_toggle">ਅਨੁਵਾਦ ਟੌਗਲ ਕਰੋ</string>
+	<string name="translation_enable">ਅਨੁਵਾਦ ਨੂੰ ਸਮਰੱਥ ਬਣਾਓ</string>
+	<string name="translation_disable">ਅਨੁਵਾਦ ਨੂੰ ਅਸਮਰੱਥ ਬਣਾਓ</string>
+	<string name="translation_active">ਕਿਰਿਆਸ਼ੀਲ</string>
+	<string name="translation_off">ਬੰਦ</string>
+	<string name="translation_provider">ਅਨੁਵਾਦ ਪ੍ਰਦਾਤਾ</string>
+	<string name="translation_provider_gemini">ਮਿਥੁਨ</string>
+	<string name="translation_provider_deepl">ਦੀਪ ਐੱਲ</string>
+	<string name="translation_provider_google">ਗੂਗਲ ਅਨੁਵਾਦ</string>
+	<string name="translation_gemini_thinking_level">ਸੋਚ ਦਾ ਪੱਧਰ</string>
+	<string name="translation_thinking_minimal">ਨਿਊਨਤਮ</string>
+	<string name="translation_thinking_low">ਘੱਟ</string>
+	<string name="translation_thinking_medium">ਦਰਮਿਆਨਾ</string>
+	<string name="translation_thinking_high">ਉੱਚ</string>
+	<string name="translation_source_lang">ਸਰੋਤ ਭਾਸ਼ਾ (OCR)</string>
+	<string name="translation_target_lang">ਨਿਸ਼ਾਨਾ ਭਾਸ਼ਾ</string>
+	<string name="translation_api_keys">Gemini API ਕੁੰਜੀਆਂ</string>
+	<string name="translation_deepl_api_keys">DeepL API ਕੁੰਜੀਆਂ</string>
+	<string name="translation_api_keys_hint">ਕਈ ਕੁੰਜੀਆਂ ਨੂੰ ਕਾਮਿਆਂ ਜਾਂ ਨਵੀਆਂ ਲਾਈਨਾਂ ਨਾਲ ਵੱਖ ਕਰੋ</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$dਸਰਗਰਮ ਕੁੰਜੀ ਕੌਂਫਿਗਰ ਕੀਤੀ ਗਈ</item>
+		<item quantity="other">%1$dਸਰਗਰਮ ਕੁੰਜੀਆਂ ਕੌਂਫਿਗਰ ਕੀਤੀਆਂ ਗਈਆਂ</item>
+	</plurals>
+	<string name="translation_api_keys_empty">ਕੋਈ API ਕੁੰਜੀ ਕੌਂਫਿਗਰ ਨਹੀਂ ਕੀਤੀ ਗਈ</string>
+	<string name="translation_api_key_required">ਇੱਕ Gemini API ਕੁੰਜੀ ਸ਼ਾਮਲ ਕਰੋ ਜਾਂ ਪ੍ਰਦਾਤਾ ਬਦਲੋ</string>
+	<string name="translation_deepl_api_key_required">ਇੱਕ DeepL API ਕੁੰਜੀ ਸ਼ਾਮਲ ਕਰੋ ਜਾਂ ਪ੍ਰਦਾਤਾ ਬਦਲੋ</string>
+	<string name="translation_auto_translate">ਪੰਨਿਆਂ ਦਾ ਸਵੈ-ਅਨੁਵਾਦ</string>
+	<string name="translation_skip_sfx">ਧੁਨੀ ਪ੍ਰਭਾਵ ਛੱਡੋ</string>
+	<string name="translation_filter_promo">ਪ੍ਰੋਮੋ ਅਤੇ ਕ੍ਰੈਡਿਟ ਪੰਨੇ ਛੱਡੋ</string>
+	<string name="translation_ocr_ready">OCR ਮਾਡਲ ਤਿਆਰ ਹੈ</string>
+	<string name="translation_ocr_auto_ready">ਆਟੋ-ਡਿਟੈਕਟ OCR ਤਿਆਰ ਹੈ</string>
+	<string name="translation_ocr_not_downloaded">ਪਹਿਲੀ ਵਰਤੋਂ \'ਤੇ OCR ਮਾਡਲ ਡਾਊਨਲੋਡ ਕਰਦਾ ਹੈ</string>
+	<string name="translation_ocr_download">ਮਾਡਲ ਡਾਊਨਲੋਡ ਕਰੋ</string>
+	<string name="translation_ocr_downloading">OCR ਮਾਡਲ ਡਾਊਨਲੋਡ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...%1$d%%%%%%</string>
+	<string name="translation_ocr_running">ਲਿਖਤ ਨੂੰ ਪਛਾਣਿਆ ਜਾ ਰਿਹਾ ਹੈ...</string>
+	<string name="translation_translating_text">ਅਨੁਵਾਦ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...</string>
+	<string name="translation_rendering_page">ਪੰਨਾ ਰੈਂਡਰ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ…</string>
+	<string name="translation_clear_cache">ਅਨੁਵਾਦ ਕੈਸ਼ ਸਾਫ਼ ਕਰੋ</string>
+	<string name="translation_cache_cleared">ਅਨੁਵਾਦ ਕੈਸ਼ ਕਲੀਅਰ ਕੀਤਾ ਗਿਆ</string>
+	<string name="translation_cache_cleared_size">ਕੈਸ਼ ਕੀਤੇ ਅਨੁਵਾਦਾਂ ਦੇ%1$sਨੂੰ ਸਾਫ਼ ਕੀਤਾ ਗਿਆ</string>
+	<string name="translation_error_generic">ਅਨੁਵਾਦ ਅਸਫਲ:%1$s</string>
+</resources>

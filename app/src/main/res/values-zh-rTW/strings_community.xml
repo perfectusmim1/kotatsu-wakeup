@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="community_comment_dislike">倒讚</string>
 	<string name="community_comment_like">讚</string>
@@ -45,4 +45,6 @@
 	<string name="community_widget_load_error">無法載入留言元件，請檢查網路或用瀏覽器開啟。</string>
 	<string name="community_widget_unavailable">此裝置不支援 WebView，請用瀏覽器查看留言。</string>
 	<string name="community_more_options">更多選項</string>
+	<string name="community_comment_translate">翻譯</string>
+	<string name="community_comment_show_original">原文</string>
 </resources>

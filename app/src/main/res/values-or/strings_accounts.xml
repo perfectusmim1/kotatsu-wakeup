@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">ଉତ୍ସ ଆକାଉଣ୍ଟ୍</string>
+	<string name="source_accounts_summary">%1$d ସାଇନ୍ ଇନ୍ · %2$d ସମର୍ଥିତ</string>
+	<string name="source_accounts_summary_none">କୌଣସି ସକ୍ରିୟ ସେସନ୍ ନାହିଁ · %1$d ସମର୍ଥିତ</string>
+	<string name="source_accounts_empty">ଆକାଉଣ୍ଟ୍ ସମର୍ଥନ ଥିବା କୌଣସି ଉତ୍ସ ମିଳିଲା ନାହିଁ</string>
+	<string name="source_account_signed_in">ସାଇନ୍ ଇନ୍ ହୋଇଛି</string>
+	<string name="source_account_not_signed_in">ସାଇନ୍ ଇନ୍ ହୋଇନାହିଁ</string>
+	<string name="source_account_switch">ଆକାଉଣ୍ଟ୍ ବଦଳାନ୍ତୁ</string>
+	<string name="source_signed_out">ସାଇନ୍ ଆଉଟ୍ ହୋଇଛି</string>
+	<string name="sign_up">ସାଇନ୍ ଅପ୍</string>
+	<string name="auth_verify">ଯାଞ୍ଚ କରନ୍ତୁ</string>
+	<string name="auth_refresh">ରିଫ୍ରେସ୍</string>
+	<string name="auth_not_verified_yet">ସେସନ୍ ଏପର୍ଯ୍ୟନ୍ତ ଯାଞ୍ଚ ହୋଇନାହିଁ। ସାଇନ୍ ଇନ୍ ସମାପ୍ତ କରି ପୁନଃଚେଷ୍ଟା କରନ୍ତୁ।</string>
+</resources>

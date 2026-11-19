@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">Fordítási beállítások</string>
+    <string name="translation_toggle">Fordítás ki/be</string>
+    <string name="translation_enable">Fordítás engedélyezése</string>
+    <string name="translation_disable">Fordítás letiltása</string>
+    <string name="translation_active">Aktív</string>
+    <string name="translation_off">Kikapcsolva</string>
+    <string name="translation_provider">Fordítószolgáltató</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google Fordító</string>
+    <string name="translation_gemini_thinking_level">Gondolkodási szint</string>
+    <string name="translation_thinking_minimal">Minimális</string>
+    <string name="translation_thinking_low">Alacsony</string>
+    <string name="translation_thinking_medium">Közepes</string>
+    <string name="translation_thinking_high">Magas</string>
+    <string name="translation_source_lang">Forrásnyelv (OCR)</string>
+    <string name="translation_target_lang">Célnyelv</string>
+    <string name="translation_api_keys">Gemini API-kulcsok</string>
+    <string name="translation_deepl_api_keys">DeepL API-kulcsok</string>
+    <string name="translation_api_keys_hint">Több kulcsot vesszővel vagy új sorral válassz el</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d aktív kulcs beállítva</item>
+        <item quantity="other">%1$d aktív kulcs beállítva</item>
+    </plurals>
+    <string name="translation_api_keys_empty">Nincs API-kulcs beállítva</string>
+    <string name="translation_api_key_required">Adj meg egy Gemini API-kulcsot vagy válts szolgáltatót</string>
+    <string name="translation_deepl_api_key_required">Adj meg egy DeepL API-kulcsot vagy válts szolgáltatót</string>
+    <string name="translation_auto_translate">Oldalak automatikus fordítása</string>
+    <string name="translation_skip_sfx">Hangeffektusok kihagyása</string>
+    <string name="translation_filter_promo">Promóciós &amp; stáblista-oldalak kihagyása</string>
+    <string name="translation_ocr_ready">Az OCR-modell készen áll</string>
+    <string name="translation_ocr_auto_ready">Automatikus OCR-felismerés kész</string>
+    <string name="translation_ocr_not_downloaded">Az OCR-modell az első használatkor töltődik le</string>
+    <string name="translation_ocr_download">Modell letöltése</string>
+    <string name="translation_ocr_downloading">OCR-modell letöltése… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">Szöveg felismerése…</string>
+    <string name="translation_translating_text">Fordítás…</string>
+    <string name="translation_rendering_page">Oldal renderelése…</string>
+    <string name="translation_clear_cache">Fordítási gyorsítótár törlése</string>
+    <string name="translation_cache_cleared">Fordítási gyorsítótár törölve</string>
+    <string name="translation_cache_cleared_size">%1$s gyorsítótárazott fordítás törölve</string>
+    <string name="translation_error_generic">Fordítás sikertelen: %1$s</string>
+</resources>

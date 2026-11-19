@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">تأیید برای %1$s لازم است</string>
+    <string name="cf_banner_multiple_required">تأیید برای %1$s (+%2$d مورد دیگر) لازم است</string>
+    <string name="cf_banner_solve">حل کردن</string>
+    <string name="cf_banner_dismiss">بستن</string>
+</resources>

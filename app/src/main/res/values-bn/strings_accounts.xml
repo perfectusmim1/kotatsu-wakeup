@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_accounts">উৎস অ্যাকাউন্ট</string>
+    <string name="source_accounts_summary">%1$dটি সাইন ইন করা · %2$dটি সমর্থিত</string>
+    <string name="source_accounts_summary_none">কোনো সক্রিয় সেশন নেই · %1$dটি সমর্থিত</string>
+    <string name="source_accounts_empty">অ্যাকাউন্ট সমর্থনসহ কোনো উৎস পাওয়া যায়নি</string>
+    <string name="source_account_signed_in">সাইন ইন করা হয়েছে</string>
+    <string name="source_account_not_signed_in">সাইন ইন করা হয়নি</string>
+    <string name="source_account_switch">অ্যাকাউন্ট পরিবর্তন করুন</string>
+    <string name="source_signed_out">সাইন আউট করা হয়েছে</string>
+    <string name="sign_up">সাইন আপ করুন</string>
+    <string name="auth_verify">যাচাই করুন</string>
+    <string name="auth_refresh">রিফ্রেশ করুন</string>
+    <string name="auth_not_verified_yet">সেশন এখনও যাচাই করা হয়নি। সাইন ইন সম্পন্ন করে আবার চেষ্টা করুন।</string>
+</resources>

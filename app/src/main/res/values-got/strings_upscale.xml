@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upscale_title">𐍆𐍂𐌹𐍃𐌰𐌷𐍄𐍃 𐌴𐌽𐌷𐌰𐌽𐌺𐌴𐌼𐌴𐌽𐍄 (𐌿𐍀𐍃𐌺𐌰𐌻𐌰)</string>
+    <string name="upscale_mode_label">𐌷𐌰𐌹𐌳𐌿𐍃</string>
+    <string name="upscale_mode_off">𐌰𐍆</string>
+    <string name="upscale_mode_fast">𐍆𐌰𐍃𐍄</string>
+    <string name="upscale_mode_ai">𐌰𐌹</string>
+    <string name="upscale_hint_off">𐌻𐌰𐌿𐌱𐍉𐍃 𐍃𐌹𐌽𐌳 𐌳𐌹𐍃𐍀𐌻𐌰𐌾𐌴𐌳 𐌰𐍄 𐌸𐌴𐌹𐍂 𐍉𐍂𐌹𐌲𐌹𐌽𐌰𐌻 𐍂𐌴𐍃𐍉𐌻𐌿𐍄𐌹𐍉𐌽</string>
+    <string name="upscale_hint_fast">𐌱𐌰𐍄𐍄𐌴𐍂𐌾-𐍆𐍂𐌹𐌴𐌽𐌳𐌻𐌾, 𐌹𐌽𐍃𐍄𐌰𐌽𐍄 (𐌰𐌽𐌹𐌼𐌴4𐌺 2𐌺𐍃)</string>
+    <string name="upscale_hint_ai">𐌷𐌹𐌲𐌷𐌴𐍃𐍄 𐌲𐍉𐌳𐌴𐌹, 𐍃𐌻𐍉𐍅𐌴𐍂 (𐍂𐌴𐌰𐌻-𐌴𐍃𐍂𐌲𐌰𐌽 2𐌺𐍃)</string>
+    <string name="upscale_low_ram_hint">𐍆𐌰𐍃𐍄 𐌷𐌰𐌹𐌳𐌿𐍃 𐌹𐍃𐍄 𐍂𐌴𐌺𐍉𐌼𐌼𐌴𐌽𐌳𐌴𐌳 𐌰𐌽𐌰 𐌻𐍉𐍅-𐍃𐍀𐌴𐌺 𐌳𐌴𐍅𐌹𐌺𐌴𐍃.</string>
+    <string name="upscale_low_ram_ai_hint">𐌼𐌰𐌾 𐍅𐌰𐍂𐌼 𐌿𐍀 𐌾𐍉𐌿𐍂 𐌳𐌴𐍅𐌹𐌺𐌴; 𐍆𐌰𐍃𐍄 𐌷𐌰𐌹𐌳𐌿𐍃 𐌹𐍃𐍄 𐍂𐌴𐌺𐍉𐌼𐌼𐌴𐌽𐌳𐌴𐌳 𐌰𐌽𐌰 𐌻𐍉𐍅-𐍃𐍀𐌴𐌺 𐌷𐌰𐍂𐌳𐍅𐌰𐍂𐌴.</string>
+    <string name="upscale_processing">𐍀𐍂𐍉𐌺𐌴𐍃𐍃𐌹𐌲𐌲…</string>
+    <string name="upscale_compare_toggle">𐌺𐍉𐌼𐍀𐌰𐍂𐌴 𐌱𐌴𐍆𐍉𐍂𐌴 / 𐌰𐍆𐍄𐌴𐍂</string>
+    <string name="upscale_high_res_toggle">𐌰𐌻𐍃𐍉 𐍀𐍂𐍉𐌺𐌴𐍃𐍃 𐌷𐌹𐌲𐌷-𐍂𐌴𐍃𐍉𐌻𐌿𐍄𐌹𐍉𐌽 𐌻𐌰𐌿𐌱𐍉𐍃</string>
+    <string name="upscale_high_res_hint">𐍈𐌴𐌽 𐌰𐍆, 𐌻𐌰𐌿𐌱𐍉𐍃 𐍅𐌹𐌳𐌴𐍂 𐌸𐌰𐌽 𐍃𐌰 𐍃𐌺𐍂𐌴𐌹𐌽 𐍂𐌴𐍃𐍉𐌻𐌿𐍄𐌹𐍉𐌽 𐍃𐌹𐌽𐌳 𐍃𐌺𐌹𐍀𐍀𐌴𐌳.</string>
+    <string name="upscale_compare_original">𐍉𐍂𐌹𐌲𐌹𐌽𐌰𐌻</string>
+    <string name="upscale_compare_enhanced">𐌴𐌽𐌷𐌰𐌽𐌺𐌴𐌳</string>
+    <string name="upscale_model_ready">𐍂𐌴𐌰𐌻-𐌴𐍃𐍂𐌲𐌰𐌽 2𐌺𐍃 𐌼𐍉𐌳𐌴𐌻 𐍂𐌴𐌰𐌳𐌾</string>
+    <string name="upscale_model_not_downloaded">𐌰𐌹 𐌼𐍉𐌳𐌴𐌻 𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌴𐌹𐌽𐍉𐍃 𐌰𐌽𐌰 𐍆𐌹𐍂𐍃𐍄 𐌿𐍃𐌴 (~2.3 𐌼𐌱)</string>
+    <string name="upscale_model_download">𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌰𐌽 𐌼𐍉𐌳𐌴𐌻</string>
+    <string name="upscale_model_downloading">𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌰𐌽𐌳𐍃 𐌰𐌹 𐌼𐍉𐌳𐌴𐌻… %1$d%%%%%%</string>
+    <string name="upscale_model_initializing">𐍀𐍂𐌴𐍀𐌰𐍂𐌹𐌲𐌲 𐌰𐌹 𐌼𐍉𐌳𐌴𐌻…</string>
+    <string name="upscale_clear_cache">𐌷𐍂𐌰𐌹𐌽𐌾𐌰𐌽 𐌿𐍀𐍃𐌺𐌰𐌻𐌰 𐌺𐌰𐍄𐍃𐌷𐌴</string>
+    <string name="upscale_cache_cleared">𐌿𐍀𐍃𐌺𐌰𐌻𐌰 𐌺𐌰𐍄𐍃𐌷𐌴 𐌺𐌻𐌴𐌰𐍂𐌴𐌳</string>
+    <string name="upscale_cache_cleared_size">𐌺𐌻𐌴𐌰𐍂𐌴𐌳 %1$s 𐌰𐍆 𐌺𐌰𐍄𐍃𐌷𐌴𐌳 𐌿𐍀𐍃𐌺𐌰𐌻𐌰 𐍃𐍄𐍂𐌹𐍀𐍃</string>
+    <string name="upscale_error_generic">𐌿𐍀𐍃𐌺𐌰𐌻𐌰 𐌰𐌹𐍂𐌶𐌴𐌹: %1$s</string>
+</resources>

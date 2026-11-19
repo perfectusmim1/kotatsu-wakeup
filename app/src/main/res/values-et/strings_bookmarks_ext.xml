@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">Järjehoidjad lisatud</string>
+    <string name="bookmarks_sort_newest">Uuemad enne</string>
+    <string name="bookmarks_sort_oldest">Vanemad enne</string>
+    <string name="bookmarks_sort_chapter">Peatükkide järjekorras</string>
+    <string name="search_bookmarks_hint">Otsi sarja või peatükki</string>
+    <string name="search_bookmarked_chapters_hint">Otsi järjehoidjates olevaid peatükke</string>
+    <string name="no_bookmarks_matching_query">Sobivaid järjehoidjaid pole</string>
+    <string name="no_bookmarks_matching_summary">Praegusele filtrile ei vastanud ükski järjehoidja</string>
+    <string name="download_bookmarked_chapters">Laadi alla järjehoidjas peatükid</string>
+    <string name="download_bookmarked_only">Ainult järjehoidjas peatükid</string>
+    <string name="download_bookmarked_next_2">Järjehoidjas + järgmised 2 peatükki</string>
+    <string name="download_bookmarked_next_3">Järjehoidjas + järgmised 3 peatükki</string>
+    <string name="no_bookmarked_chapters_to_download">Allalaadimiseks pole järjehoidjas peatükke</string>
+    <string name="migrate_bookmarks">Vii järjehoidjad üle teise allikasse</string>
+    <string name="bookmark_migration_choose_series">Vali üleviidav sari</string>
+    <string name="bookmark_migration_searching">Otsimine aktiivsetest allikatest…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d allikat · %3$d vastet</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d peatükki vastavuses</string>
+    <string name="bookmark_migration_total_chapters">%1$d peatükki</string>
+    <string name="bookmark_migration_no_candidates">Ühilduvaid allikaid ei leitud</string>
+    <string name="bookmark_migration_no_candidates_summary">Ükski lubatud allikas ei vastanud sellele sarjale ega selle järjehoidjas peatükkidele</string>
+    <string name="bookmark_migration_confirm">Kas viia %1$d järjehoidja(t) allikast \"%2$s\" (%3$s) üle allikasse \"%4$s\" (%5$s)?\n%6$d/%7$d järjehoidjas peatükist sobitusid.</string>
+    <string name="bookmark_migration_confirm_no_overlap">Kas viia %1$d järjehoidja(t) allikast \"%2$s\" (%3$s) üle allikasse \"%4$s\" (%5$s)?\nPeatükid määratakse ligikaudselt lugemise edenemise põhjal.</string>
+    <string name="bookmark_migration_success">Järjehoidjad viidi üle allikasse %1$s</string>
+    <string name="bookmark_migration_no_bookmarks">Selle sarja jaoks järjehoidjaid ei leitud</string>
+    <string name="bookmark_migration_rescan">Skanni uuesti</string>
+    <string name="bookmark_migration_unavailable_no_chapters">Peatükke pole</string>
+    <string name="bookmarks_count_badge">%1$d järjehoidjat</string>
+</resources>

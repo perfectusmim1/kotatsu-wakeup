@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">ஆதார கணக்குகள்</string>
+	<string name="source_accounts_summary">%1$d உள்நுழைந்துள்ளார் · %2$d ஆதரிக்கப்படுகிறது</string>
+	<string name="source_accounts_summary_none">செயலில் அமர்வுகள் இல்லை · %1$d ஆதரிக்கப்படுகிறது</string>
+	<string name="source_accounts_empty">கணக்கு ஆதரவுடன் எந்த ஆதாரமும் இல்லை</string>
+	<string name="source_account_signed_in">உள்நுழைந்துள்ளீர்கள்</string>
+	<string name="source_account_not_signed_in">உள்நுழையவில்லை</string>
+	<string name="source_account_switch">கணக்கை மாற்றவும்</string>
+	<string name="source_signed_out">வெளியேறினார்</string>
+	<string name="sign_up">பதிவு செய்யவும்</string>
+	<string name="auth_verify">சரிபார்க்கவும்</string>
+	<string name="auth_refresh">புதுப்பிக்கவும்</string>
+	<string name="auth_not_verified_yet">அமர்வு இன்னும் சரிபார்க்கப்படவில்லை. உள்நுழைவதை முடித்துவிட்டு மீண்டும் முயற்சிக்கவும்.</string>
+</resources>

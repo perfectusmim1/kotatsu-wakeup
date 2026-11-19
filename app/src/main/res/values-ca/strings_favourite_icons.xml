@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Icona</string>
+	<string name="fav_icon_default">Cor</string>
+	<string name="fav_icon_star">Estrella</string>
+	<string name="fav_icon_fire">Foc</string>
+	<string name="fav_icon_crown">Corona</string>
+	<string name="fav_icon_book">Llibre</string>
+	<string name="fav_icon_bookmark">Marcador</string>
+	<string name="fav_icon_eye">Ull</string>
+	<string name="fav_icon_bolt">Llamps</string>
+	<string name="fav_icon_clock">Rellotge</string>
+	<string name="fav_icon_folder">Carpeta</string>
+	<string name="fav_icon_check">Marca</string>
+	<string name="fav_icon_sparkles">Espurnes</string>
+</resources>

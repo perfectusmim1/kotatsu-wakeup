@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">AniList बाट आयात गर्नुहोस्</string>
+	<string name="anilist_import_mode_label">आयात गन्तव्य</string>
+	<string name="anilist_import_by_status">स्थिति अनुसार</string>
+	<string name="anilist_import_single_category">एउटै श्रेणी</string>
+	<string name="anilist_import_new_category">नयाँ श्रेणी</string>
+	<string name="anilist_import_new_category_hint">श्रेणीको नाम</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">तपाईंको AniList पुस्तकालय लोड हुँदैछ…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">पूरा भयो (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">आयात गरिएको: %1$d · अवस्थित: %2$d · नमिल्दो: %3$d</string>
+	<string name="anilist_import_empty">तपाईंको AniList मङ्गा सूची खाली छ।</string>
+	<string name="anilist_import_unmatched_title">नमिल्दा शीर्षकहरू</string>
+	<string name="anilist_import_start">आयात सुरु गर्नुहोस्</string>
+	<string name="anilist_import_retry">फेरि आयात गर्नुहोस्</string>
+	<string name="anilist_import_error_no_sources">आयात गर्नुअघि कम्तीमा एउटा मङ्गा स्रोत सक्षम गर्नुहोस्।</string>
+</resources>

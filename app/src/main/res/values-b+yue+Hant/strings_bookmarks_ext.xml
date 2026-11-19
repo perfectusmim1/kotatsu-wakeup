@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">已新增書籤</string>
+    <string name="bookmarks_sort_newest">最新新增</string>
+    <string name="bookmarks_sort_oldest">最早新增</string>
+    <string name="bookmarks_sort_chapter">章節順序</string>
+    <string name="search_bookmarks_hint">搜尋作品或章節</string>
+    <string name="search_bookmarked_chapters_hint">搜尋已加書籤嘅章節</string>
+    <string name="no_bookmarks_matching_query">冇符合嘅書籤</string>
+    <string name="no_bookmarks_matching_summary">冇書籤符合你目前嘅篩選條件</string>
+    <string name="download_bookmarked_chapters">下載已加書籤嘅章節</string>
+    <string name="download_bookmarked_only">只下載已加書籤嘅章節</string>
+    <string name="download_bookmarked_next_2">已加書籤 + 之後 2 話</string>
+    <string name="download_bookmarked_next_3">已加書籤 + 之後 3 話</string>
+    <string name="no_bookmarked_chapters_to_download">冇可下載嘅已加書籤章節</string>
+    <string name="migrate_bookmarks">將書籤遷移到其他來源</string>
+    <string name="bookmark_migration_choose_series">選擇要遷移嘅作品</string>
+    <string name="bookmark_migration_searching">正在搜尋已啟用嘅來源…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d 個來源 · %3$d 個符合</string>
+    <string name="bookmark_migration_chapters_matched">已配對 %1$d/%2$d 話</string>
+    <string name="bookmark_migration_total_chapters">%1$d 話</string>
+    <string name="bookmark_migration_no_candidates">搵唔到相容嘅來源</string>
+    <string name="bookmark_migration_no_candidates_summary">冇已啟用嘅來源符合呢部作品同佢已加書籤嘅章節</string>
+    <string name="bookmark_migration_confirm">要將 %1$d 個書籤從「%2$s」（%3$s）遷移到「%4$s」（%5$s）嗎？\n%7$d 個已加書籤章節入面有 %6$d 個配對成功。</string>
+    <string name="bookmark_migration_confirm_no_overlap">要將 %1$d 個書籤從「%2$s」（%3$s）遷移到「%4$s」（%5$s）嗎？\n章節將會按閱讀進度估算。</string>
+    <string name="bookmark_migration_success">書籤已遷移到 %1$s</string>
+    <string name="bookmark_migration_no_bookmarks">呢部作品冇任何書籤</string>
+    <string name="bookmark_migration_rescan">重新掃描</string>
+    <string name="bookmark_migration_unavailable_no_chapters">冇章節</string>
+    <string name="bookmarks_count_badge">%1$d 個書籤</string>
+</resources>

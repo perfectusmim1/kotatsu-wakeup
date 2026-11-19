@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="bookmark_added_many">Marcaje adăugate</string>
+	<string name="bookmarks_sort_newest">Cele mai noi adăugate</string>
+	<string name="bookmarks_sort_oldest">Cele mai vechi adăugate</string>
+	<string name="bookmarks_sort_chapter">Ordinea capitolelor</string>
+	<string name="search_bookmarks_hint">Caută serie sau capitol</string>
+	<string name="search_bookmarked_chapters_hint">Caută capitole marcate</string>
+	<string name="no_bookmarks_matching_query">Niciun marcaj potrivit</string>
+	<string name="no_bookmarks_matching_summary">Niciun marcaj nu corespunde filtrului curent</string>
+	<string name="download_bookmarked_chapters">Descarcă capitolele marcate</string>
+	<string name="download_bookmarked_only">Doar capitolele marcate</string>
+	<string name="download_bookmarked_next_2">Marcate + următoarele 2 capitole</string>
+	<string name="download_bookmarked_next_3">Marcate + următoarele 3 capitole</string>
+	<string name="no_bookmarked_chapters_to_download">Nu există capitole marcate de descărcat</string>
+	<string name="migrate_bookmarks">Migrează marcajele către altă sursă</string>
+	<string name="bookmark_migration_choose_series">Alege seria de migrat</string>
+	<string name="bookmark_migration_searching">Se caută în sursele active…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d surse · %3$d potriviri</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d capitole potrivite</string>
+	<string name="bookmark_migration_total_chapters">%1$d capitole</string>
+	<string name="bookmark_migration_no_candidates">Nu s-au găsit surse compatibile</string>
+	<string name="bookmark_migration_no_candidates_summary">Nicio sursă activată nu a potrivit această serie și capitolele ei marcate</string>
+	<string name="bookmark_migration_confirm">Migrezi %1$d marcaj(e) din \"%2$s\" (%3$s) către \"%4$s\" (%5$s)?\n%6$d din %7$d capitole marcate potrivite.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Migrezi %1$d marcaj(e) din \"%2$s\" (%3$s) către \"%4$s\" (%5$s)?\nCapitolele vor fi aproximate după progresul lecturii.</string>
+	<string name="bookmark_migration_success">Marcaje migrate către %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Nu s-au găsit marcaje pentru această serie</string>
+	<string name="bookmark_migration_rescan">Rescanează</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Fără capitole</string>
+	<string name="bookmarks_count_badge">%1$d marcaje</string>
+</resources>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upscale_title">Βελτίωση εικόνας (Upscale)</string>
+    <string name="upscale_mode_label">Λειτουργία</string>
+    <string name="upscale_mode_off">Ανενεργή</string>
+    <string name="upscale_mode_fast">Γρήγορη</string>
+    <string name="upscale_mode_ai">AI</string>
+    <string name="upscale_hint_off">Οι σελίδες εμφανίζονται στην αρχική τους ανάλυση</string>
+    <string name="upscale_hint_fast">Φιλική προς τη μπαταρία, άμεση (Anime4K 2x)</string>
+    <string name="upscale_hint_ai">Υψηλότερη ποιότητα, πιο αργή (Real-ESRGAN 2x)</string>
+    <string name="upscale_low_ram_hint">Συνιστάται η Γρήγορη λειτουργία σε συσκευές χαμηλών προδιαγραφών.</string>
+    <string name="upscale_low_ram_ai_hint">Ενδέχεται να θερμάνει τη συσκευή σου· συνιστάται η Γρήγορη λειτουργία σε υλικό χαμηλών προδιαγραφών.</string>
+    <string name="upscale_processing">Επεξεργασία…</string>
+    <string name="upscale_compare_toggle">Σύγκριση πριν / μετά</string>
+    <string name="upscale_high_res_toggle">Επεξεργασία και σελίδων υψηλής ανάλυσης</string>
+    <string name="upscale_high_res_hint">Όταν είναι απενεργοποιημένο, παραλείπονται οι σελίδες με πλάτος μεγαλύτερο από την ανάλυση της οθόνης.</string>
+    <string name="upscale_compare_original">Πρωτότυπο</string>
+    <string name="upscale_compare_enhanced">Βελτιωμένο</string>
+    <string name="upscale_model_ready">Το μοντέλο Real-ESRGAN 2x είναι έτοιμο</string>
+    <string name="upscale_model_not_downloaded">Το μοντέλο AI κατεβαίνει κατά την πρώτη χρήση (~2,3 MB)</string>
+    <string name="upscale_model_download">Λήψη μοντέλου</string>
+    <string name="upscale_model_downloading">Λήψη μοντέλου AI… %1$d%%%%%%</string>
+    <string name="upscale_model_initializing">Προετοιμασία μοντέλου AI…</string>
+    <string name="upscale_clear_cache">Εκκαθάριση προσωρινής μνήμης upscale</string>
+    <string name="upscale_cache_cleared">Η προσωρινή μνήμη upscale εκκαθαρίστηκε</string>
+    <string name="upscale_cache_cleared_size">Εκκαθαρίστηκαν %1$s από αποθηκευμένα τμήματα upscale</string>
+    <string name="upscale_error_generic">Σφάλμα upscale: %1$s</string>
+</resources>

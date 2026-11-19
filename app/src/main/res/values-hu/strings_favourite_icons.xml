@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">Ikon</string>
+    <string name="fav_icon_default">Szív</string>
+    <string name="fav_icon_star">Csillag</string>
+    <string name="fav_icon_fire">Tűz</string>
+    <string name="fav_icon_crown">Korona</string>
+    <string name="fav_icon_book">Könyv</string>
+    <string name="fav_icon_bookmark">Könyvjelző</string>
+    <string name="fav_icon_eye">Szem</string>
+    <string name="fav_icon_bolt">Villám</string>
+    <string name="fav_icon_clock">Óra</string>
+    <string name="fav_icon_folder">Mappa</string>
+    <string name="fav_icon_check">Pipa</string>
+    <string name="fav_icon_sparkles">Szikrák</string>
+</resources>

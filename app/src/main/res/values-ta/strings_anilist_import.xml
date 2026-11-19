@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">அனிலிஸ்டில் இருந்து இறக்குமதி</string>
+	<string name="anilist_import_mode_label">இறக்குமதி இலக்கு</string>
+	<string name="anilist_import_by_status">நிலை மூலம்</string>
+	<string name="anilist_import_single_category">ஒற்றை வகை</string>
+	<string name="anilist_import_new_category">புதிய வகை</string>
+	<string name="anilist_import_new_category_hint">வகை பெயர்</string>
+	<string name="anilist_import_new_category_default">அனிலிஸ்ட்</string>
+	<string name="anilist_import_fetching">உங்கள் அனிலிஸ்ட் நூலகத்தை ஏற்றுகிறது…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">முடிந்தது (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">இறக்குமதி செய்யப்பட்டது: %1$d · உள்ளது: %2$d · பொருத்தமற்றது: %3$d</string>
+	<string name="anilist_import_empty">உங்கள் அனிலிஸ்ட் மங்கா பட்டியல் காலியாக உள்ளது.</string>
+	<string name="anilist_import_unmatched_title">பொருந்தாத தலைப்புகள்</string>
+	<string name="anilist_import_start">இறக்குமதியைத் தொடங்கவும்</string>
+	<string name="anilist_import_retry">மீண்டும் இறக்குமதி செய்</string>
+	<string name="anilist_import_error_no_sources">இறக்குமதி செய்வதற்கு முன் குறைந்தது ஒரு மங்கா மூலத்தை இயக்கவும்.</string>
+</resources>

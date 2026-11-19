@@ -1,21 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-	<string name="community_comment_dislike">Je n\'aime pas</string>
-	<string name="community_comment_like">J\'aime</string>
-	<string name="community_comment_delete">Supprimer</string>
-	<string name="community_comment_edit">Modifier</string>
-	<string name="community_comment_reply">Répondre</string>
-	<string name="community_comment_send">Envoyer</string>
-	<string name="community_comment_spoiler">Spoiler</string>
-	<string name="community_comment_hint">Ajouter un commentaire</string>
-	<string name="community_comments_empty">Aucun commentaire pour l\'instant. Soyez le premier !</string>
-	<string name="community_comments_sort_new">Récents</string>
-	<string name="community_comments_sort_top">Populaires</string>
-	<string name="community_comments">Commentaires</string>
-	<string name="community_rating_none">Aucune note pour l\'instant</string>
-	<string name="community_rating_summary">%1$s · %2$s</string>
-	<string name="community_rating">Note des lecteurs</string>
-	<string name="community">Communauté</string>
 	<string name="community_rate">Noter</string>
 	<string name="community_rating_title">Note de la communauté</string>
 	<string name="community_your_rating">Votre note : %1$d / %2$d</string>
@@ -45,4 +29,6 @@
 	<string name="community_widget_load_error">Impossible de charger le widget de commentaires. Vérifiez votre connexion ou ouvrez dans le navigateur.</string>
 	<string name="community_widget_unavailable">WebView indisponible sur cet appareil. Ouvrez les commentaires dans votre navigateur.</string>
 	<string name="community_more_options">Plus d\'options</string>
+	<string name="community_comment_translate">Traduire</string>
+	<string name="community_comment_show_original">Original</string>
 </resources>

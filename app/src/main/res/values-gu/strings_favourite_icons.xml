@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">આઇકન</string>
+	<string name="fav_icon_default">હૃદય</string>
+	<string name="fav_icon_star">તારો</string>
+	<string name="fav_icon_fire">આગ</string>
+	<string name="fav_icon_crown">તાજ</string>
+	<string name="fav_icon_book">પુસ્તક</string>
+	<string name="fav_icon_bookmark">બુકમાર્ક</string>
+	<string name="fav_icon_eye">આંખ</string>
+	<string name="fav_icon_bolt">વીજળી</string>
+	<string name="fav_icon_clock">ઘડિયાળ</string>
+	<string name="fav_icon_folder">ફોલ્ડર</string>
+	<string name="fav_icon_check">ચેક</string>
+	<string name="fav_icon_sparkles">ચમક</string>
+</resources>

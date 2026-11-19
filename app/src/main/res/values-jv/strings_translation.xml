@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Setelan terjemahan</string>
+	<string name="translation_toggle">Urip/pateni terjemahan</string>
+	<string name="translation_enable">Aktifake terjemahan</string>
+	<string name="translation_disable">Pateni terjemahan</string>
+	<string name="translation_active">Aktif</string>
+	<string name="translation_off">Mati</string>
+	<string name="translation_provider">Panyedhiya terjemahan</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Tingkat mikir</string>
+	<string name="translation_thinking_minimal">Minimal</string>
+	<string name="translation_thinking_low">Cendhek</string>
+	<string name="translation_thinking_medium">Sedheng</string>
+	<string name="translation_thinking_high">Dhuwur</string>
+	<string name="translation_source_lang">Basa sumber (OCR)</string>
+	<string name="translation_target_lang">Basa tujuan</string>
+	<string name="translation_api_keys">Kunci API Gemini</string>
+	<string name="translation_deepl_api_keys">Kunci API DeepL</string>
+	<string name="translation_api_keys_hint">Pisahake pirang-pirang kunci nganggo koma utawa baris anyar</string>
+	<string name="translation_api_keys_empty">Ora ana kunci API sing disetel</string>
+	<string name="translation_api_key_required">Tambahake kunci API Gemini utawa ganti panyedhiya</string>
+	<string name="translation_deepl_api_key_required">Tambahake kunci API DeepL utawa ganti panyedhiya</string>
+	<string name="translation_auto_translate">Terjemahake kaca otomatis</string>
+	<string name="translation_skip_sfx">Liwati efek swara</string>
+	<string name="translation_filter_promo">Liwati kaca promo &amp; kredit</string>
+	<string name="translation_ocr_ready">Model OCR wis siyap</string>
+	<string name="translation_ocr_auto_ready">OCR deteksi otomatis wis siyap</string>
+	<string name="translation_ocr_not_downloaded">Model OCR diundhuh nalika pisanan digunakake</string>
+	<string name="translation_ocr_download">Undhuh model</string>
+	<string name="translation_ocr_downloading">Ngundhuh model OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Ngenali teks…</string>
+	<string name="translation_translating_text">Nerjemahake…</string>
+	<string name="translation_rendering_page">Ngrakit kaca…</string>
+	<string name="translation_clear_cache">Resiki cache terjemahan</string>
+	<string name="translation_cache_cleared">Cache terjemahan diresiki</string>
+	<string name="translation_cache_cleared_size">Ngresiki %1$s cache terjemahan</string>
+	<string name="translation_error_generic">Terjemahan gagal: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d kunci aktif disetel</item>
+		<item quantity="other">%1$d kunci aktif disetel</item>
+	</plurals>
+</resources>

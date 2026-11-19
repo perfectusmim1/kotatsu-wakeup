@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Tulkošanas iestatījumi</string>
+	<string name="translation_toggle">Pārslēgt tulkošanu</string>
+	<string name="translation_enable">Iespējot tulkošanu</string>
+	<string name="translation_disable">Atspējot tulkošanu</string>
+	<string name="translation_active">Aktīvs</string>
+	<string name="translation_off">Izslēgts</string>
+	<string name="translation_provider">Tulkošanas nodrošinātājs</string>
+	<string name="translation_provider_gemini">Dvīņi</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google tulkotājs</string>
+	<string name="translation_gemini_thinking_level">Domāšanas līmenis</string>
+	<string name="translation_thinking_minimal">Minimāli</string>
+	<string name="translation_thinking_low">Zems</string>
+	<string name="translation_thinking_medium">Vidēja</string>
+	<string name="translation_thinking_high">Augsts</string>
+	<string name="translation_source_lang">Avota valoda (OCR)</string>
+	<string name="translation_target_lang">Mērķa valoda</string>
+	<string name="translation_api_keys">Gemini API atslēgas</string>
+	<string name="translation_deepl_api_keys">DeepL API atslēgas</string>
+	<string name="translation_api_keys_hint">Atdaliet vairākus taustiņus ar komatiem vai jaunām rindām</string>
+	<string name="translation_api_keys_empty">Nav konfigurēta API atslēga</string>
+	<string name="translation_api_key_required">Pievienojiet Gemini API atslēgu vai mainiet pakalpojumu sniedzēju</string>
+	<string name="translation_deepl_api_key_required">Pievienojiet DeepL API atslēgu vai mainiet pakalpojumu sniedzēju</string>
+	<string name="translation_auto_translate">Automātiski tulkot lapas</string>
+	<string name="translation_skip_sfx">Izlaist skaņas efektus</string>
+	<string name="translation_filter_promo">Izlaist reklāmas un kredītu lapas</string>
+	<string name="translation_ocr_ready">OCR modelis gatavs</string>
+	<string name="translation_ocr_auto_ready">Gatavs automātiskai OCR noteikšanai</string>
+	<string name="translation_ocr_not_downloaded">OCR modeļa lejupielāde pirmajā lietošanas reizē</string>
+	<string name="translation_ocr_download">Lejupielādēt modeli</string>
+	<string name="translation_ocr_downloading">Notiek OCR modeļa lejupielāde… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Notiek teksta atpazīšana…</string>
+	<string name="translation_translating_text">Notiek tulkošana…</string>
+	<string name="translation_rendering_page">Notiek lapas renderēšana…</string>
+	<string name="translation_clear_cache">Notīrīt tulkošanas kešatmiņu</string>
+	<string name="translation_cache_cleared">Tulkošanas kešatmiņa ir notīrīta</string>
+	<string name="translation_cache_cleared_size">Iztīrīti %1$s kešatmiņā saglabātie tulkojumi</string>
+	<string name="translation_error_generic">Tulkojums neizdevās: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d aktīvā atslēga ir konfigurēta</item>
+		<item quantity="other">%1$d aktīvās atslēgas ir konfigurētas</item>
+	</plurals>
+</resources>

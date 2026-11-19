@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">Ikonoa</string>
+    <string name="fav_icon_default">Bihotza</string>
+    <string name="fav_icon_star">Izarra</string>
+    <string name="fav_icon_fire">Sua</string>
+    <string name="fav_icon_crown">Koroa</string>
+    <string name="fav_icon_book">Liburua</string>
+    <string name="fav_icon_bookmark">Laster-marka</string>
+    <string name="fav_icon_eye">Begia</string>
+    <string name="fav_icon_bolt">Tximista</string>
+    <string name="fav_icon_clock">Erlojua</string>
+    <string name="fav_icon_folder">Karpeta</string>
+    <string name="fav_icon_check">Egiaztapena</string>
+    <string name="fav_icon_sparkles">Txinpartak</string>
+</resources>

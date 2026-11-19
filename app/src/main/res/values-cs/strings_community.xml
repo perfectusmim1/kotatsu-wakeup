@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">Hodnotit</string>
+	<string name="community_rating_title">Hodnocení komunity</string>
+	<string name="community_your_rating">Vaše hodnocení: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Odeslat</string>
+	<string name="community_rating_saved">Hodnocení uloženo</string>
+	<string name="community_rating_count">%1$s hodnocení</string>
+	<string name="community_views_count">%1$s zobrazení</string>
+	<string name="community_follows_count">%1$s sledujících</string>
+	<string name="community_comments_count">%1$s komentářů</string>
+	<string name="community_comments_sort_old">Nejstarší</string>
+	<string name="community_web_comments">Web</string>
+	<string name="community_show_replies">Zobrazit odpovědi (%1$d)</string>
+	<string name="community_hide_replies">Skrýt odpovědi</string>
+	<string name="community_load_more">Načíst další</string>
+	<string name="community_load_more_replies">Načíst další odpovědi</string>
+	<string name="community_replying_to">Odpověď pro %1$s</string>
+	<string name="community_editing_comment">Úprava komentáře</string>
+	<string name="community_comment_edited">(upraveno)</string>
+	<string name="community_comment_deleted">Komentář smazán</string>
+	<string name="community_comment_delete_confirm">Smazat tento komentář?</string>
+	<string name="community_comment_translate">Přeložit</string>
+	<string name="community_comment_show_original">Originál</string>
+	<string name="community_spoiler_warning">Spoiler — Klepněte pro zobrazení</string>
+	<string name="community_spoiler_hide">Skrýt spoiler</string>
+	<string name="community_sign_in_to_comment">Přihlaste se pro přidávání komentářů nebo reakcí</string>
+	<string name="community_sign_in_to_rate">Přihlaste se pro hodnocení na %1$s</string>
+	<string name="community_widget_ssl_error">Zabezpečené připojení pro tento widget komentářů selhalo. Můžete stránku otevřít v prohlížeči.</string>
+	<string name="community_widget_load_error">Widget komentářů se nepodařilo načíst. Zkontrolujte připojení nebo jej otevřete v prohlížeči.</string>
+	<string name="community_widget_unavailable">WebView není na tomto zařízení dostupný. Otevřete komentáře v prohlížeči.</string>
+	<string name="community_more_options">Další možnosti</string>
+</resources>

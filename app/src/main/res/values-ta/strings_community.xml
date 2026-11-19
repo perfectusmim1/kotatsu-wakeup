@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">மதிப்பிடவும்</string>
+	<string name="community_rating_title">சமூக மதிப்பீடு</string>
+	<string name="community_your_rating">உங்கள் மதிப்பீடு: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">சமர்ப்பிக்கவும்</string>
+	<string name="community_rating_saved">மதிப்பீடு சேமிக்கப்பட்டது</string>
+	<string name="community_rating_count">%1$s மதிப்பீடுகள்</string>
+	<string name="community_views_count">%1$s பார்வைகள்</string>
+	<string name="community_follows_count">%1$s பின்தொடர்கிறது</string>
+	<string name="community_comments_count">%1$s கருத்துகள்</string>
+	<string name="community_comments_sort_old">பழையது</string>
+	<string name="community_web_comments">இணையம்</string>
+	<string name="community_show_replies">பதில்களைக் காட்டு (%1$d)</string>
+	<string name="community_hide_replies">பதில்களை மறை</string>
+	<string name="community_load_more">மேலும் ஏற்றவும்</string>
+	<string name="community_load_more_replies">மேலும் பதில்களை ஏற்றவும்</string>
+	<string name="community_replying_to">%1$s க்கு பதிலளிக்கிறது</string>
+	<string name="community_editing_comment">கருத்தைத் திருத்துகிறது</string>
+	<string name="community_comment_edited">(திருத்தப்பட்டது)</string>
+	<string name="community_comment_deleted">கருத்து நீக்கப்பட்டது</string>
+	<string name="community_comment_delete_confirm">இந்தக் கருத்தை நீக்கவா?</string>
+	<string name="community_comment_translate">மொழிபெயர்</string>
+	<string name="community_comment_show_original">அசல்</string>
+	<string name="community_spoiler_warning">ஸ்பாய்லர் - வெளிப்படுத்த தட்டவும்</string>
+	<string name="community_spoiler_hide">ஸ்பாய்லரை மறை</string>
+	<string name="community_sign_in_to_comment">கருத்துகள் அல்லது எதிர்வினைகளை இடுகையிட உள்நுழையவும்</string>
+	<string name="community_sign_in_to_rate">%1$s இல் மதிப்பிட உள்நுழையவும்</string>
+	<string name="community_widget_ssl_error">இந்த கருத்து விட்ஜெட்டுக்கான பாதுகாப்பான இணைப்பு தோல்வியடைந்தது. அதற்குப் பதிலாக உங்கள் உலாவியில் பக்கத்தைத் திறக்கலாம்.</string>
+	<string name="community_widget_load_error">கருத்து விட்ஜெட்டை ஏற்ற முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்க்கவும் அல்லது அதை உங்கள் உலாவியில் திறக்கவும்.</string>
+	<string name="community_widget_unavailable">இந்தச் சாதனத்தில் WebView இல்லை. உங்கள் உலாவியில் கருத்துகளைத் திறக்கவும்.</string>
+	<string name="community_more_options">மேலும் விருப்பங்கள்</string>
+</resources>

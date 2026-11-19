@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">অনুবাদ সেটিংস</string>
+    <string name="translation_toggle">অনুবাদ টগল করুন</string>
+    <string name="translation_enable">অনুবাদ সক্রিয় করুন</string>
+    <string name="translation_disable">অনুবাদ নিষ্ক্রিয় করুন</string>
+    <string name="translation_active">সক্রিয়</string>
+    <string name="translation_off">বন্ধ</string>
+    <string name="translation_provider">অনুবাদ প্রদানকারী</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google Translate</string>
+    <string name="translation_gemini_thinking_level">চিন্তার স্তর</string>
+    <string name="translation_thinking_minimal">ন্যূনতম</string>
+    <string name="translation_thinking_low">নিম্ন</string>
+    <string name="translation_thinking_medium">মাঝারি</string>
+    <string name="translation_thinking_high">উচ্চ</string>
+    <string name="translation_source_lang">উৎস ভাষা (OCR)</string>
+    <string name="translation_target_lang">লক্ষ্য ভাষা</string>
+    <string name="translation_api_keys">Gemini API কী</string>
+    <string name="translation_deepl_api_keys">DeepL API কী</string>
+    <string name="translation_api_keys_hint">একাধিক কী কমা বা নতুন লাইন দিয়ে আলাদা করুন</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$dটি সক্রিয় কী কনফিগার করা হয়েছে</item>
+        <item quantity="other">%1$dটি সক্রিয় কী কনফিগার করা হয়েছে</item>
+    </plurals>
+    <string name="translation_api_keys_empty">কোনো API কী কনফিগার করা হয়নি</string>
+    <string name="translation_api_key_required">একটি Gemini API কী যোগ করুন বা প্রদানকারী পরিবর্তন করুন</string>
+    <string name="translation_deepl_api_key_required">একটি DeepL API কী যোগ করুন বা প্রদানকারী পরিবর্তন করুন</string>
+    <string name="translation_auto_translate">পৃষ্ঠা স্বয়ংক্রিয়ভাবে অনুবাদ করুন</string>
+    <string name="translation_skip_sfx">শব্দ প্রভাব এড়িয়ে যান</string>
+    <string name="translation_filter_promo">প্রোমো ও ক্রেডিট পৃষ্ঠা এড়িয়ে যান</string>
+    <string name="translation_ocr_ready">OCR মডেল প্রস্তুত</string>
+    <string name="translation_ocr_auto_ready">স্বয়ংক্রিয় শনাক্তকরণ OCR প্রস্তুত</string>
+    <string name="translation_ocr_not_downloaded">প্রথম ব্যবহারে OCR মডেল ডাউনলোড হবে</string>
+    <string name="translation_ocr_download">মডেল ডাউনলোড করুন</string>
+    <string name="translation_ocr_downloading">OCR মডেল ডাউনলোড হচ্ছে… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">পাঠ্য শনাক্ত করা হচ্ছে…</string>
+    <string name="translation_translating_text">অনুবাদ করা হচ্ছে…</string>
+    <string name="translation_rendering_page">পৃষ্ঠা রেন্ডার করা হচ্ছে…</string>
+    <string name="translation_clear_cache">অনুবাদ ক্যাশে পরিষ্কার করুন</string>
+    <string name="translation_cache_cleared">অনুবাদ ক্যাশে পরিষ্কার করা হয়েছে</string>
+    <string name="translation_cache_cleared_size">ক্যাশে করা অনুবাদের %1$s পরিষ্কার করা হয়েছে</string>
+    <string name="translation_error_generic">অনুবাদ ব্যর্থ হয়েছে: %1$s</string>
+</resources>

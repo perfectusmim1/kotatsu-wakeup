@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="cf_banner_required">%1$s үшін тексеру қажет</string>
+	<string name="cf_banner_multiple_required">%1$s (+тағы %2$d) үшін тексеру қажет</string>
+	<string name="cf_banner_solve">Шешу</string>
+	<string name="cf_banner_dismiss">Жабу</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">บัญชีต้นทาง</string>
+	<string name="source_accounts_summary">ลงชื่อเข้าใช้ %1$d · รองรับ %2$d</string>
+	<string name="source_accounts_summary_none">ไม่มีเซสชันที่ใช้งานอยู่ · รองรับ %1$d</string>
+	<string name="source_accounts_empty">ไม่พบแหล่งที่มาที่รองรับบัญชี</string>
+	<string name="source_account_signed_in">ลงชื่อเข้าใช้แล้ว</string>
+	<string name="source_account_not_signed_in">ไม่ได้ลงชื่อเข้าใช้</string>
+	<string name="source_account_switch">สลับบัญชี</string>
+	<string name="source_signed_out">ออกจากระบบแล้ว</string>
+	<string name="sign_up">ลงทะเบียน</string>
+	<string name="auth_verify">ตรวจสอบ</string>
+	<string name="auth_refresh">รีเฟรช</string>
+	<string name="auth_not_verified_yet">เซสชั่นยังไม่ได้รับการยืนยัน ลงชื่อเข้าใช้ให้เสร็จสิ้นแล้วลองอีกครั้ง</string>
+</resources>

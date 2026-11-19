@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="cf_banner_required">%1$s का लागि प्रमाणीकरण आवश्यक छ</string>
+	<string name="cf_banner_multiple_required">%1$s (+%2$d अन्य) का लागि प्रमाणीकरण आवश्यक छ</string>
+	<string name="cf_banner_solve">समाधान गर्नुहोस्</string>
+	<string name="cf_banner_dismiss">खारेज गर्नुहोस्</string>
+</resources>

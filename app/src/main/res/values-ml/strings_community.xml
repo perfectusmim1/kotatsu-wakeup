@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">റേറ്റ് ചെയ്യുക</string>
+	<string name="community_rating_title">കമ്മ്യൂണിറ്റി റേറ്റിംഗ്</string>
+	<string name="community_your_rating">നിങ്ങളുടെ റേറ്റിംഗ്: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">സമർപ്പിക്കുക</string>
+	<string name="community_rating_saved">റേറ്റിംഗ് സംരക്ഷിച്ചു</string>
+	<string name="community_rating_count">%1$s റേറ്റിംഗുകൾ</string>
+	<string name="community_views_count">%1$s കാഴ്ചകൾ</string>
+	<string name="community_follows_count">%1$s ഫോളോകൾ</string>
+	<string name="community_comments_count">%1$s അഭിപ്രായങ്ങൾ</string>
+	<string name="community_comments_sort_old">പഴയത്</string>
+	<string name="community_web_comments">വെബ്</string>
+	<string name="community_show_replies">മറുപടികൾ കാണിക്കുക (%1$d)</string>
+	<string name="community_hide_replies">മറുപടികൾ മറയ്ക്കുക</string>
+	<string name="community_load_more">കൂടുതൽ ലോഡ് ചെയ്യുക</string>
+	<string name="community_load_more_replies">കൂടുതൽ മറുപടികൾ ലോഡ് ചെയ്യുക</string>
+	<string name="community_replying_to">%1$s-ന് മറുപടി നൽകുന്നു</string>
+	<string name="community_editing_comment">അഭിപ്രായം എഡിറ്റ് ചെയ്യുന്നു</string>
+	<string name="community_comment_edited">(എഡിറ്റ് ചെയ്തത്)</string>
+	<string name="community_comment_deleted">അഭിപ്രായം ഇല്ലാതാക്കി</string>
+	<string name="community_comment_delete_confirm">ഈ അഭിപ്രായം ഇല്ലാതാക്കണോ?</string>
+	<string name="community_comment_translate">വിവർത്തനം ചെയ്യുക</string>
+	<string name="community_comment_show_original">യഥാർത്ഥം</string>
+	<string name="community_spoiler_warning">സ്പോയിലർ — കാണാൻ ടാപ്പ് ചെയ്യുക</string>
+	<string name="community_spoiler_hide">സ്പോയിലർ മറയ്ക്കുക</string>
+	<string name="community_sign_in_to_comment">അഭിപ്രായങ്ങളോ പ്രതികരണങ്ങളോ പോസ്റ്റ് ചെയ്യാൻ സൈൻ ഇൻ ചെയ്യുക</string>
+	<string name="community_sign_in_to_rate">%1$s-ൽ റേറ്റ് ചെയ്യാൻ സൈൻ ഇൻ ചെയ്യുക</string>
+	<string name="community_widget_ssl_error">ഈ അഭിപ്രായ വിജറ്റിനായി സുരക്ഷിത കണക്ഷൻ പരാജയപ്പെട്ടു. പകരം നിങ്ങളുടെ ബ്രൗസറിൽ പേജ് തുറക്കാവുന്നതാണ്.</string>
+	<string name="community_widget_load_error">അഭിപ്രായ വിജറ്റ് ലോഡ് ചെയ്യാനായില്ല. നിങ്ങളുടെ കണക്ഷൻ പരിശോധിക്കുക അല്ലെങ്കിൽ ബ്രൗസറിൽ തുറക്കുക.</string>
+	<string name="community_widget_unavailable">ഈ ഉപകരണത്തിൽ WebView ലഭ്യമല്ല. പകരം ബ്രൗസറിൽ അഭിപ്രായങ്ങൾ തുറക്കുക.</string>
+	<string name="community_more_options">കൂടുതൽ ഓപ്ഷനുകൾ</string>
+</resources>

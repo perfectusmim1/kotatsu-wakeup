@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">อัตรา</string>
+	<string name="community_rating_title">การให้คะแนนโดยชุมชน</string>
+	<string name="community_your_rating">คะแนนของคุณ: %1$d/%2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">ส่ง</string>
+	<string name="community_rating_saved">บันทึกคะแนนแล้ว</string>
+	<string name="community_rating_count">คะแนน %1$s</string>
+	<string name="community_views_count">จำนวนการดู %1$s ครั้ง</string>
+	<string name="community_follows_count">%1$sตามมาครับ</string>
+	<string name="community_comments_count">%1$s ความคิดเห็น</string>
+	<string name="community_comments_sort_old">เก่า</string>
+	<string name="community_web_comments">เว็บ</string>
+	<string name="community_show_replies">แสดงการตอบกลับ (%1$d)</string>
+	<string name="community_hide_replies">ซ่อนการตอบกลับ</string>
+	<string name="community_load_more">โหลดเพิ่ม</string>
+	<string name="community_load_more_replies">โหลดคำตอบเพิ่มเติม</string>
+	<string name="community_replying_to">กำลังตอบกลับ %1$s</string>
+	<string name="community_editing_comment">แก้ไขความคิดเห็น</string>
+	<string name="community_comment_edited">(แก้ไข)</string>
+	<string name="community_comment_deleted">ลบความคิดเห็นแล้ว</string>
+	<string name="community_comment_delete_confirm">ลบความคิดเห็นนี้ใช่ไหม</string>
+	<string name="community_comment_translate">แปล</string>
+	<string name="community_comment_show_original">ต้นฉบับ</string>
+	<string name="community_spoiler_warning">สปอยเลอร์ — แตะเพื่อแสดง</string>
+	<string name="community_spoiler_hide">ซ่อนสปอยเลอร์</string>
+	<string name="community_sign_in_to_comment">ลงชื่อเข้าใช้เพื่อแสดงความคิดเห็นหรือแสดงปฏิกิริยา</string>
+	<string name="community_sign_in_to_rate">ลงชื่อเข้าใช้เพื่อให้คะแนนที่ %1$s</string>
+	<string name="community_widget_ssl_error">การเชื่อมต่อที่ปลอดภัยล้มเหลวสำหรับวิดเจ็ตความคิดเห็นนี้ คุณสามารถเปิดหน้าเว็บในเบราว์เซอร์แทนได้</string>
+	<string name="community_widget_load_error">ไม่สามารถโหลดวิดเจ็ตความคิดเห็นได้ ตรวจสอบการเชื่อมต่อของคุณหรือเปิดในเบราว์เซอร์ของคุณ</string>
+	<string name="community_widget_unavailable">WebView ไม่พร้อมใช้งานบนอุปกรณ์นี้ เปิดความคิดเห็นในเบราว์เซอร์ของคุณแทน</string>
+	<string name="community_more_options">ตัวเลือกเพิ่มเติม</string>
+</resources>

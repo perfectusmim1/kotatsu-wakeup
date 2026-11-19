@@ -36,4 +36,16 @@
         <item quantity="one">%1$d perc</item>
         <item quantity="other">%1$d perc</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d találat</item>
+        <item quantity="other">%1$d találat</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d oldal</item>
+        <item quantity="other">%1$d oldal</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d forrás</item>
+        <item quantity="other">%1$d forrás</item>
+    </plurals>
 </resources>

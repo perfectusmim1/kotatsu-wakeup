@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<plurals name="search_results_count">
+		<item quantity="one">%1$d نتیجہ</item>
+		<item quantity="other">%1$d نتائج</item>
+	</plurals>
+	<plurals name="items">
+		<item quantity="one">%1$d شے</item>
+		<item quantity="other">%1$d شیواں</item>
+	</plurals>
+	<plurals name="new_chapters">
+		<item quantity="one">%1$d نواں باب</item>
+		<item quantity="other">%1$d نویں باب</item>
+	</plurals>
+	<plurals name="chapters">
+		<item quantity="one">%1$d باب</item>
+		<item quantity="other">%1$d باب</item>
+	</plurals>
+	<plurals name="pages">
+		<item quantity="one">%1$d صفحہ</item>
+		<item quantity="other">%1$d صفحے</item>
+	</plurals>
+	<plurals name="minutes_ago">
+		<item quantity="one">%1$d منٹ پہلاں</item>
+		<item quantity="other">%1$d منٹ پہلاں</item>
+	</plurals>
+	<plurals name="hours_ago">
+		<item quantity="one">%1$d گھنٹہ پہلاں</item>
+		<item quantity="other">%1$d گھنٹے پہلاں</item>
+	</plurals>
+	<plurals name="days_ago">
+		<item quantity="one">%1$d دن پہلاں</item>
+		<item quantity="other">%1$d دن پہلاں</item>
+	</plurals>
+	<plurals name="months_ago">
+		<item quantity="one">%1$d مہینہ پہلاں</item>
+		<item quantity="other">%1$d مہینے پہلاں</item>
+	</plurals>
+	<plurals name="hours">
+		<item quantity="one">%1$d گھنٹہ</item>
+		<item quantity="other">%1$d گھنٹے</item>
+	</plurals>
+	<plurals name="minutes">
+		<item quantity="one">%1$d منٹ</item>
+		<item quantity="other">%1$d منٹ</item>
+	</plurals>
+	<plurals name="sources_count">
+		<item quantity="one">%1$d ذریعہ</item>
+		<item quantity="other">%1$d ذرائع</item>
+	</plurals>
+</resources>

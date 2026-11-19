@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="bookmark_added_many">已新增書籤</string>
 	<string name="bookmarks_sort_newest">最新新增</string>

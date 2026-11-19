@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$sக்கு சரிபார்ப்பு தேவை</string>
+	<string name="cf_banner_multiple_required">%1$sக்கு சரிபார்ப்பு தேவை (+%2$d மேலும்)</string>
+	<string name="cf_banner_solve">தீர்க்கவும்</string>
+	<string name="cf_banner_dismiss">நிராகரி</string>
+</resources>

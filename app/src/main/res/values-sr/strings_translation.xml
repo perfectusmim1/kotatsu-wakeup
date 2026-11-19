@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">Подешавања превода</string>
+	<string name="translation_toggle">Укључи/искључи превод</string>
+	<string name="translation_enable">Омогући превод</string>
+	<string name="translation_disable">Онемогући превод</string>
+	<string name="translation_active">Активан</string>
+	<string name="translation_off">Искључен</string>
+	<string name="translation_provider">Добављач превода</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Ниво размишљања</string>
+	<string name="translation_thinking_minimal">Минималан</string>
+	<string name="translation_thinking_low">Низак</string>
+	<string name="translation_thinking_medium">Средњи</string>
+	<string name="translation_thinking_high">Висок</string>
+	<string name="translation_source_lang">Изворни језик (OCR)</string>
+	<string name="translation_target_lang">Циљни језик</string>
+	<string name="translation_api_keys">Gemini API кључеви</string>
+	<string name="translation_deepl_api_keys">DeepL API кључеви</string>
+	<string name="translation_api_keys_hint">Одвојите више кључева зарезима или новим редовима</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">Подешен је %1$d активан кључ</item>
+		<item quantity="few">Подешена су %1$d активна кључа</item>
+		<item quantity="other">Подешено је %1$d активних кључева</item>
+	</plurals>
+	<string name="translation_api_keys_empty">Није подешен ниједан API кључ</string>
+	<string name="translation_api_key_required">Додајте Gemini API кључ или промените добављача</string>
+	<string name="translation_deepl_api_key_required">Додајте DeepL API кључ или промените добављача</string>
+	<string name="translation_auto_translate">Аутоматски преводи странице</string>
+	<string name="translation_skip_sfx">Прескочи звучне ефекте</string>
+	<string name="translation_filter_promo">Прескочи промотивне и странице захвалнице</string>
+	<string name="translation_ocr_ready">OCR модел је спреман</string>
+	<string name="translation_ocr_auto_ready">Аутоматско препознавање (OCR) је спремно</string>
+	<string name="translation_ocr_not_downloaded">OCR модел се преузима при првој употреби</string>
+	<string name="translation_ocr_download">Преузми модел</string>
+	<string name="translation_ocr_downloading">Преузимање OCR модела… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Препознавање текста…</string>
+	<string name="translation_translating_text">Превођење…</string>
+	<string name="translation_rendering_page">Исцртавање странице…</string>
+	<string name="translation_clear_cache">Избриши кеш превода</string>
+	<string name="translation_cache_cleared">Кеш превода је избрисан</string>
+	<string name="translation_cache_cleared_size">Избрисано %1$s кешираних превода</string>
+	<string name="translation_error_generic">Превод није успео: %1$s</string>
+</resources>

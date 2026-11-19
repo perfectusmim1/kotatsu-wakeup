@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Piktograma</string>
+	<string name="fav_icon_default">Širdelė</string>
+	<string name="fav_icon_star">Žvaigždė</string>
+	<string name="fav_icon_fire">Ugnis</string>
+	<string name="fav_icon_crown">Karūna</string>
+	<string name="fav_icon_book">Knyga</string>
+	<string name="fav_icon_bookmark">Žymė</string>
+	<string name="fav_icon_eye">Akis</string>
+	<string name="fav_icon_bolt">Žaibas</string>
+	<string name="fav_icon_clock">Laikrodis</string>
+	<string name="fav_icon_folder">Aplankas</string>
+	<string name="fav_icon_check">Varžtelis</string>
+	<string name="fav_icon_sparkles">Žibėjimas</string>
+</resources>

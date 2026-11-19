@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">ਸਰੋਤ ਖਾਤੇ</string>
+	<string name="source_accounts_summary">%1$dਸਾਈਨ ਇਨ ਕੀਤਾ ·%2$dਸਮਰਥਿਤ</string>
+	<string name="source_accounts_summary_none">ਕੋਈ ਕਿਰਿਆਸ਼ੀਲ ਸੈਸ਼ਨ ਨਹੀਂ ·%1$dਸਮਰਥਿਤ</string>
+	<string name="source_accounts_empty">ਖਾਤਾ ਸਮਰਥਨ ਵਾਲਾ ਕੋਈ ਸਰੋਤ ਨਹੀਂ ਮਿਲਿਆ</string>
+	<string name="source_account_signed_in">ਸਾਈਨ ਇਨ ਕੀਤਾ</string>
+	<string name="source_account_not_signed_in">ਸਾਈਨ ਇਨ ਨਹੀਂ ਕੀਤਾ</string>
+	<string name="source_account_switch">ਖਾਤਾ ਬਦਲੋ</string>
+	<string name="source_signed_out">ਸਾਈਨ ਆਊਟ ਕੀਤਾ</string>
+	<string name="sign_up">ਸਾਇਨ ਅਪ</string>
+	<string name="auth_verify">ਪੁਸ਼ਟੀ ਕਰੋ</string>
+	<string name="auth_refresh">ਤਾਜ਼ਾ ਕਰੋ</string>
+	<string name="auth_not_verified_yet">ਸੈਸ਼ਨ ਅਜੇ ਤਸਦੀਕ ਨਹੀਂ ਹੋਇਆ। ਸਾਈਨ ਇਨ ਕਰਨਾ ਪੂਰਾ ਕਰੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+</resources>

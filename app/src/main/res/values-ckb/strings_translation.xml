@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">ڕێکخستنەکانی وەرگێڕان</string>
+	<string name="translation_toggle">گۆڕینی وەرگێڕان</string>
+	<string name="translation_enable">چالاککردنی وەرگێڕان</string>
+	<string name="translation_disable">ناچالاککردنی وەرگێڕان</string>
+	<string name="translation_active">چالاک</string>
+	<string name="translation_off">کوژاوە</string>
+	<string name="translation_provider">دابینکەری وەرگێڕان</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">ئاستی بیرکردنەوە</string>
+	<string name="translation_thinking_minimal">کەمترین</string>
+	<string name="translation_thinking_low">نزم</string>
+	<string name="translation_thinking_medium">مامناوەند</string>
+	<string name="translation_thinking_high">بەرز</string>
+	<string name="translation_source_lang">زمانی سەرچاوە (OCR)</string>
+	<string name="translation_target_lang">زمانی ئامانج</string>
+	<string name="translation_api_keys">کلیلەکانی Gemini API</string>
+	<string name="translation_deepl_api_keys">کلیلەکانی DeepL API</string>
+	<string name="translation_api_keys_hint">چەند کلیلێک بە فاریزە یان هێڵی نوێ جیا بکەرەوە</string>
+	<string name="translation_api_keys_empty">هیچ کلیلێکی API ڕێکنەخراوە</string>
+	<string name="translation_api_key_required">کلیلێکی Gemini API زیاد بکە یان دابینکەر بگۆڕە</string>
+	<string name="translation_deepl_api_key_required">کلیلێکی DeepL API زیاد بکە یان دابینکەر بگۆڕە</string>
+	<string name="translation_auto_translate">وەرگێڕانی خۆکارانەی پەڕەکان</string>
+	<string name="translation_skip_sfx">تێپەڕاندنی کاریگەرییە دەنگییەکان</string>
+	<string name="translation_filter_promo">تێپەڕاندنی پەڕەکانی ڕیکلام و ئاماژە</string>
+	<string name="translation_ocr_ready">مۆدێلی OCR ئامادەیە</string>
+	<string name="translation_ocr_auto_ready">ناسینەوەی خۆکارانەی OCR ئامادەیە</string>
+	<string name="translation_ocr_not_downloaded">مۆدێلی OCR لە یەکەم بەکارهێناندا دادەگیرێت</string>
+	<string name="translation_ocr_download">داگرتنی مۆدێل</string>
+	<string name="translation_ocr_downloading">داگرتنی مۆدێلی OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">ناسینەوەی دەق…</string>
+	<string name="translation_translating_text">وەرگێڕان…</string>
+	<string name="translation_rendering_page">ئامادەکردنی پەڕە…</string>
+	<string name="translation_clear_cache">سڕینەوەی کاشی وەرگێڕان</string>
+	<string name="translation_cache_cleared">کاشی وەرگێڕان سڕایەوە</string>
+	<string name="translation_cache_cleared_size">%1$s لە وەرگێڕانە کاشکراوەکان سڕایەوە</string>
+	<string name="translation_error_generic">وەرگێڕان شکستی هێنا: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d کلیلی چالاک ڕێکخراوە</item>
+		<item quantity="other">%1$d کلیلی چالاک ڕێکخراون</item>
+	</plurals>
+</resources>

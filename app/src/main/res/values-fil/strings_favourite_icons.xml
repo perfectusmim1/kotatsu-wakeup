@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">Icon</string>
+	<string name="fav_icon_default">Puso</string>
+	<string name="fav_icon_star">Bituin</string>
+	<string name="fav_icon_fire">Sunog</string>
+	<string name="fav_icon_crown">Korona</string>
+	<string name="fav_icon_book">Aklat</string>
+	<string name="fav_icon_bookmark">Bookmark</string>
+	<string name="fav_icon_eye">Mata</string>
+	<string name="fav_icon_bolt">Bolt</string>
+	<string name="fav_icon_clock">orasan</string>
+	<string name="fav_icon_folder">Folder</string>
+	<string name="fav_icon_check">Suriin</string>
+	<string name="fav_icon_sparkles">Sparkles</string>
+</resources>

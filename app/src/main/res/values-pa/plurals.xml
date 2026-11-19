@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<plurals name="search_results_count">
+		<item quantity="one">%1$dਨਤੀਜਾ</item>
+		<item quantity="other">%1$dਨਤੀਜੇ</item>
+	</plurals>
+	<plurals name="items">
+		<item quantity="one">%1$dਆਈਟਮ</item>
+		<item quantity="other">%1$dਆਈਟਮਾਂ</item>
+	</plurals>
+	<plurals name="new_chapters">
+		<item quantity="one">%1$dਨਵਾਂ ਅਧਿਆਏ</item>
+		<item quantity="other">%1$dਨਵੇਂ ਅਧਿਆਏ</item>
+	</plurals>
+	<plurals name="chapters">
+		<item quantity="one">%1$dਅਧਿਆਏ</item>
+		<item quantity="other">%1$dਅਧਿਆਏ</item>
+	</plurals>
+	<plurals name="pages">
+		<item quantity="one">%1$dਪੰਨਾ</item>
+		<item quantity="other">%1$dਪੰਨੇ</item>
+	</plurals>
+	<plurals name="minutes_ago">
+		<item quantity="one">%1$dਮਿੰਟ ਪਹਿਲਾਂ</item>
+		<item quantity="other">%1$dਮਿੰਟ ਪਹਿਲਾਂ</item>
+	</plurals>
+	<plurals name="hours_ago">
+		<item quantity="one">%1$dਘੰਟਾ ਪਹਿਲਾਂ</item>
+		<item quantity="other">%1$dਘੰਟੇ ਪਹਿਲਾਂ</item>
+	</plurals>
+	<plurals name="days_ago">
+		<item quantity="one">%1$dਦਿਨ ਪਹਿਲਾਂ</item>
+		<item quantity="other">%1$dਦਿਨ ਪਹਿਲਾਂ</item>
+	</plurals>
+	<plurals name="months_ago">
+		<item quantity="one">%1$dਮਹੀਨਾ ਪਹਿਲਾਂ</item>
+		<item quantity="other">%1$dਮਹੀਨੇ ਪਹਿਲਾਂ</item>
+	</plurals>
+	<plurals name="hours">
+		<item quantity="one">%1$dਘੰਟਾ</item>
+		<item quantity="other">%1$dਘੰਟੇ</item>
+	</plurals>
+	<plurals name="minutes">
+		<item quantity="one">%1$dਮਿੰਟ</item>
+		<item quantity="other">%1$dਮਿੰਟ</item>
+	</plurals>
+	<plurals name="sources_count">
+		<item quantity="one">%1$dਸਰੋਤ</item>
+		<item quantity="other">%1$dਸਰੋਤ</item>
+	</plurals>
+</resources>

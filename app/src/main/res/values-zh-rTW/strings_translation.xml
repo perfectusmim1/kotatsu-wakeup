@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="translation_settings">翻譯設定</string>
 	<string name="translation_toggle">切換翻譯</string>
@@ -22,7 +22,7 @@
 	<string name="translation_ocr_auto_ready">自動偵測 OCR 已就緒</string>
 	<string name="translation_ocr_not_downloaded">首次使用時將下載 OCR 模型</string>
 	<string name="translation_ocr_download">下載模型</string>
-	<string name="translation_ocr_downloading">正在下載 OCR 模型… %1$d%%</string>
+	<string name="translation_ocr_downloading">正在下載 OCR 模型… %1$d%%%%%%</string>
 	<string name="translation_ocr_running">正在辨識文字…</string>
 	<string name="translation_translating_text">正在翻譯…</string>
 	<string name="translation_rendering_page">正在繪製頁面…</string>
@@ -33,4 +33,12 @@
 	<plurals name="translation_api_keys_count">
 		<item quantity="other">已設定 %1$d 個有效金鑰</item>
 	</plurals>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_gemini_thinking_level">思考層級</string>
+	<string name="translation_thinking_minimal">最低</string>
+	<string name="translation_thinking_low">低</string>
+	<string name="translation_thinking_medium">中</string>
+	<string name="translation_thinking_high">高</string>
+	<string name="translation_deepl_api_keys">DeepL API 金鑰</string>
+	<string name="translation_deepl_api_key_required">請新增 DeepL API 金鑰或切換提供者</string>
 </resources>

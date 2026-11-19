@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Inportatu AniList-etik</string>
+    <string name="anilist_import_mode_label">Inportazio-helburua</string>
+    <string name="anilist_import_by_status">Egoeraren arabera</string>
+    <string name="anilist_import_single_category">Kategoria bakarra</string>
+    <string name="anilist_import_new_category">Kategoria berria</string>
+    <string name="anilist_import_new_category_hint">Kategoriaren izena</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">Zure AniList liburutegia kargatzen…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Osatuta (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Inportatuta: %1$d · Lehendik: %2$d · Bat ez datozenak: %3$d</string>
+    <string name="anilist_import_empty">Zure AniList manga zerrenda hutsik dago.</string>
+    <string name="anilist_import_unmatched_title">Bat ez datozen izenburuak</string>
+    <string name="anilist_import_start">Hasi inportazioa</string>
+    <string name="anilist_import_retry">Inportatu berriro</string>
+    <string name="anilist_import_error_no_sources">Gaitu gutxienez manga-iturri bat inportatu aurretik.</string>
+</resources>

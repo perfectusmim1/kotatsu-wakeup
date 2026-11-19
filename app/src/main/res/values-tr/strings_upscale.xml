@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="upscale_title">Görüntü iyileştirme (Upscale)</string>
 	<string name="upscale_mode_label">Mod</string>

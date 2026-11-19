@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">הגדרות תרגום</string>
+	<string name="translation_toggle">הפעל/כבה תרגום</string>
+	<string name="translation_enable">הפעל תרגום</string>
+	<string name="translation_disable">השבת תרגום</string>
+	<string name="translation_active">פעיל</string>
+	<string name="translation_off">כבוי</string>
+	<string name="translation_provider">ספק תרגום</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">רמת חשיבה</string>
+	<string name="translation_thinking_minimal">מינימלית</string>
+	<string name="translation_thinking_low">נמוכה</string>
+	<string name="translation_thinking_medium">בינונית</string>
+	<string name="translation_thinking_high">גבוהה</string>
+	<string name="translation_source_lang">שפת מקור (OCR)</string>
+	<string name="translation_target_lang">שפת יעד</string>
+	<string name="translation_api_keys">מפתחות API של Gemini</string>
+	<string name="translation_deepl_api_keys">מפתחות API של DeepL</string>
+	<string name="translation_api_keys_hint">הפרד מפתחות מרובים בפסיקים או שורות חדשות</string>
+	<string name="translation_api_keys_empty">לא הוגדר מפתח API</string>
+	<string name="translation_api_key_required">הוסף מפתח API של Gemini או החלף ספק</string>
+	<string name="translation_deepl_api_key_required">הוסף מפתח API של DeepL או החלף ספק</string>
+	<string name="translation_auto_translate">תרגם עמודים אוטומטית</string>
+	<string name="translation_skip_sfx">דלג על אפקטים קוליים</string>
+	<string name="translation_filter_promo">דלג על עמודי פרסום וקרדיטים</string>
+	<string name="translation_ocr_ready">מודל OCR מוכן</string>
+	<string name="translation_ocr_auto_ready">זיהוי אוטומטי של OCR מוכן</string>
+	<string name="translation_ocr_not_downloaded">מודל ה-OCR יירד בשימוש הראשון</string>
+	<string name="translation_ocr_download">הורד מודל</string>
+	<string name="translation_ocr_downloading">מוריד מודל OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">מזהה טקסט…</string>
+	<string name="translation_translating_text">מתרגם…</string>
+	<string name="translation_rendering_page">מעבד עמוד…</string>
+	<string name="translation_clear_cache">נקה מטמון תרגום</string>
+	<string name="translation_cache_cleared">מטמון התרגום נוקה</string>
+	<string name="translation_cache_cleared_size">נוקו %1$s של תרגומים שמורים</string>
+	<string name="translation_error_generic">התרגום נכשל: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">מפתח פעיל %1$d מוגדר</item>
+		<item quantity="other">%1$d מפתחות פעילים מוגדרים</item>
+		<item quantity="two">%1$d מפתחות פעילים מוגדרים</item>
+	</plurals>
+</resources>

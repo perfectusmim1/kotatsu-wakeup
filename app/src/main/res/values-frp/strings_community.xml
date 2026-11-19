@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="community_rate">Notâr</string>
+    <string name="community_rating_title">Nota de la comunôtât</string>
+    <string name="community_your_rating">Voutra nota : %1$d / %2$d</string>
+    <string name="community_your_rating_short">★%1$d</string>
+    <string name="community_submit_rating">Envoyer</string>
+    <string name="community_rating_saved">Nota sôvegardâ</string>
+    <string name="community_rating_count">%1$s notes</string>
+    <string name="community_views_count">%1$s vives</string>
+    <string name="community_follows_count">%1$s abonements</string>
+    <string name="community_comments_count">%1$s comentèros</string>
+    <string name="community_comments_sort_old">Vielys</string>
+    <string name="community_web_comments">Vouèbe</string>
+    <string name="community_show_replies">Fâre vêre les rèponses (%1$d)</string>
+    <string name="community_hide_replies">Cachiér les rèponses</string>
+    <string name="community_load_more">Chargiér més</string>
+    <string name="community_load_more_replies">Chargiér més de rèponses</string>
+    <string name="community_replying_to">Rèponse a %1$s</string>
+    <string name="community_editing_comment">Modificacion du comentèro</string>
+    <string name="community_comment_edited">(modifiâ)</string>
+    <string name="community_comment_deleted">Comentèro suprimâ</string>
+    <string name="community_comment_delete_confirm">Suprimâr ceti comentèro ?</string>
+    <string name="community_comment_translate">Tradure</string>
+    <string name="community_comment_show_original">Originâl</string>
+    <string name="community_spoiler_warning">Divulgâjo — Tochéd per fâre vêre</string>
+    <string name="community_spoiler_hide">Cachiér lo divulgâjo</string>
+    <string name="community_sign_in_to_comment">Conèctâd-vos per postâr des comentèros ou des rèaccions</string>
+    <string name="community_sign_in_to_rate">Conèctâd-vos per notâr sus %1$s</string>
+    <string name="community_widget_ssl_error">La conèxion ségura at falyi per ceti gadgèt de comentèros. Vos povéd ovrir la pâge dens voutro navigator.</string>
+    <string name="community_widget_load_error">Empossiblo de chargiér lo gadgèt de comentèros. Vèrifiâd voutra conèxion ou ovréd-lo dens voutro navigator.</string>
+    <string name="community_widget_unavailable">WebView est pas disponiblo sus ceti aparèly. Ovréd los comentèros dens voutro navigator.</string>
+    <string name="community_more_options">Més d\'opcions</string>
+</resources>

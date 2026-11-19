@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Šaltinių paskyros</string>
+	<string name="source_accounts_summary">%1 prisijungta · %2 palaikoma</string>
+	<string name="source_accounts_summary_none">Nėra aktyvių seansų · %1 palaikoma</string>
+	<string name="source_accounts_empty">Nerasta šaltinių su paskyrų palaikymu</string>
+	<string name="source_account_signed_in">Prisijungta</string>
+	<string name="source_account_not_signed_in">Neprisijungta</string>
+	<string name="source_account_switch">Perjungti paskyrą</string>
+	<string name="source_signed_out">Atsijungta</string>
+	<string name="sign_up">Registruotis</string>
+	<string name="auth_verify">Patvirtinti</string>
+	<string name="auth_refresh">Atnaujinti</string>
+	<string name="auth_not_verified_yet">Seansas dar nepatvirtintas. Baikite prisijungimą ir bandykite dar kartą.</string>
+</resources>

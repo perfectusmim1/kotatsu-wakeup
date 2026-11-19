@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Naidagdag ang mga bookmark</string>
+	<string name="bookmarks_sort_newest">Pinakabagong idinagdag</string>
+	<string name="bookmarks_sort_oldest">Idinagdag ang pinakamatanda</string>
+	<string name="bookmarks_sort_chapter">Pagkakasunod-sunod ng kabanata</string>
+	<string name="search_bookmarks_hint">Maghanap ng serye o kabanata</string>
+	<string name="search_bookmarked_chapters_hint">Maghanap ng mga naka-bookmark na kabanata</string>
+	<string name="no_bookmarks_matching_query">Walang katugmang mga bookmark</string>
+	<string name="no_bookmarks_matching_summary">Walang mga bookmark na tumugma sa iyong kasalukuyang filter</string>
+	<string name="download_bookmarked_chapters">Mag-download ng mga naka-bookmark na kabanata</string>
+	<string name="download_bookmarked_only">Mga bookmark na kabanata lamang</string>
+	<string name="download_bookmarked_next_2">Na-bookmark + susunod na 2 kabanata</string>
+	<string name="download_bookmarked_next_3">Na-bookmark + susunod na 3 kabanata</string>
+	<string name="no_bookmarked_chapters_to_download">Walang naka-bookmark na mga kabanata upang i-download</string>
+	<string name="migrate_bookmarks">Ilipat ang mga bookmark sa ibang pinagmulan</string>
+	<string name="bookmark_migration_choose_series">Pumili ng seryeng i-migrate</string>
+	<string name="bookmark_migration_searching">Naghahanap ng mga aktibong mapagkukunan...</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d source · %3$d mga tugma</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d kabanata ang tumugma</string>
+	<string name="bookmark_migration_total_chapters">%1$d mga kabanata</string>
+	<string name="bookmark_migration_no_candidates">Walang nakitang mga katugmang mapagkukunan</string>
+	<string name="bookmark_migration_no_candidates_summary">Walang pinaganang pinagmulan ang tumugma sa seryeng ito at sa mga naka-bookmark na kabanata nito</string>
+	<string name="bookmark_migration_confirm">I-migrate ang %1$d (mga) bookmark mula sa \"%2$s\" (%3$s) sa \"%4$s\" (%5$s)?\n%6$d ng %7$d na mga bookmark na kabanata ang tumugma.</string>
+	<string name="bookmark_migration_confirm_no_overlap">I-migrate ang %1$d (mga) bookmark mula sa \"%2$s\" (%3$s) sa \"%4$s\" (%5$s)?\nAng mga kabanata ay tinatantya sa pamamagitan ng pag-unlad ng pagbasa.</string>
+	<string name="bookmark_migration_success">Nag-migrate ang mga bookmark sa %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Walang nakitang mga bookmark para sa seryeng ito</string>
+	<string name="bookmark_migration_rescan">Muling i-scan</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Walang mga kabanata</string>
+	<string name="bookmarks_count_badge">%1$d mga bookmark</string>
+</resources>

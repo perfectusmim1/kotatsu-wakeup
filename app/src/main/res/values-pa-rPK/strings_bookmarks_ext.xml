@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">بک مارک شامل کر دتے گئے</string>
+	<string name="bookmarks_sort_newest">نویں شامل کردہ</string>
+	<string name="bookmarks_sort_oldest">پرانے شامل کردہ</string>
+	<string name="bookmarks_sort_chapter">باب دی ترتیب</string>
+	<string name="search_bookmarks_hint">سیریز یا باب لبھو</string>
+	<string name="search_bookmarked_chapters_hint">بک مارک کیتے باب لبھو</string>
+	<string name="no_bookmarks_matching_query">کوئی میل کھاندا بک مارک نہیں</string>
+	<string name="no_bookmarks_matching_summary">تہاڈے موجودہ فلٹر نال کوئی بک مارک میل نہیں کھاندا</string>
+	<string name="download_bookmarked_chapters">بک مارک کیتے باب ڈاؤن لوڈ کرو</string>
+	<string name="download_bookmarked_only">صرف بک مارک کیتے باب</string>
+	<string name="download_bookmarked_next_2">بک مارک کیتے + اگلے 2 باب</string>
+	<string name="download_bookmarked_next_3">بک مارک کیتے + اگلے 3 باب</string>
+	<string name="no_bookmarked_chapters_to_download">ڈاؤن لوڈ کرن لئی کوئی بک مارک کیتا باب نہیں</string>
+	<string name="migrate_bookmarks">بک مارکس نوں دوجے ذریعے تے منتقل کرو</string>
+	<string name="bookmark_migration_choose_series">منتقل کرن لئی سیریز چنو</string>
+	<string name="bookmark_migration_searching">فعال ذرائع وچ لبھیا جا رہیا اے…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d ذرائع · %3$d میل</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d باب میل کھا گئے</string>
+	<string name="bookmark_migration_total_chapters">%1$d باب</string>
+	<string name="bookmark_migration_no_candidates">کوئی موافق ذریعہ نہیں لبھیا</string>
+	<string name="bookmark_migration_no_candidates_summary">کوئی چالو ذریعہ ایس سیریز تے ایہدے بک مارک کیتے باباں نال میل نہیں کھادا</string>
+	<string name="bookmark_migration_confirm">کیہ \"%2$s\" (%3$s) توں %1$d بک مارک \"%4$s\" (%5$s) تے منتقل کرن دی اجازت اے؟\n%7$d وچوں %6$d بک مارک کیتے باب میل کھا گئے۔</string>
+	<string name="bookmark_migration_confirm_no_overlap">کیہ \"%2$s\" (%3$s) توں %1$d بک مارک \"%4$s\" (%5$s) تے منتقل کرن دی اجازت اے؟\nباباں دا اندازہ پڑھن دی پیش رفت توں لایا جائے گا۔</string>
+	<string name="bookmark_migration_success">بک مارک %1$s تے منتقل ہو گئے</string>
+	<string name="bookmark_migration_no_bookmarks">ایس سیریز لئی کوئی بک مارک نہیں لبھیا</string>
+	<string name="bookmark_migration_rescan">دوبارہ سکین کرو</string>
+	<string name="bookmark_migration_unavailable_no_chapters">کوئی باب نہیں</string>
+	<string name="bookmarks_count_badge">%1$d بک مارک</string>
+</resources>

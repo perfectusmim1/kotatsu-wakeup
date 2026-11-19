@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Importēt no AniList</string>
+	<string name="anilist_import_mode_label">Importa galamērķis</string>
+	<string name="anilist_import_by_status">Pēc statusa</string>
+	<string name="anilist_import_single_category">Viena kategorija</string>
+	<string name="anilist_import_new_category">Jauna kategorija</string>
+	<string name="anilist_import_new_category_hint">Kategorijas nosaukums</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Notiek jūsu AniList bibliotēkas ielāde…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Pabeigts (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Importēts: %1$d · Esošais: %2$d · Neatbilstošs: %3$d</string>
+	<string name="anilist_import_empty">Jūsu AniList manga saraksts ir tukšs.</string>
+	<string name="anilist_import_unmatched_title">Nepārspējami nosaukumi</string>
+	<string name="anilist_import_start">Sākt importēšanu</string>
+	<string name="anilist_import_retry">Importējiet vēlreiz</string>
+	<string name="anilist_import_error_no_sources">Pirms importēšanas iespējojiet vismaz vienu manga avotu.</string>
+</resources>

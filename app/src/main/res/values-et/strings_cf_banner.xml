@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">Allika %1$s jaoks on vajalik kontroll</string>
+    <string name="cf_banner_multiple_required">Allika %1$s (+veel %2$d) jaoks on vajalik kontroll</string>
+    <string name="cf_banner_solve">Lahenda</string>
+    <string name="cf_banner_dismiss">Sulge</string>
+</resources>

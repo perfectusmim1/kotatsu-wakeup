@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Εισαγωγή από AniList</string>
+    <string name="anilist_import_mode_label">Προορισμός εισαγωγής</string>
+    <string name="anilist_import_by_status">Ανά κατάσταση</string>
+    <string name="anilist_import_single_category">Μία κατηγορία</string>
+    <string name="anilist_import_new_category">Νέα κατηγορία</string>
+    <string name="anilist_import_new_category_hint">Όνομα κατηγορίας</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">Φόρτωση της βιβλιοθήκης σου στο AniList…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Ολοκληρώθηκε (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Εισήχθησαν: %1$d · Υπάρχοντα: %2$d · Χωρίς αντιστοίχιση: %3$d</string>
+    <string name="anilist_import_empty">Η λίστα manga σου στο AniList είναι κενή.</string>
+    <string name="anilist_import_unmatched_title">Τίτλοι χωρίς αντιστοίχιση</string>
+    <string name="anilist_import_start">Έναρξη εισαγωγής</string>
+    <string name="anilist_import_retry">Εισαγωγή ξανά</string>
+    <string name="anilist_import_error_no_sources">Ενεργοποίησε τουλάχιστον μία πηγή manga πριν την εισαγωγή.</string>
+</resources>

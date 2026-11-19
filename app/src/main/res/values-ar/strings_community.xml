@@ -1,21 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="community_comment_dislike">عدم إعجاب</string>
-	<string name="community_comment_like">إعجاب</string>
-	<string name="community_comment_delete">حذف</string>
-	<string name="community_comment_edit">تعديل</string>
-	<string name="community_comment_reply">رد</string>
-	<string name="community_comment_send">إرسال</string>
-	<string name="community_comment_spoiler">حرق</string>
-	<string name="community_comment_hint">أضف تعليقاً</string>
-	<string name="community_comments_empty">لا توجد تعليقات بعد. كن أول من يعلّق!</string>
-	<string name="community_comments_sort_new">الأحدث</string>
-	<string name="community_comments_sort_top">الأفضل</string>
-	<string name="community_comments">التعليقات</string>
-	<string name="community_rating_none">لا توجد تقييمات بعد</string>
-	<string name="community_rating_summary">%1$s · %2$s</string>
-	<string name="community_rating">تقييم القرّاء</string>
-	<string name="community">المجتمع</string>
 	<string name="community_rate">تقييم</string>
 	<string name="community_rating_title">تقييم المجتمع</string>
 	<string name="community_your_rating">تقييمك: %1$d / %2$d</string>
@@ -37,6 +21,8 @@
 	<string name="community_comment_edited">(معدّل)</string>
 	<string name="community_comment_deleted">تم حذف التعليق</string>
 	<string name="community_comment_delete_confirm">هل تريد حذف هذا التعليق؟</string>
+	<string name="community_comment_translate">ترجمة</string>
+	<string name="community_comment_show_original">أصلي</string>
 	<string name="community_spoiler_warning">حرق أحداث — اضغط للعرض</string>
 	<string name="community_spoiler_hide">إخفاء الحرق</string>
 	<string name="community_sign_in_to_comment">سجّل الدخول للتعليق أو التفاعل</string>

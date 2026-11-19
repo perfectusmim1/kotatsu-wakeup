@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Avota konti</string>
+	<string name="source_accounts_summary">%1$d pierakstījies · %2$d atbalstīts</string>
+	<string name="source_accounts_summary_none">Nav aktīvu sesiju · Atbalstīts %1$d</string>
+	<string name="source_accounts_empty">Nav atrasts neviens avots ar konta atbalstu</string>
+	<string name="source_account_signed_in">Pierakstījies</string>
+	<string name="source_account_not_signed_in">Nav pierakstījies</string>
+	<string name="source_account_switch">Pārslēgt kontu</string>
+	<string name="source_signed_out">Izrakstījies</string>
+	<string name="sign_up">Pierakstīties</string>
+	<string name="auth_verify">Pārbaudīt</string>
+	<string name="auth_refresh">Atsvaidzināt</string>
+	<string name="auth_not_verified_yet">Sesija vēl nav apstiprināta. Pabeidziet pierakstīšanos un mēģiniet vēlreiz.</string>
+</resources>

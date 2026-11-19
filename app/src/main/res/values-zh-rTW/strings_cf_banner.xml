@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="cf_banner_required">%1$s 需要驗證</string>
 	<string name="cf_banner_multiple_required">%1$s（及另外 %2$d 個）需要驗證</string>

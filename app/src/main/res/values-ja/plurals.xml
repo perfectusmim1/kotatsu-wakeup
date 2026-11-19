@@ -27,4 +27,16 @@
     <plurals name="minutes">
         <item quantity="other">%1$d分</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d 件の結果</item>
+        <item quantity="other">%1$d 件の結果</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d ページ</item>
+        <item quantity="other">%1$d ページ</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d 件のソース</item>
+        <item quantity="other">%1$d 件のソース</item>
+    </plurals>
 </resources>

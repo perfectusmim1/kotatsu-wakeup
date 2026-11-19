@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">%1$s के लिए सत्यापन आवश्यक है</string>
+    <string name="cf_banner_multiple_required">%1$s (+%2$d और) के लिए सत्यापन आवश्यक है</string>
+    <string name="cf_banner_solve">हल करें</string>
+    <string name="cf_banner_dismiss">खारिज करें</string>
+</resources>

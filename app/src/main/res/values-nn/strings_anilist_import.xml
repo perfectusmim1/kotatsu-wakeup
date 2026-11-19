@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Importer fra AniList</string>
+	<string name="anilist_import_mode_label">Importmål</string>
+	<string name="anilist_import_by_status">Etter status</string>
+	<string name="anilist_import_single_category">Én kategori</string>
+	<string name="anilist_import_new_category">Ny kategori</string>
+	<string name="anilist_import_new_category_hint">Kategorinavn</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Laster inn AniList-biblioteket ditt…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Fullført (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Importert: %1$d · Eksisterende: %2$d · Ikke funnet: %3$d</string>
+	<string name="anilist_import_empty">AniList-mangalisten din er tom.</string>
+	<string name="anilist_import_unmatched_title">Titler uten treff</string>
+	<string name="anilist_import_start">Start import</string>
+	<string name="anilist_import_retry">Importer på nytt</string>
+	<string name="anilist_import_error_no_sources">Aktiver minst én mangakilde før du importerer.</string>
+</resources>

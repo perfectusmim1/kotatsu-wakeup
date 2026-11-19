@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Be fali marque-pages be wlali nun</string>
+	<string name="bookmarks_sort_newest">Be fali uflɛuflɛ be wlali nun</string>
+	<string name="bookmarks_sort_oldest">Be fali laa kpafuɛ’n be wlali nun</string>
+	<string name="bookmarks_sort_chapter">Ndɛ tre’m be nun</string>
+	<string name="search_bookmarks_hint">Kunndɛ ndɛ akpasua annzɛ ndɛ tre .</string>
+	<string name="search_bookmarked_chapters_hint">Kunndɛ ndɛ tre nga be sieli be nzɔliɛ’n .</string>
+	<string name="no_bookmarks_matching_query">Signmarks be nin i fataman</string>
+	<string name="no_bookmarks_matching_summary">Signques fi nin ɔ filtre dɔ nga su’n be kɔman likawlɛ</string>
+	<string name="download_bookmarked_chapters">Télécharger ndɛ tre nga be sieli be nzɔliɛ’n .</string>
+	<string name="download_bookmarked_only">Ndɛ tre nga be sieli be nzɔliɛ’n be ngunmin .</string>
+	<string name="download_bookmarked_next_2">Be sieli i nzɔliɛ + ndɛ tre 2 nga bé bá lɛ’n</string>
+	<string name="download_bookmarked_next_3">Be fali be sieli i nzɔliɛ + ndɛ tre 3 nga be sin lɛ’n</string>
+	<string name="no_bookmarked_chapters_to_download">Ndɛ tre nga be sieli be bookmark nun’n, be nunman lɛ naan b’a tɛlɛ .</string>
+	<string name="migrate_bookmarks">Fa bookmark’m be kɔ lika uflɛ .</string>
+	<string name="bookmark_migration_choose_series">Fa serie nga á fá kɔ́ lika uflɛ’n</string>
+	<string name="bookmark_migration_searching">Be su kunndɛ lika nga be o lɛ’n...</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d · %3$d be ti kun</string>
+	<string name="bookmark_migration_chapters_matched">Ndɛ tre %1$d/%2$d be ti kun</string>
+	<string name="bookmark_migration_total_chapters">Ndɛ tre %1$d</string>
+	<string name="bookmark_migration_no_candidates">Be wunman lika nga be nin i fata’n</string>
+	<string name="bookmark_migration_no_candidates_summary">Source activée fi nin serie sɔ’n nin i ndɛ tre nga be sieli be bookmark’n be kɔman likawlɛ .</string>
+	<string name="bookmark_migration_confirm">Migrate %1$d bookmark(s) from \"%2$s\" (%3$s) to \"%4$s\" (%5$s)?\n%6$d of %7$d bookmarked chapters matched.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Migrate %1$d bookmark(s) from \"%2$s\" (%3$s) to \"%4$s\" (%5$s)?\nChapters will be approximated by reading progress.</string>
+	<string name="bookmark_migration_success">Be fali nzɔliɛ like’m be ɔli %1$s su.</string>
+	<string name="bookmark_migration_no_bookmarks">Be wunman like fi nzɔliɛ like sɔ’m be su</string>
+	<string name="bookmark_migration_rescan">Skanni ekun</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Ndɛ tre fi nunman lɛ .</string>
+	<string name="bookmarks_count_badge">%1$d be nzɔliɛ like mun</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList માંથી આયાત કરો</string>
+	<string name="anilist_import_mode_label">આયાત સ્થાન</string>
+	<string name="anilist_import_by_status">સ્થિતિ મુજબ</string>
+	<string name="anilist_import_single_category">એક શ્રેણી</string>
+	<string name="anilist_import_new_category">નવી શ્રેણી</string>
+	<string name="anilist_import_new_category_hint">શ્રેણીનું નામ</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">તમારી AniList લાઇબ્રેરી લોડ થઈ રહી છે…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">પૂર્ણ (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">આયાત કરેલ: %1$d · હાલનું: %2$d · મેળ ન ખાતા: %3$d</string>
+	<string name="anilist_import_empty">તમારી AniList મંગા સૂચિ ખાલી છે.</string>
+	<string name="anilist_import_unmatched_title">મેળ ન ખાતા શીર્ષકો</string>
+	<string name="anilist_import_start">આયાત શરૂ કરો</string>
+	<string name="anilist_import_retry">ફરીથી આયાત કરો</string>
+	<string name="anilist_import_error_no_sources">આયાત કરતા પહેલા ઓછામાં ઓછો એક મંગા સ્રોત સક્ષમ કરો.</string>
+</resources>

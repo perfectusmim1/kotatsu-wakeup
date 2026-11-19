@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">ไอคอน</string>
+	<string name="fav_icon_default">หัวใจ</string>
+	<string name="fav_icon_star">ดาว</string>
+	<string name="fav_icon_fire">ไฟ</string>
+	<string name="fav_icon_crown">คราวน์</string>
+	<string name="fav_icon_book">หนังสือ</string>
+	<string name="fav_icon_bookmark">บุ๊กมาร์ก</string>
+	<string name="fav_icon_eye">ตา</string>
+	<string name="fav_icon_bolt">โบลท์</string>
+	<string name="fav_icon_clock">นาฬิกา</string>
+	<string name="fav_icon_folder">โฟลเดอร์</string>
+	<string name="fav_icon_check">ตรวจสอบ</string>
+	<string name="fav_icon_sparkles">ประกายไฟ</string>
+</resources>

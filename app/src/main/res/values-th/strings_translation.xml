@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">การตั้งค่าการแปล</string>
+	<string name="translation_toggle">สลับการแปล</string>
+	<string name="translation_enable">เปิดใช้งานการแปล</string>
+	<string name="translation_disable">ปิดการใช้งานการแปล</string>
+	<string name="translation_active">ใช้งานอยู่</string>
+	<string name="translation_off">ปิด</string>
+	<string name="translation_provider">ผู้ให้บริการแปล</string>
+	<string name="translation_provider_gemini">ราศีเมถุน</string>
+	<string name="translation_provider_deepl">ดีพแอล</string>
+	<string name="translation_provider_google">Google แปลภาษา</string>
+	<string name="translation_gemini_thinking_level">ระดับการคิด</string>
+	<string name="translation_thinking_minimal">น้อยที่สุด</string>
+	<string name="translation_thinking_low">ต่ำ</string>
+	<string name="translation_thinking_medium">ปานกลาง</string>
+	<string name="translation_thinking_high">สูง</string>
+	<string name="translation_source_lang">ภาษาต้นฉบับ (OCR)</string>
+	<string name="translation_target_lang">ภาษาเป้าหมาย</string>
+	<string name="translation_api_keys">คีย์ Gemini API</string>
+	<string name="translation_deepl_api_keys">คีย์ DeepL API</string>
+	<string name="translation_api_keys_hint">คั่นหลายคีย์ด้วยเครื่องหมายจุลภาคหรือขึ้นบรรทัดใหม่</string>
+	<string name="translation_api_keys_empty">ไม่มีการกำหนดค่าคีย์ API</string>
+	<string name="translation_api_key_required">เพิ่มคีย์ Gemini API หรือผู้ให้บริการสวิตช์</string>
+	<string name="translation_deepl_api_key_required">เพิ่มคีย์ DeepL API หรือผู้ให้บริการสวิตช์</string>
+	<string name="translation_auto_translate">แปลหน้าอัตโนมัติ</string>
+	<string name="translation_skip_sfx">ข้ามเอฟเฟกต์เสียง</string>
+	<string name="translation_filter_promo">ข้ามหน้าโปรโมชันและเครดิต</string>
+	<string name="translation_ocr_ready">โมเดล OCR พร้อมแล้ว</string>
+	<string name="translation_ocr_auto_ready">พร้อมตรวจจับ OCR อัตโนมัติ</string>
+	<string name="translation_ocr_not_downloaded">ดาวน์โหลดโมเดล OCR ในการใช้งานครั้งแรก</string>
+	<string name="translation_ocr_download">ดาวน์โหลดโมเดล</string>
+	<string name="translation_ocr_downloading">กำลังดาวน์โหลดโมเดล OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">กำลังจดจำข้อความ...</string>
+	<string name="translation_translating_text">กำลังแปล...</string>
+	<string name="translation_rendering_page">กำลังแสดงผลหน้า...</string>
+	<string name="translation_clear_cache">ล้างแคชการแปล</string>
+	<string name="translation_cache_cleared">ล้างแคชการแปลแล้ว</string>
+	<string name="translation_cache_cleared_size">ล้างการแปลที่แคชไว้ %1$s รายการ</string>
+	<string name="translation_error_generic">การแปลล้มเหลว: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">กำหนดค่าคีย์ที่ใช้งานอยู่ %1$d แล้ว</item>
+		<item quantity="other">กำหนดค่าคีย์ที่ใช้งานอยู่ %1$d รายการ</item>
+	</plurals>
+</resources>

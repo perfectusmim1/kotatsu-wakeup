@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">ଅନୁବାଦ ସେଟିଂସ୍</string>
+	<string name="translation_toggle">ଅନୁବାଦ ଟୋଗଲ୍</string>
+	<string name="translation_enable">ଅନୁବାଦ ସକ୍ଷମ କରନ୍ତୁ</string>
+	<string name="translation_disable">ଅନୁବାଦ ଅକ୍ଷମ କରନ୍ତୁ</string>
+	<string name="translation_active">ସକ୍ରିୟ</string>
+	<string name="translation_off">ବନ୍ଦ</string>
+	<string name="translation_provider">ଅନୁବାଦ ପ୍ରଦାନକାରୀ</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">ଚିନ୍ତନ ସ୍ତର</string>
+	<string name="translation_thinking_minimal">ସର୍ବନିମ୍ନ</string>
+	<string name="translation_thinking_low">ନିମ୍ନ</string>
+	<string name="translation_thinking_medium">ମଧ୍ୟମ</string>
+	<string name="translation_thinking_high">ଉଚ୍ଚ</string>
+	<string name="translation_source_lang">ଉତ୍ସ ଭାଷା (OCR)</string>
+	<string name="translation_target_lang">ଲକ୍ଷ୍ୟ ଭାଷା</string>
+	<string name="translation_api_keys">Gemini API କୀ</string>
+	<string name="translation_deepl_api_keys">DeepL API କୀ</string>
+	<string name="translation_api_keys_hint">ଏକାଧିକ କୀ କୁ କମା କିମ୍ବା ନୂଆ ଧାଡ଼ି ଦ୍ୱାରା ପୃଥକ କରନ୍ତୁ</string>
+	<string name="translation_api_keys_empty">କୌଣସି API କୀ ବିନ୍ୟାସିତ ନାହିଁ</string>
+	<string name="translation_api_key_required">ଏକ Gemini API କୀ ଯୋଡ଼ନ୍ତୁ କିମ୍ବା ପ୍ରଦାନକାରୀ ବଦଳାନ୍ତୁ</string>
+	<string name="translation_deepl_api_key_required">ଏକ DeepL API କୀ ଯୋଡ଼ନ୍ତୁ କିମ୍ବା ପ୍ରଦାନକାରୀ ବଦଳାନ୍ତୁ</string>
+	<string name="translation_auto_translate">ପୃଷ୍ଠାଗୁଡ଼ିକ ସ୍ୱୟଂଚାଳିତ ଅନୁବାଦ କରନ୍ତୁ</string>
+	<string name="translation_skip_sfx">ଧ୍ୱନି ପ୍ରଭାବ ଛାଡ଼ନ୍ତୁ</string>
+	<string name="translation_filter_promo">ପ୍ରୋମୋ ଏବଂ କ୍ରେଡିଟ୍ ପୃଷ୍ଠା ଛାଡ଼ନ୍ତୁ</string>
+	<string name="translation_ocr_ready">OCR ମଡେଲ୍ ପ୍ରସ୍ତୁତ</string>
+	<string name="translation_ocr_auto_ready">ସ୍ୱୟଂ-ଚିହ୍ନଟ OCR ପ୍ରସ୍ତୁତ</string>
+	<string name="translation_ocr_not_downloaded">ପ୍ରଥମ ବ୍ୟବହାରରେ OCR ମଡେଲ୍ ଡାଉନଲୋଡ୍ ହେବ</string>
+	<string name="translation_ocr_download">ମଡେଲ୍ ଡାଉନଲୋଡ୍ କରନ୍ତୁ</string>
+	<string name="translation_ocr_downloading">OCR ମଡେଲ୍ ଡାଉନଲୋଡ୍ ହେଉଛି… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">ପାଠ୍ୟ ଚିହ୍ନଟ ହେଉଛି…</string>
+	<string name="translation_translating_text">ଅନୁବାଦ ହେଉଛି…</string>
+	<string name="translation_rendering_page">ପୃଷ୍ଠା ରେଣ୍ଡର ହେଉଛି…</string>
+	<string name="translation_clear_cache">ଅନୁବାଦ କ୍ୟାଶ୍ ସଫା କରନ୍ତୁ</string>
+	<string name="translation_cache_cleared">ଅନୁବାଦ କ୍ୟାଶ୍ ସଫା ହେଲା</string>
+	<string name="translation_cache_cleared_size">କ୍ୟାଶ୍ ହୋଇଥିବା %1$s ଅନୁବାଦ ସଫା ହେଲା</string>
+	<string name="translation_error_generic">ଅନୁବାଦ ବିଫଳ ହେଲା: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d ସକ୍ରିୟ କୀ ବିନ୍ୟାସିତ</item>
+		<item quantity="other">%1$d ସକ୍ରିୟ କୀ ବିନ୍ୟାସିତ</item>
+	</plurals>
+</resources>

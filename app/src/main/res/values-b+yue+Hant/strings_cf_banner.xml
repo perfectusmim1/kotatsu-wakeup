@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">%1$s 需要進行驗證</string>
+    <string name="cf_banner_multiple_required">%1$s 需要進行驗證（另外仲有 %2$d 個）</string>
+    <string name="cf_banner_solve">解決</string>
+    <string name="cf_banner_dismiss">略過</string>
+</resources>

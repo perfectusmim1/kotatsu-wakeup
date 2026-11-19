@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">ବୁକମାର୍କ ଯୋଡ଼ାଗଲା</string>
+	<string name="bookmarks_sort_newest">ନୂତନତମ ଯୋଡ଼ାଯାଇଥିବା</string>
+	<string name="bookmarks_sort_oldest">ପୁରାତନତମ ଯୋଡ଼ାଯାଇଥିବା</string>
+	<string name="bookmarks_sort_chapter">ଅଧ୍ୟାୟ କ୍ରମ</string>
+	<string name="search_bookmarks_hint">ସିରିଜ୍ କିମ୍ବା ଅଧ୍ୟାୟ ଖୋଜନ୍ତୁ</string>
+	<string name="search_bookmarked_chapters_hint">ବୁକମାର୍କ ହୋଇଥିବା ଅଧ୍ୟାୟ ଖୋଜନ୍ତୁ</string>
+	<string name="no_bookmarks_matching_query">କୌଣସି ମେଳ ଖାଉଥିବା ବୁକମାର୍କ ନାହିଁ</string>
+	<string name="no_bookmarks_matching_summary">ଆପଣଙ୍କ ବର୍ତ୍ତମାନର ଫିଲ୍ଟର ସହିତ କୌଣସି ବୁକମାର୍କ ମେଳ ଖାଇଲା ନାହିଁ</string>
+	<string name="download_bookmarked_chapters">ବୁକମାର୍କ ହୋଇଥିବା ଅଧ୍ୟାୟ ଡାଉନଲୋଡ୍ କରନ୍ତୁ</string>
+	<string name="download_bookmarked_only">କେବଳ ବୁକମାର୍କ ହୋଇଥିବା ଅଧ୍ୟାୟ</string>
+	<string name="download_bookmarked_next_2">ବୁକମାର୍କ + ପରବର୍ତ୍ତୀ ୨ଟି ଅଧ୍ୟାୟ</string>
+	<string name="download_bookmarked_next_3">ବୁକମାର୍କ + ପରବର୍ତ୍ତୀ ୩ଟି ଅଧ୍ୟାୟ</string>
+	<string name="no_bookmarked_chapters_to_download">ଡାଉନଲୋଡ୍ କରିବାକୁ କୌଣସି ବୁକମାର୍କ ଅଧ୍ୟାୟ ନାହିଁ</string>
+	<string name="migrate_bookmarks">ଅନ୍ୟ ଉତ୍ସକୁ ବୁକମାର୍କ ସ୍ଥାନାନ୍ତର କରନ୍ତୁ</string>
+	<string name="bookmark_migration_choose_series">ସ୍ଥାନାନ୍ତର କରିବାକୁ ସିରିଜ୍ ବାଛନ୍ତୁ</string>
+	<string name="bookmark_migration_searching">ସକ୍ରିୟ ଉତ୍ସଗୁଡ଼ିକ ଖୋଜାଯାଉଛି…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d ଉତ୍ସ · %3$d ମେଳ</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d ଅଧ୍ୟାୟ ମେଳ ଖାଇଲା</string>
+	<string name="bookmark_migration_total_chapters">%1$d ଅଧ୍ୟାୟ</string>
+	<string name="bookmark_migration_no_candidates">କୌଣସି ସୁସଙ୍ଗତ ଉତ୍ସ ମିଳିଲା ନାହିଁ</string>
+	<string name="bookmark_migration_no_candidates_summary">କୌଣସି ସକ୍ଷମ ଉତ୍ସ ଏହି ସିରିଜ୍ ଏବଂ ଏହାର ବୁକମାର୍କ ଅଧ୍ୟାୟ ସହିତ ମେଳ ଖାଇଲା ନାହିଁ</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s) ରୁ \"%4$s\" (%5$s) କୁ %1$d ବୁକମାର୍କ ସ୍ଥାନାନ୍ତର କରିବେ କି?\n%7$d ରୁ %6$d ବୁକମାର୍କ ଅଧ୍ୟାୟ ମେଳ ଖାଇଲା।</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s) ରୁ \"%4$s\" (%5$s) କୁ %1$d ବୁକମାର୍କ ସ୍ଥାନାନ୍ତର କରିବେ କି?\nପଠନ ଅଗ୍ରଗତି ଦ୍ୱାରା ଅଧ୍ୟାୟଗୁଡ଼ିକ ଆକଳନ କରାଯିବ।</string>
+	<string name="bookmark_migration_success">ବୁକମାର୍କ %1$s କୁ ସ୍ଥାନାନ୍ତରିତ ହେଲା</string>
+	<string name="bookmark_migration_no_bookmarks">ଏହି ସିରିଜ୍ ପାଇଁ କୌଣସି ବୁକମାର୍କ ମିଳିଲା ନାହିଁ</string>
+	<string name="bookmark_migration_rescan">ପୁନଃ ସ୍କାନ୍</string>
+	<string name="bookmark_migration_unavailable_no_chapters">କୌଣସି ଅଧ୍ୟାୟ ନାହିଁ</string>
+	<string name="bookmarks_count_badge">%1$d ବୁକମାର୍କ</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">ഉറവിട അക്കൗണ്ടുകൾ</string>
+	<string name="source_accounts_summary">%1$d സൈൻ ഇൻ ചെയ്തു · %2$d പിന്തുണയ്ക്കുന്നു</string>
+	<string name="source_accounts_summary_none">സജീവ സെഷനുകളൊന്നുമില്ല · %1$d പിന്തുണയ്ക്കുന്നു</string>
+	<string name="source_accounts_empty">അക്കൗണ്ട് പിന്തുണയുള്ള ഉറവിടങ്ങളൊന്നും കണ്ടെത്തിയില്ല</string>
+	<string name="source_account_signed_in">സൈൻ ഇൻ ചെയ്തു</string>
+	<string name="source_account_not_signed_in">സൈൻ ഇൻ ചെയ്തിട്ടില്ല</string>
+	<string name="source_account_switch">അക്കൗണ്ട് മാറ്റുക</string>
+	<string name="source_signed_out">സൈൻ ഔട്ട് ചെയ്തു</string>
+	<string name="sign_up">സൈൻ അപ്പ് ചെയ്യുക</string>
+	<string name="auth_verify">പരിശോധിക്കുക</string>
+	<string name="auth_refresh">പുതുക്കുക</string>
+	<string name="auth_not_verified_yet">സെഷൻ ഇതുവരെ പരിശോധിച്ചിട്ടില്ല. സൈൻ ഇൻ പൂർത്തിയാക്കി വീണ്ടും ശ്രമിക്കുക.</string>
+</resources>

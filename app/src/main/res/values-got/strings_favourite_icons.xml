@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">𐍆𐍂𐌹𐍃𐌰𐌷𐍄𐍃</string>
+    <string name="fav_icon_default">𐌷𐌴𐌰𐍂𐍄</string>
+    <string name="fav_icon_star">𐍃𐍄𐌰𐍂</string>
+    <string name="fav_icon_fire">𐍆𐌹𐍂𐌴</string>
+    <string name="fav_icon_crown">𐌺𐍂𐍉𐍅𐌽</string>
+    <string name="fav_icon_book">𐌱𐍉𐌺𐌰</string>
+    <string name="fav_icon_bookmark">𐌱𐍉𐌺𐌰𐍄𐌰𐌹𐌺𐌽</string>
+    <string name="fav_icon_eye">𐌴𐌾𐌴</string>
+    <string name="fav_icon_bolt">𐌱𐍉𐌻𐍄</string>
+    <string name="fav_icon_clock">𐌺𐌻𐍉𐌺</string>
+    <string name="fav_icon_folder">𐌺𐌰𐍂𐌺𐌰𐍂𐌰</string>
+    <string name="fav_icon_check">𐌺𐌰𐌿𐍃𐌾𐌰𐌽</string>
+    <string name="fav_icon_sparkles">𐍃𐍀𐌰𐍂𐌺𐌻𐌴𐍃</string>
+</resources>

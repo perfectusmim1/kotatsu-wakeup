@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">Kuvake</string>
+    <string name="fav_icon_default">Sydän</string>
+    <string name="fav_icon_star">Tähti</string>
+    <string name="fav_icon_fire">Tuli</string>
+    <string name="fav_icon_crown">Kruunu</string>
+    <string name="fav_icon_book">Kirja</string>
+    <string name="fav_icon_bookmark">Kirjanmerkki</string>
+    <string name="fav_icon_eye">Silmä</string>
+    <string name="fav_icon_bolt">Salama</string>
+    <string name="fav_icon_clock">Kello</string>
+    <string name="fav_icon_folder">Kansio</string>
+    <string name="fav_icon_check">Valintamerkki</string>
+    <string name="fav_icon_sparkles">Kipinät</string>
+</resources>

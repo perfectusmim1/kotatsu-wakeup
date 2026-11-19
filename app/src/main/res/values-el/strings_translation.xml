@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">Ρυθμίσεις μετάφρασης</string>
+    <string name="translation_toggle">Εναλλαγή μετάφρασης</string>
+    <string name="translation_enable">Ενεργοποίηση μετάφρασης</string>
+    <string name="translation_disable">Απενεργοποίηση μετάφρασης</string>
+    <string name="translation_active">Ενεργή</string>
+    <string name="translation_off">Ανενεργή</string>
+    <string name="translation_provider">Πάροχος μετάφρασης</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Μετάφραση Google</string>
+    <string name="translation_gemini_thinking_level">Επίπεδο σκέψης</string>
+    <string name="translation_thinking_minimal">Ελάχιστο</string>
+    <string name="translation_thinking_low">Χαμηλό</string>
+    <string name="translation_thinking_medium">Μεσαίο</string>
+    <string name="translation_thinking_high">Υψηλό</string>
+    <string name="translation_source_lang">Γλώσσα προέλευσης (OCR)</string>
+    <string name="translation_target_lang">Γλώσσα προορισμού</string>
+    <string name="translation_api_keys">Κλειδιά API Gemini</string>
+    <string name="translation_deepl_api_keys">Κλειδιά API DeepL</string>
+    <string name="translation_api_keys_hint">Διαχώρισε πολλαπλά κλειδιά με κόμματα ή νέες γραμμές</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d ενεργό κλειδί ρυθμισμένο</item>
+        <item quantity="other">%1$d ενεργά κλειδιά ρυθμισμένα</item>
+    </plurals>
+    <string name="translation_api_keys_empty">Δεν έχει ρυθμιστεί κλειδί API</string>
+    <string name="translation_api_key_required">Πρόσθεσε ένα κλειδί API Gemini ή άλλαξε πάροχο</string>
+    <string name="translation_deepl_api_key_required">Πρόσθεσε ένα κλειδί API DeepL ή άλλαξε πάροχο</string>
+    <string name="translation_auto_translate">Αυτόματη μετάφραση σελίδων</string>
+    <string name="translation_skip_sfx">Παράλειψη ηχητικών εφέ</string>
+    <string name="translation_filter_promo">Παράλειψη σελίδων προώθησης &amp; συντελεστών</string>
+    <string name="translation_ocr_ready">Το μοντέλο OCR είναι έτοιμο</string>
+    <string name="translation_ocr_auto_ready">Η αυτόματη ανίχνευση OCR είναι έτοιμη</string>
+    <string name="translation_ocr_not_downloaded">Το μοντέλο OCR κατεβαίνει κατά την πρώτη χρήση</string>
+    <string name="translation_ocr_download">Λήψη μοντέλου</string>
+    <string name="translation_ocr_downloading">Λήψη μοντέλου OCR… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">Αναγνώριση κειμένου…</string>
+    <string name="translation_translating_text">Μετάφραση…</string>
+    <string name="translation_rendering_page">Απόδοση σελίδας…</string>
+    <string name="translation_clear_cache">Εκκαθάριση προσωρινής μνήμης μετάφρασης</string>
+    <string name="translation_cache_cleared">Η προσωρινή μνήμη μετάφρασης εκκαθαρίστηκε</string>
+    <string name="translation_cache_cleared_size">Εκκαθαρίστηκαν %1$s από αποθηκευμένες μεταφράσεις</string>
+    <string name="translation_error_generic">Η μετάφραση απέτυχε: %1$s</string>
+</resources>

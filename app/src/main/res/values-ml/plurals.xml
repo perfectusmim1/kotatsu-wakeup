@@ -1,11 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <plurals name="new_chapters">
-        <item quantity="one">%1$d ഒരു പുതിയ അദ്ധ്യായം</item>
-        <item quantity="other">%1$d ഒരുപാട് പുതിയ അധ്യായങ്ങൾ</item>
-    </plurals>
-    <plurals name="minutes">
-        <item quantity="one">%1$d മിനിറ്റ്</item>
-        <item quantity="other">%1$d മിനിറ്റ്</item>
-    </plurals>
+	<plurals name="search_results_count">
+		<item quantity="one">%1$d ഫലം</item>
+		<item quantity="other">%1$d ഫലങ്ങൾ</item>
+	</plurals>
+	<plurals name="items">
+		<item quantity="one">%1$d ഇനം</item>
+		<item quantity="other">%1$d ഇനങ്ങൾ</item>
+	</plurals>
+	<plurals name="new_chapters">
+		<item quantity="one">%1$d ഒരു പുതിയ അദ്ധ്യായം</item>
+		<item quantity="other">%1$d ഒരുപാട് പുതിയ അധ്യായങ്ങൾ</item>
+	</plurals>
+	<plurals name="chapters">
+		<item quantity="one">%1$d അധ്യായം</item>
+		<item quantity="other">%1$d അധ്യായങ്ങൾ</item>
+	</plurals>
+	<plurals name="pages">
+		<item quantity="one">%1$d പേജ്</item>
+		<item quantity="other">%1$d പേജുകൾ</item>
+	</plurals>
+	<plurals name="minutes_ago">
+		<item quantity="one">%1$d മിനിറ്റ് മുമ്പ്</item>
+		<item quantity="other">%1$d മിനിറ്റ് മുമ്പ്</item>
+	</plurals>
+	<plurals name="hours_ago">
+		<item quantity="one">%1$d മണിക്കൂർ മുമ്പ്</item>
+		<item quantity="other">%1$d മണിക്കൂർ മുമ്പ്</item>
+	</plurals>
+	<plurals name="days_ago">
+		<item quantity="one">%1$d ദിവസം മുമ്പ്</item>
+		<item quantity="other">%1$d ദിവസങ്ങൾ മുമ്പ്</item>
+	</plurals>
+	<plurals name="months_ago">
+		<item quantity="one">%1$d മാസം മുമ്പ്</item>
+		<item quantity="other">%1$d മാസങ്ങൾ മുമ്പ്</item>
+	</plurals>
+	<plurals name="hours">
+		<item quantity="one">%1$d മണിക്കൂർ</item>
+		<item quantity="other">%1$d മണിക്കൂർ</item>
+	</plurals>
+	<plurals name="minutes">
+		<item quantity="one">%1$d മിനിറ്റ്</item>
+		<item quantity="other">%1$d മിനിറ്റ്</item>
+	</plurals>
+	<plurals name="sources_count">
+		<item quantity="one">%1$d ഉറവിടം</item>
+		<item quantity="other">%1$d ഉറവിടങ്ങൾ</item>
+	</plurals>
 </resources>

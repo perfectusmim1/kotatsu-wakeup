@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList ରୁ ଆମଦାନୀ କରନ୍ତୁ</string>
+	<string name="anilist_import_mode_label">ଆମଦାନୀ ଗନ୍ତବ୍ୟସ୍ଥଳ</string>
+	<string name="anilist_import_by_status">ସ୍ଥିତି ଅନୁଯାୟୀ</string>
+	<string name="anilist_import_single_category">ଏକକ ବର୍ଗ</string>
+	<string name="anilist_import_new_category">ନୂତନ ବର୍ଗ</string>
+	<string name="anilist_import_new_category_hint">ବର୍ଗର ନାମ</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">ଆପଣଙ୍କ AniList ଲାଇବ୍ରେରୀ ଲୋଡ୍ ହେଉଛି…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">ସମ୍ପୂର୍ଣ୍ଣ (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">ଆମଦାନୀ: %1$d · ବିଦ୍ୟମାନ: %2$d · ଅମେଳ: %3$d</string>
+	<string name="anilist_import_empty">ଆପଣଙ୍କ AniList ମାଙ୍ଗା ତାଲିକା ଖାଲି ଅଛି।</string>
+	<string name="anilist_import_unmatched_title">ଅମେଳ ଶୀର୍ଷକ</string>
+	<string name="anilist_import_start">ଆମଦାନୀ ଆରମ୍ଭ କରନ୍ତୁ</string>
+	<string name="anilist_import_retry">ପୁନଃ ଆମଦାନୀ କରନ୍ତୁ</string>
+	<string name="anilist_import_error_no_sources">ଆମଦାନୀ କରିବା ପୂର୍ବରୁ ଅତି କମରେ ଗୋଟିଏ ମାଙ୍ଗା ଉତ୍ସ ସକ୍ଷମ କରନ୍ତୁ।</string>
+</resources>

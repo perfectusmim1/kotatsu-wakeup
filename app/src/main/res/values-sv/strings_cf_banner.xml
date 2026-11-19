@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="cf_banner_required">Verifiering krävs för %1$s</string>
+	<string name="cf_banner_multiple_required">Verifiering krävs för %1$s (+%2$d till)</string>
+	<string name="cf_banner_solve">Lös</string>
+	<string name="cf_banner_dismiss">Avfärda</string>
+</resources>

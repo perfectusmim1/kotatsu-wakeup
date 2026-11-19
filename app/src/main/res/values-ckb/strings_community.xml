@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">هەڵسەنگاندن</string>
+	<string name="community_rating_title">هەڵسەنگاندنی کۆمەڵگا</string>
+	<string name="community_your_rating">هەڵسەنگاندنەکەت: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">ناردن</string>
+	<string name="community_rating_saved">هەڵسەنگاندن پاشەکەوت کرا</string>
+	<string name="community_rating_count">%1$s (%2$d)</string>
+	<string name="community_views_count">%1$s views</string>
+	<string name="community_follows_count">%1$s follows</string>
+	<string name="community_comments_count">لێدوانەکان (%1$d)</string>
+	<string name="community_comments_sort_old">کۆن</string>
+	<string name="community_web_comments">وێب</string>
+	<string name="community_show_replies">Show replies (%1$d)</string>
+	<string name="community_hide_replies">وەڵامەکان بشارەوە</string>
+	<string name="community_load_more">زیاتر بار بکە</string>
+	<string name="community_load_more_replies">Load more replies</string>
+	<string name="community_replying_to">Replying to %1$s</string>
+	<string name="community_editing_comment">Editing comment</string>
+	<string name="community_comment_edited">(دەستکاری کراوە)</string>
+	<string name="community_comment_deleted">لێدوان سڕایەوە</string>
+	<string name="community_comment_delete_confirm">ئەم لێدوانە دەسڕیتەوە؟</string>
+	<string name="community_comment_translate">وەرگێڕان</string>
+	<string name="community_comment_show_original">ڕەسەن</string>
+	<string name="community_spoiler_warning">سپۆیلەر — کرتە بکە بۆ بینین</string>
+	<string name="community_spoiler_hide">شاردنەوەی سپۆیلەر</string>
+	<string name="community_sign_in_to_comment">بچۆ ژوورەوە بۆ نووسینی لێدوان یان کاردانەوە</string>
+	<string name="community_sign_in_to_rate">بچۆ ژوورەوە بۆ هەڵسەنگاندن لە %1$s</string>
+	<string name="community_widget_ssl_error">پەیوەندی پارێزراو بۆ ئەم ویجێتی لێدوانە شکستی هێنا. دەتوانیت پەڕەکە لە وێبگەڕەکەتدا بکەیتەوە.</string>
+	<string name="community_widget_load_error">نەتوانرا ویجێتی لێدوانەکان باربکرێت. پەیوەندییەکەت بپشکنە یان لە وێبگەڕەکەتدا بیکەرەوە.</string>
+	<string name="community_widget_unavailable">WebView لەسەر ئەم ئامێرە بەردەست نییە. لێدوانەکان لە وێبگەڕەکەتدا بکەرەوە.</string>
+	<string name="community_more_options">هەڵبژاردەی زیاتر</string>
+</resources>

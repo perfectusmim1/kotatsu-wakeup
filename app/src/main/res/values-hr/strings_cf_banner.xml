@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">Potrebna je provjera za %1$s</string>
+    <string name="cf_banner_multiple_required">Potrebna je provjera za %1$s (+ još %2$d)</string>
+    <string name="cf_banner_solve">Riješi</string>
+    <string name="cf_banner_dismiss">Odbaci</string>
+</resources>

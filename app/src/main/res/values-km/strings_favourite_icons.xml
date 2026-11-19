@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">រូបតំណាង</string>
+	<string name="fav_icon_default">បេះដូង</string>
+	<string name="fav_icon_star">ផ្កាយ</string>
+	<string name="fav_icon_fire">ភ្លើង</string>
+	<string name="fav_icon_crown">មកុដ</string>
+	<string name="fav_icon_book">សៀវភៅ</string>
+	<string name="fav_icon_bookmark">ចំណាំ</string>
+	<string name="fav_icon_eye">ភ្នែក</string>
+	<string name="fav_icon_bolt">ផ្លេកបន្ទោរ</string>
+	<string name="fav_icon_clock">នាឡិកា</string>
+	<string name="fav_icon_folder">ថតឯកសារ</string>
+	<string name="fav_icon_check">ធីក</string>
+	<string name="fav_icon_sparkles">ផ្កាភ្លើង</string>
+</resources>

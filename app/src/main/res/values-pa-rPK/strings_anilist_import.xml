@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList توں درآمد کرو</string>
+	<string name="anilist_import_mode_label">درآمد دی تھاں</string>
+	<string name="anilist_import_by_status">حالت دے مطابق</string>
+	<string name="anilist_import_single_category">اک زمرہ</string>
+	<string name="anilist_import_new_category">نواں زمرہ</string>
+	<string name="anilist_import_new_category_hint">زمرے دا ناں</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">تہاڈی AniList لائبریری لوڈ ہو رہی اے…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">مکمل (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">درآمد شدہ: %1$d · موجود: %2$d · بے میل: %3$d</string>
+	<string name="anilist_import_empty">تہاڈی AniList مانگا فہرست خالی اے۔</string>
+	<string name="anilist_import_unmatched_title">بے میل عنوان</string>
+	<string name="anilist_import_start">درآمد شروع کرو</string>
+	<string name="anilist_import_retry">دوبارہ درآمد کرو</string>
+	<string name="anilist_import_error_no_sources">درآمد کرن توں پہلاں گھٹ توں گھٹ اک مانگا ذریعہ چالو کرو۔</string>
+</resources>

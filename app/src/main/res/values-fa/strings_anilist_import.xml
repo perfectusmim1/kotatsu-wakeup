@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">وارد کردن از AniList</string>
+    <string name="anilist_import_mode_label">مقصد وارد کردن</string>
+    <string name="anilist_import_by_status">بر اساس وضعیت</string>
+    <string name="anilist_import_single_category">یک دسته‌بندی</string>
+    <string name="anilist_import_new_category">دسته‌بندی جدید</string>
+    <string name="anilist_import_new_category_hint">نام دسته‌بندی</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">در حال بارگذاری کتابخانه AniList شما…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">تکمیل شد (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">وارد شده: %1$d · موجود: %2$d · تطبیق‌نیافته: %3$d</string>
+    <string name="anilist_import_empty">فهرست مانگای AniList شما خالی است.</string>
+    <string name="anilist_import_unmatched_title">عناوین تطبیق‌نیافته</string>
+    <string name="anilist_import_start">شروع وارد کردن</string>
+    <string name="anilist_import_retry">وارد کردن مجدد</string>
+    <string name="anilist_import_error_no_sources">قبل از وارد کردن، حداقل یک منبع مانگا را فعال کنید.</string>
+</resources>

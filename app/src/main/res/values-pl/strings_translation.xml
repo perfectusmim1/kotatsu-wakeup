@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="translation_settings">Ustawienia tłumaczenia</string>
 	<string name="translation_toggle">Przełącz tłumaczenie</string>
@@ -22,7 +22,7 @@
 	<string name="translation_ocr_auto_ready">Automatyczne OCR gotowe</string>
 	<string name="translation_ocr_not_downloaded">Model OCR zostanie pobrany przy pierwszym użyciu</string>
 	<string name="translation_ocr_download">Pobierz model</string>
-	<string name="translation_ocr_downloading">Pobieranie modelu OCR… %1$d%%</string>
+	<string name="translation_ocr_downloading">Pobieranie modelu OCR… %1$d%%%%%%</string>
 	<string name="translation_ocr_running">Rozpoznawanie tekstu…</string>
 	<string name="translation_translating_text">Tłumaczenie…</string>
 	<string name="translation_rendering_page">Renderowanie strony…</string>
@@ -36,4 +36,12 @@
 		<item quantity="many">Skonfigurowano %1$d aktywnych kluczy</item>
 		<item quantity="other">Skonfigurowano %1$d aktywnego klucza</item>
 	</plurals>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_gemini_thinking_level">Poziom myślenia</string>
+	<string name="translation_thinking_minimal">Minimalny</string>
+	<string name="translation_thinking_low">Niski</string>
+	<string name="translation_thinking_medium">Średni</string>
+	<string name="translation_thinking_high">Wysoki</string>
+	<string name="translation_deepl_api_keys">Klucze API DeepL</string>
+	<string name="translation_deepl_api_key_required">Dodaj klucz API DeepL lub zmień dostawcę</string>
 </resources>

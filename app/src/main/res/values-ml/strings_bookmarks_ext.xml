@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">ബുക്ക്മാർക്കുകൾ ചേർത്തു</string>
+	<string name="bookmarks_sort_newest">ഏറ്റവും പുതിയത്</string>
+	<string name="bookmarks_sort_oldest">ഏറ്റവും പഴയത്</string>
+	<string name="bookmarks_sort_chapter">അധ്യായ ക്രമം</string>
+	<string name="search_bookmarks_hint">സീരീസ് അല്ലെങ്കിൽ അധ്യായം തിരയുക</string>
+	<string name="search_bookmarked_chapters_hint">ബുക്ക്മാർക്ക് ചെയ്ത അധ്യായങ്ങൾ തിരയുക</string>
+	<string name="no_bookmarks_matching_query">പൊരുത്തപ്പെടുന്ന ബുക്ക്മാർക്കുകളൊന്നുമില്ല</string>
+	<string name="no_bookmarks_matching_summary">നിങ്ങളുടെ നിലവിലെ ഫിൽട്ടറുമായി പൊരുത്തപ്പെടുന്ന ബുക്ക്മാർക്കുകളൊന്നുമില്ല</string>
+	<string name="download_bookmarked_chapters">ബുക്ക്മാർക്ക് ചെയ്ത അധ്യായങ്ങൾ ഡൗൺലോഡ് ചെയ്യുക</string>
+	<string name="download_bookmarked_only">ബുക്ക്മാർക്ക് ചെയ്ത അധ്യായങ്ങൾ മാത്രം</string>
+	<string name="download_bookmarked_next_2">ബുക്ക്മാർക്ക് ചെയ്തത് + അടുത്ത 2 അധ്യായങ്ങൾ</string>
+	<string name="download_bookmarked_next_3">ബുക്ക്മാർക്ക് ചെയ്തത് + അടുത്ത 3 അധ്യായങ്ങൾ</string>
+	<string name="no_bookmarked_chapters_to_download">ഡൗൺലോഡ് ചെയ്യാൻ ബുക്ക്മാർക്ക് ചെയ്ത അധ്യായങ്ങളൊന്നുമില്ല</string>
+	<string name="migrate_bookmarks">ബുക്ക്മാർക്കുകൾ മറ്റൊരു ഉറവിടത്തിലേക്ക് മാറ്റുക</string>
+	<string name="bookmark_migration_choose_series">മാറ്റേണ്ട സീരീസ് തിരഞ്ഞെടുക്കുക</string>
+	<string name="bookmark_migration_searching">സജീവ ഉറവിടങ്ങളിൽ തിരയുന്നു…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d ഉറവിടങ്ങൾ · %3$d പൊരുത്തങ്ങൾ</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d അധ്യായങ്ങൾ പൊരുത്തപ്പെട്ടു</string>
+	<string name="bookmark_migration_total_chapters">%1$d അധ്യായങ്ങൾ</string>
+	<string name="bookmark_migration_no_candidates">അനുയോജ്യമായ ഉറവിടങ്ങളൊന്നും കണ്ടെത്തിയില്ല</string>
+	<string name="bookmark_migration_no_candidates_summary">പ്രവർത്തനക്ഷമമാക്കിയ ഉറവിടങ്ങളൊന്നും ഈ സീരീസുമായും അതിന്റെ ബുക്ക്മാർക്ക് ചെയ്ത അധ്യായങ്ങളുമായും പൊരുത്തപ്പെടുന്നില്ല</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s)-ൽ നിന്ന് \"%4$s\" (%5$s)-ലേക്ക് %1$d ബുക്ക്മാർക്ക്(കൾ) മാറ്റണോ?
+%7$d-ൽ %6$d ബുക്ക്മാർക്ക് ചെയ്ത അധ്യായങ്ങൾ പൊരുത്തപ്പെട്ടു.</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s)-ൽ നിന്ന് \"%4$s\" (%5$s)-ലേക്ക് %1$d ബുക്ക്മാർക്ക്(കൾ) മാറ്റണോ?
+വായനാ പുരോഗതി അനുസരിച്ച് അധ്യായങ്ങൾ ഏകദേശമായി കണക്കാക്കും.</string>
+	<string name="bookmark_migration_success">ബുക്ക്മാർക്കുകൾ %1$s-ലേക്ക് മാറ്റി</string>
+	<string name="bookmark_migration_no_bookmarks">ഈ സീരീസിനായി ബുക്ക്മാർക്കുകളൊന്നും കണ്ടെത്തിയില്ല</string>
+	<string name="bookmark_migration_rescan">വീണ്ടും സ്കാൻ ചെയ്യുക</string>
+	<string name="bookmark_migration_unavailable_no_chapters">അധ്യായങ്ങളൊന്നുമില്ല</string>
+	<string name="bookmarks_count_badge">%1$d ബുക്ക്മാർക്കുകൾ</string>
+</resources>

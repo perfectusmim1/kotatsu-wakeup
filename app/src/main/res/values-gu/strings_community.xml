@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">રેટ કરો</string>
+	<string name="community_rating_title">સમુદાય રેટિંગ</string>
+	<string name="community_your_rating">તમારું રેટિંગ: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">સબમિટ કરો</string>
+	<string name="community_rating_saved">રેટિંગ સાચવ્યું</string>
+	<string name="community_rating_count">%1$s રેટિંગ્સ</string>
+	<string name="community_views_count">%1$s વ્યૂઝ</string>
+	<string name="community_follows_count">%1$s ફોલો</string>
+	<string name="community_comments_count">%1$s ટિપ્પણીઓ</string>
+	<string name="community_comments_sort_old">જૂનું</string>
+	<string name="community_web_comments">વેબ</string>
+	<string name="community_show_replies">જવાબો બતાવો (%1$d)</string>
+	<string name="community_hide_replies">જવાબો છુપાવો</string>
+	<string name="community_load_more">વધુ લોડ કરો</string>
+	<string name="community_load_more_replies">વધુ જવાબો લોડ કરો</string>
+	<string name="community_replying_to">%1$s ને જવાબ આપી રહ્યા છો</string>
+	<string name="community_editing_comment">ટિપ્પણી સંપાદિત કરી રહ્યા છો</string>
+	<string name="community_comment_edited">(સંપાદિત)</string>
+	<string name="community_comment_deleted">ટિપ્પણી કાઢી નાખી</string>
+	<string name="community_comment_delete_confirm">આ ટિપ્પણી કાઢી નાખીએ?</string>
+	<string name="community_comment_translate">અનુવાદ કરો</string>
+	<string name="community_comment_show_original">મૂળ</string>
+	<string name="community_spoiler_warning">સ્પોઇલર — જોવા માટે ટૅપ કરો</string>
+	<string name="community_spoiler_hide">સ્પોઇલર છુપાવો</string>
+	<string name="community_sign_in_to_comment">ટિપ્પણીઓ અથવા પ્રતિક્રિયાઓ પોસ્ટ કરવા માટે સાઇન ઇન કરો</string>
+	<string name="community_sign_in_to_rate">%1$s પર રેટ કરવા માટે સાઇન ઇન કરો</string>
+	<string name="community_widget_ssl_error">આ ટિપ્પણી વિજેટ માટે સુરક્ષિત કનેક્શન નિષ્ફળ ગયું. તમે તેના બદલે તમારા બ્રાઉઝરમાં પૃષ્ઠ ખોલી શકો છો.</string>
+	<string name="community_widget_load_error">ટિપ્પણી વિજેટ લોડ કરી શકાયું નથી. તમારું કનેક્શન તપાસો અથવા તેને તમારા બ્રાઉઝરમાં ખોલો.</string>
+	<string name="community_widget_unavailable">આ ઉપકરણ પર WebView અનુપલબ્ધ છે. તેના બદલે તમારા બ્રાઉઝરમાં ટિપ્પણીઓ ખોલો.</string>
+	<string name="community_more_options">વધુ વિકલ્પો</string>
+</resources>

@@ -36,4 +36,16 @@
         <item quantity="one">%1$d tund</item>
         <item quantity="other">%1$d tundi</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d tulemus</item>
+        <item quantity="other">%1$d tulemust</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d lehekülg</item>
+        <item quantity="other">%1$d lehekülge</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d allikas</item>
+        <item quantity="other">%1$d allikat</item>
+    </plurals>
 </resources>

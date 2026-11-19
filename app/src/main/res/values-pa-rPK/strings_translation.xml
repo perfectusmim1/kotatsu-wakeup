@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">ترجمہ ترتیباں</string>
+	<string name="translation_toggle">ترجمہ ٹوگل کرو</string>
+	<string name="translation_enable">ترجمہ چالو کرو</string>
+	<string name="translation_disable">ترجمہ بند کرو</string>
+	<string name="translation_active">فعال</string>
+	<string name="translation_off">بند</string>
+	<string name="translation_provider">ترجمہ فراہم کنندہ</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">سوچ دی سطح</string>
+	<string name="translation_thinking_minimal">گھٹ توں گھٹ</string>
+	<string name="translation_thinking_low">گھٹ</string>
+	<string name="translation_thinking_medium">درمیانہ</string>
+	<string name="translation_thinking_high">زیادہ</string>
+	<string name="translation_source_lang">اصل زبان (OCR)</string>
+	<string name="translation_target_lang">ہدف زبان</string>
+	<string name="translation_api_keys">Gemini API کلیداں</string>
+	<string name="translation_deepl_api_keys">DeepL API کلیداں</string>
+	<string name="translation_api_keys_hint">متعدد کلیداں نوں کومے یا نویں سطراں نال وکھرا کرو</string>
+	<string name="translation_api_keys_empty">کوئی API کلید ترتیب نہیں دتی گئی</string>
+	<string name="translation_api_key_required">کوئی Gemini API کلید شامل کرو یا فراہم کنندہ بدلو</string>
+	<string name="translation_deepl_api_key_required">کوئی DeepL API کلید شامل کرو یا فراہم کنندہ بدلو</string>
+	<string name="translation_auto_translate">صفحیاں دا خودکار ترجمہ کرو</string>
+	<string name="translation_skip_sfx">صوتی اثرات چھڈ دیو</string>
+	<string name="translation_filter_promo">پرومو تے کریڈٹ صفحے چھڈ دیو</string>
+	<string name="translation_ocr_ready">OCR ماڈل تیار اے</string>
+	<string name="translation_ocr_auto_ready">خودکار شناخت OCR تیار اے</string>
+	<string name="translation_ocr_not_downloaded">OCR ماڈل پہلی ورتوں تے ڈاؤن لوڈ ہوندا اے</string>
+	<string name="translation_ocr_download">ماڈل ڈاؤن لوڈ کرو</string>
+	<string name="translation_ocr_downloading">OCR ماڈل ڈاؤن لوڈ ہو رہیا اے… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">متن پچھانیا جا رہیا اے…</string>
+	<string name="translation_translating_text">ترجمہ ہو رہیا اے…</string>
+	<string name="translation_rendering_page">صفحہ رینڈر ہو رہیا اے…</string>
+	<string name="translation_clear_cache">ترجمہ کیش صاف کرو</string>
+	<string name="translation_cache_cleared">ترجمہ کیش صاف ہو گیا</string>
+	<string name="translation_cache_cleared_size">کیش کیتے ترجمیاں دا %1$s صاف کر دتا گیا</string>
+	<string name="translation_error_generic">ترجمہ ناکام: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d فعال کلید ترتیب دی گئی۔</item>
+		<item quantity="other">%1$d فعال چابیاں ترتیب دی گئیں۔</item>
+	</plurals>
+</resources>

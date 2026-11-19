@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList nun falɛ</string>
+	<string name="anilist_import_mode_label">Lika n\'ga be fa ba</string>
+	<string name="anilist_import_by_status">Kɛ be se kɛ</string>
+	<string name="anilist_import_single_category">Categorie kunngba cɛ</string>
+	<string name="anilist_import_new_category">Catégorie uflɛ</string>
+	<string name="anilist_import_new_category_hint">Categorie i dunman</string>
+	<string name="anilist_import_new_category_default">Anilist</string>
+	<string name="anilist_import_fetching">Ɔ su fa ɔ AniList fluwa siewlɛ’n...</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Be wieli (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Be fali be bali: %1$d · Be nga be o lɛ’n: %2$d · Be nin be wiengu’m be timan kun: %3$d</string>
+	<string name="anilist_import_empty">Ɔ AniList manga listi’n ti ngbɛn.</string>
+	<string name="anilist_import_unmatched_title">Titre nga be nin be wiengu’m be kɔman likawlɛ’n</string>
+	<string name="anilist_import_start">Bo falɛ bo</string>
+	<string name="anilist_import_retry">Import ekun</string>
+	<string name="anilist_import_error_no_sources">Maan ɔ yo manga source kun ka naan w’a fa wlu lɔ.</string>
+</resources>

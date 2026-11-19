@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">మూల ఖాతాలు</string>
+	<string name="source_accounts_summary">%1$d సైన్ ఇన్ చేశారు · %2$d మద్దతు ఉంది</string>
+	<string name="source_accounts_summary_none">క్రియాశీల సెషన్‌లు లేవు · %1$d మద్దతు ఉంది</string>
+	<string name="source_accounts_empty">ఖాతా మద్దతు ఉన్న మూలాలు ఏవీ కనుగొనబడలేదు</string>
+	<string name="source_account_signed_in">సైన్ ఇన్ చేశారు</string>
+	<string name="source_account_not_signed_in">సైన్ ఇన్ చేయలేదు</string>
+	<string name="source_account_switch">ఖాతాను మార్చండి</string>
+	<string name="source_signed_out">సైన్ అవుట్ చేశారు</string>
+	<string name="sign_up">సైన్ అప్ చేయండి</string>
+	<string name="auth_verify">ధృవీకరించండి</string>
+	<string name="auth_refresh">రిఫ్రెష్ చేయండి</string>
+	<string name="auth_not_verified_yet">సెషన్ ఇంకా ధృవీకరించబడలేదు. సైన్ ఇన్ పూర్తి చేసి మళ్లీ ప్రయత్నించండి.</string>
+</resources>

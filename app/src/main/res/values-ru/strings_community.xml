@@ -1,21 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-	<string name="community_comment_dislike">Не нравится</string>
-	<string name="community_comment_like">Нравится</string>
-	<string name="community_comment_delete">Удалить</string>
-	<string name="community_comment_edit">Изменить</string>
-	<string name="community_comment_reply">Ответить</string>
-	<string name="community_comment_send">Отправить</string>
-	<string name="community_comment_spoiler">Спойлер</string>
-	<string name="community_comment_hint">Добавить комментарий</string>
-	<string name="community_comments_empty">Комментариев пока нет. Будьте первым!</string>
-	<string name="community_comments_sort_new">Новые</string>
-	<string name="community_comments_sort_top">Лучшие</string>
-	<string name="community_comments">Комментарии</string>
-	<string name="community_rating_none">Оценок пока нет</string>
-	<string name="community_rating_summary">%1$s · %2$s</string>
-	<string name="community_rating">Оценка читателей</string>
-	<string name="community">Сообщество</string>
 	<string name="community_rate">Оценить</string>
 	<string name="community_rating_title">Оценка сообщества</string>
 	<string name="community_your_rating">Ваша оценка: %1$d / %2$d</string>
@@ -45,4 +29,6 @@
 	<string name="community_widget_load_error">Не удалось загрузить виджет комментариев. Проверьте подключение или откройте в браузере.</string>
 	<string name="community_widget_unavailable">WebView недоступен на этом устройстве. Откройте комментарии в браузере.</string>
 	<string name="community_more_options">Дополнительно</string>
+	<string name="community_comment_translate">Перевести</string>
+	<string name="community_comment_show_original">Оригинал</string>
 </resources>

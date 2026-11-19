@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">පරිවර්තන සැකසුම්</string>
+	<string name="translation_toggle">පරිවර්තනය මාරු කරන්න</string>
+	<string name="translation_enable">පරිවර්තනය සබල කරන්න</string>
+	<string name="translation_disable">පරිවර්තනය අබල කරන්න</string>
+	<string name="translation_active">සක්‍රියයි</string>
+	<string name="translation_off">අක්‍රියයි</string>
+	<string name="translation_provider">පරිවර්තන සපයන්නා</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">සිතීමේ මට්ටම</string>
+	<string name="translation_thinking_minimal">අවම</string>
+	<string name="translation_thinking_low">අඩු</string>
+	<string name="translation_thinking_medium">මධ්‍යම</string>
+	<string name="translation_thinking_high">ඉහළ</string>
+	<string name="translation_source_lang">මූලාශ්‍ර භාෂාව (OCR)</string>
+	<string name="translation_target_lang">ඉලක්ක භාෂාව</string>
+	<string name="translation_api_keys">Gemini API යතුරු</string>
+	<string name="translation_deepl_api_keys">DeepL API යතුරු</string>
+	<string name="translation_api_keys_hint">බහු යතුරු කොමා හෝ නව පේළි වලින් වෙන් කරන්න</string>
+	<string name="translation_api_keys_empty">API යතුරක් වින්‍යාස කර නොමැත</string>
+	<string name="translation_api_key_required">Gemini API යතුරක් එක් කරන්න හෝ සපයන්නන් මාරු කරන්න</string>
+	<string name="translation_deepl_api_key_required">DeepL API යතුරක් එක් කරන්න හෝ සපයන්නන් මාරු කරන්න</string>
+	<string name="translation_auto_translate">පිටු ස්වයංක්‍රීයව පරිවර්තනය කරන්න</string>
+	<string name="translation_skip_sfx">ශබ්ද ප්‍රයෝග මඟ හරින්න</string>
+	<string name="translation_filter_promo">ප්‍රවර්ධන සහ ක්‍රෙඩිට් පිටු මඟ හරින්න</string>
+	<string name="translation_ocr_ready">OCR ආකෘතිය සූදානම්</string>
+	<string name="translation_ocr_auto_ready">ස්වයං-හඳුනාගැනීමේ OCR සූදානම්</string>
+	<string name="translation_ocr_not_downloaded">පළමු භාවිතයේදී OCR ආකෘතිය බාගත වේ</string>
+	<string name="translation_ocr_download">ආකෘතිය බාගන්න</string>
+	<string name="translation_ocr_downloading">OCR ආකෘතිය බාගත වෙමින්… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">පෙළ හඳුනාගනිමින්…</string>
+	<string name="translation_translating_text">පරිවර්තනය වෙමින්…</string>
+	<string name="translation_rendering_page">පිටුව විදැහුම් වෙමින්…</string>
+	<string name="translation_clear_cache">පරිවර්තන හැඹිලිය හිස් කරන්න</string>
+	<string name="translation_cache_cleared">පරිවර්තන හැඹිලිය හිස් කරන ලදී</string>
+	<string name="translation_cache_cleared_size">හැඹිලිගත පරිවර්තන %1$sක් හිස් කරන ලදී</string>
+	<string name="translation_error_generic">පරිවර්තනය අසාර්ථක විය: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">සක්‍රිය යතුරු %1$dක් වින්‍යාස කර ඇත</item>
+		<item quantity="other">සක්‍රිය යතුරු %1$dක් වින්‍යාස කර ඇත</item>
+	</plurals>
+</resources>

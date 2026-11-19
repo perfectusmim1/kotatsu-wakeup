@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="cf_banner_required">%1$sਲਈ ਪੁਸ਼ਟੀਕਰਨ ਦੀ ਲੋੜ ਹੈ</string>
+	<string name="cf_banner_multiple_required">%1$s(+%2$dਹੋਰ) ਲਈ ਪੁਸ਼ਟੀਕਰਨ ਦੀ ਲੋੜ ਹੈ</string>
+	<string name="cf_banner_solve">ਹੱਲ</string>
+	<string name="cf_banner_dismiss">ਖਾਰਜ ਕਰੋ</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="bookmark_added_many">Bokmärken tillagda</string>
+	<string name="bookmarks_sort_newest">Senast tillagd</string>
+	<string name="bookmarks_sort_oldest">Äldst tillagd</string>
+	<string name="bookmarks_sort_chapter">Kapitelordning</string>
+	<string name="search_bookmarks_hint">Sök serie eller kapitel</string>
+	<string name="search_bookmarked_chapters_hint">Sök bokmärkta kapitel</string>
+	<string name="no_bookmarks_matching_query">Inga matchande bokmärken</string>
+	<string name="no_bookmarks_matching_summary">Inga bokmärken matchade ditt aktuella filter</string>
+	<string name="download_bookmarked_chapters">Ladda ner bokmärkta kapitel</string>
+	<string name="download_bookmarked_only">Endast bokmärkta kapitel</string>
+	<string name="download_bookmarked_next_2">Bokmärkta + nästa 2 kapitel</string>
+	<string name="download_bookmarked_next_3">Bokmärkta + nästa 3 kapitel</string>
+	<string name="no_bookmarked_chapters_to_download">Inga bokmärkta kapitel att ladda ner</string>
+	<string name="migrate_bookmarks">Migrera bokmärken till en annan källa</string>
+	<string name="bookmark_migration_choose_series">Välj serie att migrera</string>
+	<string name="bookmark_migration_searching">Söker i aktiva källor…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d källor · %3$d träffar</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d kapitel matchade</string>
+	<string name="bookmark_migration_total_chapters">%1$d kapitel</string>
+	<string name="bookmark_migration_no_candidates">Inga kompatibla källor hittades</string>
+	<string name="bookmark_migration_no_candidates_summary">Ingen aktiverad källa matchade den här serien och dess bokmärkta kapitel</string>
+	<string name="bookmark_migration_confirm">Migrera %1$d bokmärke(n) från \"%2$s\" (%3$s) till \"%4$s\" (%5$s)?\n%6$d av %7$d bokmärkta kapitel matchade.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Migrera %1$d bokmärke(n) från \"%2$s\" (%3$s) till \"%4$s\" (%5$s)?\nKapitel uppskattas utifrån läsförloppet.</string>
+	<string name="bookmark_migration_success">Bokmärken migrerade till %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Inga bokmärken hittades för den här serien</string>
+	<string name="bookmark_migration_rescan">Skanna igen</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Inga kapitel</string>
+	<string name="bookmarks_count_badge">%1$d bokmärken</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Mga pinagmulang account</string>
+	<string name="source_accounts_summary">%1$d naka-sign in · %2$d suportado</string>
+	<string name="source_accounts_summary_none">Walang aktibong session · %1$d suportado</string>
+	<string name="source_accounts_empty">Walang nakitang source na may suporta sa account</string>
+	<string name="source_account_signed_in">Naka-sign in</string>
+	<string name="source_account_not_signed_in">Hindi naka-sign in</string>
+	<string name="source_account_switch">Lumipat ng account</string>
+	<string name="source_signed_out">Naka-sign out</string>
+	<string name="sign_up">Mag-sign up</string>
+	<string name="auth_verify">I-verify</string>
+	<string name="auth_refresh">I-refresh</string>
+	<string name="auth_not_verified_yet">Hindi pa na-verify ang session. Tapusin ang pag-sign in at subukang muli.</string>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">Taux</string>
+	<string name="community_rating_title">Note communautaire</string>
+	<string name="community_your_rating">Ɔ nzɔliɛ’n: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Fa ko man</string>
+	<string name="community_rating_saved">Be sieli note</string>
+	<string name="community_rating_count">%1$s</string>
+	<string name="community_views_count">%1$s be niannin</string>
+	<string name="community_follows_count">%1$s su</string>
+	<string name="community_comments_count">%1$s n\'dɛ</string>
+	<string name="community_comments_sort_old">Kpɛn</string>
+	<string name="community_web_comments">Wɛbsaiti</string>
+	<string name="community_show_replies">Kle kosan\'m be su tɛlɛ (%1$d)</string>
+	<string name="community_hide_replies">Fiɛ kosan’m be su tɛlɛ’n</string>
+	<string name="community_load_more">Load like uflɛ</string>
+	<string name="community_load_more_replies">Fa kosan’m be su tɛlɛ uflɛ</string>
+	<string name="community_replying_to">Be tɛli su kɛ %1$s</string>
+	<string name="community_editing_comment">Be su kaci ndɛ’n</string>
+	<string name="community_comment_edited">(be kacili)</string>
+	<string name="community_comment_deleted">Be yili ndɛ’n</string>
+	<string name="community_comment_delete_confirm">\?Supprime cette commentaire?</string>
+	<string name="community_comment_translate">Kaci ndɛ’n</string>
+	<string name="community_comment_show_original">I bo bolɛ nun</string>
+	<string name="community_spoiler_warning">Spoiler — Tin su naan w’a yi i nglo .</string>
+	<string name="community_spoiler_hide">Fiɛ like ng’ɔ saci like’n</string>
+	<string name="community_sign_in_to_comment">Wlu lɔ naan w\'a klɛ ndɛ annzɛ like nga a yo\'n</string>
+	<string name="community_sign_in_to_rate">Wlu lɔ naan w’a nian %1$s su.</string>
+	<string name="community_widget_ssl_error">Connexion sécure w\'a yoman ye widget n\'ga be kan n\'dɛ nu. Ɔ kwla tike fluwa’n i bue’n su ɔ navigatɛli’n nun.</string>
+	<string name="community_widget_load_error">Ɔ kwlá faman ndɛ’m be su widget’n. Nian ɔ connexion’n nun annzɛ tike i ɔ navigatɛli’n nun.</string>
+	<string name="community_widget_unavailable">WebView nunman mannzin sɔ’n su. I liɛ’n, tike ndɛ’m be su ɔ navigatɛli’n nun.</string>
+	<string name="community_more_options">Like uflɛ\'m</string>
+</resources>

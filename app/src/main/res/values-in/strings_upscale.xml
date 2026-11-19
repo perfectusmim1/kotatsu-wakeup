@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="upscale_title">Peningkatan gambar (Upscale)</string>
+	<string name="upscale_mode_label">Mode</string>
+	<string name="upscale_mode_off">Mati</string>
+	<string name="upscale_mode_fast">Cepat</string>
+	<string name="upscale_mode_ai">AI</string>
+	<string name="upscale_hint_off">Halaman ditampilkan dalam resolusi aslinya</string>
+	<string name="upscale_hint_fast">Hemat baterai, instan (Anime4K 2x)</string>
+	<string name="upscale_hint_ai">Kualitas tertinggi, lebih lambat (Real-ESRGAN 2x)</string>
+	<string name="upscale_low_ram_hint">Mode Cepat disarankan pada perangkat berspesifikasi rendah.</string>
+	<string name="upscale_low_ram_ai_hint">Dapat menghangatkan perangkat Anda; mode Cepat disarankan pada perangkat keras berspesifikasi rendah.</string>
+	<string name="upscale_processing">Memproses…</string>
+	<string name="upscale_compare_toggle">Bandingkan sebelum / sesudah</string>
+	<string name="upscale_high_res_toggle">Proses juga halaman beresolusi tinggi</string>
+	<string name="upscale_high_res_hint">Jika mati, halaman yang lebih lebar dari resolusi layar akan dilewati.</string>
+	<string name="upscale_compare_original">Asli</string>
+	<string name="upscale_compare_enhanced">Ditingkatkan</string>
+	<string name="upscale_model_ready">Model Real-ESRGAN 2x siap</string>
+	<string name="upscale_model_not_downloaded">Model AI diunduh saat penggunaan pertama (~2,3 MB)</string>
+	<string name="upscale_model_download">Unduh model</string>
+	<string name="upscale_model_downloading">Mengunduh model AI… %1$d%%%%%%</string>
+	<string name="upscale_model_initializing">Menyiapkan model AI…</string>
+	<string name="upscale_clear_cache">Hapus cache upscale</string>
+	<string name="upscale_cache_cleared">Cache upscale dihapus</string>
+	<string name="upscale_cache_cleared_size">Menghapus %1$s strip upscale yang di-cache</string>
+	<string name="upscale_error_generic">Kesalahan upscale: %1$s</string>
+</resources>

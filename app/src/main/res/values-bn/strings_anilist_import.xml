@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">AniList থেকে ইম্পোর্ট করুন</string>
+    <string name="anilist_import_mode_label">ইম্পোর্ট গন্তব্য</string>
+    <string name="anilist_import_by_status">অবস্থা অনুযায়ী</string>
+    <string name="anilist_import_single_category">একক বিভাগ</string>
+    <string name="anilist_import_new_category">নতুন বিভাগ</string>
+    <string name="anilist_import_new_category_hint">বিভাগের নাম</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">আপনার AniList লাইব্রেরি লোড হচ্ছে…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">সম্পন্ন (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">ইম্পোর্ট করা হয়েছে: %1$d · বিদ্যমান: %2$d · অমিল: %3$d</string>
+    <string name="anilist_import_empty">আপনার AniList মাঙ্গা তালিকা খালি।</string>
+    <string name="anilist_import_unmatched_title">অমিল শিরোনাম</string>
+    <string name="anilist_import_start">ইম্পোর্ট শুরু করুন</string>
+    <string name="anilist_import_retry">আবার ইম্পোর্ট করুন</string>
+    <string name="anilist_import_error_no_sources">ইম্পোর্ট করার আগে অন্তত একটি মাঙ্গা উৎস সক্রিয় করুন।</string>
+</resources>

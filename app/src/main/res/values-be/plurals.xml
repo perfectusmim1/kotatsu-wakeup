@@ -50,4 +50,22 @@
         <item quantity="many">%1$dхвілін</item>
         <item quantity="other">%1$dхвілін</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d вынік</item>
+        <item quantity="few">%1$d вынікі</item>
+        <item quantity="many">%1$d вынікаў</item>
+        <item quantity="other">%1$d вынікаў</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d старонка</item>
+        <item quantity="few">%1$d старонкі</item>
+        <item quantity="many">%1$d старонак</item>
+        <item quantity="other">%1$d старонак</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d крыніца</item>
+        <item quantity="few">%1$d крыніцы</item>
+        <item quantity="many">%1$d крыніц</item>
+        <item quantity="other">%1$d крыніц</item>
+    </plurals>
 </resources>

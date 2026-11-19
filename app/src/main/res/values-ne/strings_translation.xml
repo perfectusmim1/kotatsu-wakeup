@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">अनुवाद सेटिङहरू</string>
+	<string name="translation_toggle">अनुवाद टगल गर्नुहोस्</string>
+	<string name="translation_enable">अनुवाद सक्षम गर्नुहोस्</string>
+	<string name="translation_disable">अनुवाद असक्षम गर्नुहोस्</string>
+	<string name="translation_active">सक्रिय</string>
+	<string name="translation_off">बन्द</string>
+	<string name="translation_provider">अनुवाद प्रदायक</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">सोच स्तर</string>
+	<string name="translation_thinking_minimal">न्यूनतम</string>
+	<string name="translation_thinking_low">कम</string>
+	<string name="translation_thinking_medium">मध्यम</string>
+	<string name="translation_thinking_high">उच्च</string>
+	<string name="translation_source_lang">स्रोत भाषा (OCR)</string>
+	<string name="translation_target_lang">लक्ष्य भाषा</string>
+	<string name="translation_api_keys">Gemini API कुञ्जीहरू</string>
+	<string name="translation_deepl_api_keys">DeepL API कुञ्जीहरू</string>
+	<string name="translation_api_keys_hint">धेरै कुञ्जीहरूलाई अल्पविराम वा नयाँ लाइनले छुट्याउनुहोस्</string>
+	<string name="translation_api_keys_empty">कुनै API कुञ्जी कन्फिगर गरिएको छैन</string>
+	<string name="translation_api_key_required">Gemini API कुञ्जी थप्नुहोस् वा प्रदायक स्विच गर्नुहोस्</string>
+	<string name="translation_deepl_api_key_required">DeepL API कुञ्जी थप्नुहोस् वा प्रदायक स्विच गर्नुहोस्</string>
+	<string name="translation_auto_translate">पृष्ठहरू स्वतः अनुवाद गर्नुहोस्</string>
+	<string name="translation_skip_sfx">ध्वनि प्रभावहरू छोड्नुहोस्</string>
+	<string name="translation_filter_promo">प्रोमो र क्रेडिट पृष्ठहरू छोड्नुहोस्</string>
+	<string name="translation_ocr_ready">OCR मोडेल तयार छ</string>
+	<string name="translation_ocr_auto_ready">स्वतः पत्ता लगाउने OCR तयार छ</string>
+	<string name="translation_ocr_not_downloaded">OCR मोडेल पहिलो प्रयोगमा डाउनलोड हुन्छ</string>
+	<string name="translation_ocr_download">मोडेल डाउनलोड गर्नुहोस्</string>
+	<string name="translation_ocr_downloading">OCR मोडेल डाउनलोड हुँदैछ… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">पाठ पहिचान गरिँदैछ…</string>
+	<string name="translation_translating_text">अनुवाद गरिँदैछ…</string>
+	<string name="translation_rendering_page">पृष्ठ रेन्डर गरिँदैछ…</string>
+	<string name="translation_clear_cache">अनुवाद क्यास खाली गर्नुहोस्</string>
+	<string name="translation_cache_cleared">अनुवाद क्यास खाली गरियो</string>
+	<string name="translation_cache_cleared_size">क्यास गरिएका अनुवादहरूको %1$s खाली गरियो</string>
+	<string name="translation_error_generic">अनुवाद असफल भयो: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d सक्रिय कुञ्जी कन्फिगर गरिएको छ</item>
+		<item quantity="other">%1$d सक्रिय कुञ्जीहरू कन्फिगर गरिएका छन्</item>
+	</plurals>
+</resources>

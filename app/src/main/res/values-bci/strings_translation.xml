@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Be kacili ndɛ’n i nun ninnge mun</string>
+	<string name="translation_toggle">Kaci ndɛ’n i kacilɛ’n</string>
+	<string name="translation_enable">Maan be kaci ndɛ’n</string>
+	<string name="translation_disable">Desactiver le traduction</string>
+	<string name="translation_active">Active</string>
+	<string name="translation_off">Off</string>
+	<string name="translation_provider">Be nga be kaci ndɛ’n</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google kacilɛ like</string>
+	<string name="translation_gemini_thinking_level">Niveau de pensée</string>
+	<string name="translation_thinking_minimal">Minimal</string>
+	<string name="translation_thinking_low">Low</string>
+	<string name="translation_thinking_medium">Médium</string>
+	<string name="translation_thinking_high">Ɔ ti dan</string>
+	<string name="translation_source_lang">Aniɛn nga be fa yi ndɛ’n (OCR)</string>
+	<string name="translation_target_lang">Aniɛn nga be waan bé kán’n</string>
+	<string name="translation_api_keys">API lakle Gemini</string>
+	<string name="translation_deepl_api_keys">DeepL API lakle mun</string>
+	<string name="translation_api_keys_hint">Fa virgule annzɛ ligne uflɛ fa kpɛ lakle kpanngban be nun</string>
+	<string name="translation_api_keys_empty">API lakle fi nunman lɛ</string>
+	<string name="translation_api_key_required">Fa Gemini API lakle kun annzɛ kaci be nga be man like’n .</string>
+	<string name="translation_deepl_api_key_required">Fa DeepL API lakle kun annzɛ kaci be nga be man like’n .</string>
+	<string name="translation_auto_translate">Fluwa’n i bue’m be kacilɛ’n i bɔbɔ</string>
+	<string name="translation_skip_sfx">Jran kpanlɛ like’m be su</string>
+	<string name="translation_filter_promo">Jran promotion &amp; credit bue\'m be su</string>
+	<string name="translation_ocr_ready">Modèle OCR prêt</string>
+	<string name="translation_ocr_auto_ready">OCR m’ɔ wun i wun’n, w’a siesie i wun</string>
+	<string name="translation_ocr_not_downloaded">OCR modèle téléchargements à l\'utilisation première</string>
+	<string name="translation_ocr_download">Télécharger modèle .</string>
+	<string name="translation_ocr_downloading">Téléchargement le modèle OCR... %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Ndɛ\'m be silɛ...</string>
+	<string name="translation_translating_text">Be kacilɛ...</string>
+	<string name="translation_rendering_page">Fluwa’n i bue’n i yilɛ...</string>
+	<string name="translation_clear_cache">Effacer le cache de la traduction</string>
+	<string name="translation_cache_cleared">Be yili ndɛ’m be kacilɛ lika’n</string>
+	<string name="translation_cache_cleared_size">Be yili ndɛ mma %1$s mɔ be kacili be’n</string>
+	<string name="translation_error_generic">Be kacilɛ’n w’a yoman ye: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d be siesieli lakle ng’ɔ o lɛ’n</item>
+		<item quantity="other">%1$d be siesieli lakle nga be di junman’n</item>
+	</plurals>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">គណនីប្រភព</string>
+	<string name="source_accounts_summary">បានចូល %1$d · គាំទ្រ %2$d</string>
+	<string name="source_accounts_summary_none">គ្មានសម័យសកម្ម · គាំទ្រ %1$d</string>
+	<string name="source_accounts_empty">រកមិនឃើញប្រភពដែលគាំទ្រគណនីទេ</string>
+	<string name="source_account_signed_in">បានចូល</string>
+	<string name="source_account_not_signed_in">មិនទាន់បានចូល</string>
+	<string name="source_account_switch">ប្តូរគណនី</string>
+	<string name="source_signed_out">បានចេញ</string>
+	<string name="sign_up">ចុះឈ្មោះ</string>
+	<string name="auth_verify">ផ្ទៀងផ្ទាត់</string>
+	<string name="auth_refresh">ផ្ទុកឡើងវិញ</string>
+	<string name="auth_not_verified_yet">សម័យមិនទាន់បានផ្ទៀងផ្ទាត់នៅឡើយទេ។ សូមបញ្ចប់ការចូល ហើយព្យាយាមម្តងទៀត។</string>
+</resources>

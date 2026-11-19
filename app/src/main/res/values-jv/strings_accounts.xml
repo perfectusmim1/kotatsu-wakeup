@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Akun sumber</string>
+	<string name="source_accounts_summary">%1$d mlebu · %2$d didhukung</string>
+	<string name="source_accounts_summary_none">Ora ana sesi aktif · %1$d didhukung</string>
+	<string name="source_accounts_empty">Ora ana sumber sing ndhukung akun</string>
+	<string name="source_account_signed_in">Wis mlebu</string>
+	<string name="source_account_not_signed_in">Durung mlebu</string>
+	<string name="source_account_switch">Ganti akun</string>
+	<string name="source_signed_out">Wis metu</string>
+	<string name="sign_up">Daftar</string>
+	<string name="auth_verify">Verifikasi</string>
+	<string name="auth_refresh">Muat ulang</string>
+	<string name="auth_not_verified_yet">Sesi durung diverifikasi. Rampungake mlebu banjur coba maneh.</string>
+</resources>

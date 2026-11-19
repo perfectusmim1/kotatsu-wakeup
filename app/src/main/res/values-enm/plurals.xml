@@ -1,2 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
+    <plurals name="items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <plurals name="new_chapters">
+        <item quantity="one">%1$d newe chapitre</item>
+        <item quantity="other">%1$d newe chapitres</item>
+    </plurals>
+    <plurals name="chapters">
+        <item quantity="one">%1$d chapitre</item>
+        <item quantity="other">%1$d chapitres</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d leef</item>
+        <item quantity="other">%1$d leves</item>
+    </plurals>
+    <plurals name="minutes_ago">
+        <item quantity="one">%1$d mynute ago</item>
+        <item quantity="other">%1$d mynutes ago</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">%1$d houre ago</item>
+        <item quantity="other">%1$d houres ago</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d dayes ago</item>
+    </plurals>
+    <plurals name="months_ago">
+        <item quantity="one">%1$d monthe ago</item>
+        <item quantity="other">%1$d months ago</item>
+    </plurals>
+    <plurals name="hours">
+        <item quantity="one">%1$d houre</item>
+        <item quantity="other">%1$d houres</item>
+    </plurals>
+    <plurals name="minutes">
+        <item quantity="one">%1$d mynute</item>
+        <item quantity="other">%1$d mynutes</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d welle</item>
+        <item quantity="other">%1$d welles</item>
+    </plurals>
+</resources>

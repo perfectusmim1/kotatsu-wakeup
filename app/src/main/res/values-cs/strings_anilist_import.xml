@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Importovat z AniList</string>
+	<string name="anilist_import_mode_label">Cíl importu</string>
+	<string name="anilist_import_by_status">Podle stavu</string>
+	<string name="anilist_import_single_category">Jedna kategorie</string>
+	<string name="anilist_import_new_category">Nová kategorie</string>
+	<string name="anilist_import_new_category_hint">Název kategorie</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Načítání vaší knihovny AniList…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Dokončeno (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Importováno: %1$d · Existující: %2$d · Nespárované: %3$d</string>
+	<string name="anilist_import_empty">Váš seznam mangy na AniList je prázdný.</string>
+	<string name="anilist_import_unmatched_title">Nespárované tituly</string>
+	<string name="anilist_import_start">Spustit import</string>
+	<string name="anilist_import_retry">Importovat znovu</string>
+	<string name="anilist_import_error_no_sources">Před importem povolte alespoň jeden zdroj mangy.</string>
+</resources>

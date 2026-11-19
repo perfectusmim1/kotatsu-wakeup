@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">Könyvjelzők hozzáadva</string>
+    <string name="bookmarks_sort_newest">Legutóbb hozzáadott</string>
+    <string name="bookmarks_sort_oldest">Legrégebben hozzáadott</string>
+    <string name="bookmarks_sort_chapter">Fejezetsorrend</string>
+    <string name="search_bookmarks_hint">Sorozat vagy fejezet keresése</string>
+    <string name="search_bookmarked_chapters_hint">Könyvjelzőzött fejezetek keresése</string>
+    <string name="no_bookmarks_matching_query">Nincs egyező könyvjelző</string>
+    <string name="no_bookmarks_matching_summary">Egyetlen könyvjelző sem felel meg a jelenlegi szűrőnek</string>
+    <string name="download_bookmarked_chapters">Könyvjelzőzött fejezetek letöltése</string>
+    <string name="download_bookmarked_only">Csak a könyvjelzőzött fejezetek</string>
+    <string name="download_bookmarked_next_2">Könyvjelzőzött + következő 2 fejezet</string>
+    <string name="download_bookmarked_next_3">Könyvjelzőzött + következő 3 fejezet</string>
+    <string name="no_bookmarked_chapters_to_download">Nincs letölthető könyvjelzőzött fejezet</string>
+    <string name="migrate_bookmarks">Könyvjelzők átköltöztetése másik forrásba</string>
+    <string name="bookmark_migration_choose_series">Válaszd ki az átköltöztetendő sorozatot</string>
+    <string name="bookmark_migration_searching">Aktív források keresése…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d forrás · %3$d találat</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d fejezet egyezik</string>
+    <string name="bookmark_migration_total_chapters">%1$d fejezet</string>
+    <string name="bookmark_migration_no_candidates">Nem található kompatibilis forrás</string>
+    <string name="bookmark_migration_no_candidates_summary">Egyetlen engedélyezett forrás sem egyezett ezzel a sorozattal és könyvjelzőzött fejezeteivel</string>
+    <string name="bookmark_migration_confirm">Átköltöztetsz %1$d könyvjelzőt innen: \"%2$s\" (%3$s) ide: \"%4$s\" (%5$s)?\n%7$d könyvjelzőzött fejezetből %6$d egyezett.</string>
+    <string name="bookmark_migration_confirm_no_overlap">Átköltöztetsz %1$d könyvjelzőt innen: \"%2$s\" (%3$s) ide: \"%4$s\" (%5$s)?\nA fejezetek az olvasási előrehaladás alapján lesznek megbecsülve.</string>
+    <string name="bookmark_migration_success">Könyvjelzők átköltöztetve ide: %1$s</string>
+    <string name="bookmark_migration_no_bookmarks">Nem találhatók könyvjelzők ehhez a sorozathoz</string>
+    <string name="bookmark_migration_rescan">Újraolvasás</string>
+    <string name="bookmark_migration_unavailable_no_chapters">Nincsenek fejezetek</string>
+    <string name="bookmarks_count_badge">%1$d könyvjelző</string>
+</resources>

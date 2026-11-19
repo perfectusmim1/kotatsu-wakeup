@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_accounts">Λογαριασμοί πηγών</string>
+    <string name="source_accounts_summary">%1$d συνδεδεμένοι · %2$d υποστηρίζονται</string>
+    <string name="source_accounts_summary_none">Καμία ενεργή συνεδρία · %1$d υποστηρίζονται</string>
+    <string name="source_accounts_empty">Δεν βρέθηκαν πηγές με υποστήριξη λογαριασμού</string>
+    <string name="source_account_signed_in">Συνδεδεμένος</string>
+    <string name="source_account_not_signed_in">Μη συνδεδεμένος</string>
+    <string name="source_account_switch">Εναλλαγή λογαριασμού</string>
+    <string name="source_signed_out">Αποσυνδέθηκε</string>
+    <string name="sign_up">Εγγραφή</string>
+    <string name="auth_verify">Επαλήθευση</string>
+    <string name="auth_refresh">Ανανέωση</string>
+    <string name="auth_not_verified_yet">Η συνεδρία δεν έχει επαληθευτεί ακόμα. Ολοκλήρωσε τη σύνδεση και δοκίμασε ξανά.</string>
+</resources>

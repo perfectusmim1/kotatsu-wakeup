@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="community_rate">Βαθμολόγηση</string>
+    <string name="community_rating_title">Βαθμολογία κοινότητας</string>
+    <string name="community_your_rating">Η βαθμολογία σου: %1$d / %2$d</string>
+    <string name="community_your_rating_short">★%1$d</string>
+    <string name="community_submit_rating">Υποβολή</string>
+    <string name="community_rating_saved">Η βαθμολογία αποθηκεύτηκε</string>
+    <string name="community_rating_count">%1$s βαθμολογίες</string>
+    <string name="community_views_count">%1$s προβολές</string>
+    <string name="community_follows_count">%1$s ακόλουθοι</string>
+    <string name="community_comments_count">%1$s σχόλια</string>
+    <string name="community_comments_sort_old">Παλαιότερα</string>
+    <string name="community_web_comments">Ιστός</string>
+    <string name="community_show_replies">Εμφάνιση απαντήσεων (%1$d)</string>
+    <string name="community_hide_replies">Απόκρυψη απαντήσεων</string>
+    <string name="community_load_more">Φόρτωση περισσότερων</string>
+    <string name="community_load_more_replies">Φόρτωση περισσότερων απαντήσεων</string>
+    <string name="community_replying_to">Απάντηση στον/στην %1$s</string>
+    <string name="community_editing_comment">Επεξεργασία σχολίου</string>
+    <string name="community_comment_edited">(επεξεργασμένο)</string>
+    <string name="community_comment_deleted">Το σχόλιο διαγράφηκε</string>
+    <string name="community_comment_delete_confirm">Διαγραφή αυτού του σχολίου;</string>
+    <string name="community_comment_translate">Μετάφραση</string>
+    <string name="community_comment_show_original">Πρωτότυπο</string>
+    <string name="community_spoiler_warning">Spoiler — Πάτησε για αποκάλυψη</string>
+    <string name="community_spoiler_hide">Απόκρυψη spoiler</string>
+    <string name="community_sign_in_to_comment">Συνδέσου για να δημοσιεύσεις σχόλια ή αντιδράσεις</string>
+    <string name="community_sign_in_to_rate">Συνδέσου για να βαθμολογήσεις στο %1$s</string>
+    <string name="community_widget_ssl_error">Η ασφαλής σύνδεση απέτυχε για αυτό το γραφικό στοιχείο σχολίων. Μπορείς να ανοίξεις τη σελίδα στο πρόγραμμα περιήγησης.</string>
+    <string name="community_widget_load_error">Δεν ήταν δυνατή η φόρτωση του γραφικού στοιχείου σχολίων. Έλεγξε τη σύνδεσή σου ή άνοιξέ το στο πρόγραμμα περιήγησης.</string>
+    <string name="community_widget_unavailable">Το WebView δεν είναι διαθέσιμο σε αυτή τη συσκευή. Άνοιξε τα σχόλια στο πρόγραμμα περιήγησης.</string>
+    <string name="community_more_options">Περισσότερες επιλογές</string>
+</resources>

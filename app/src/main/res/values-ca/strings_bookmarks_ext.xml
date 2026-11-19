@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Marcadors afegits</string>
+	<string name="bookmarks_sort_newest">Afegits recentment</string>
+	<string name="bookmarks_sort_oldest">Més antics primer</string>
+	<string name="bookmarks_sort_chapter">Ordre de capítols</string>
+	<string name="search_bookmarks_hint">Cerca una sèrie o un capítol</string>
+	<string name="search_bookmarked_chapters_hint">Cerca capítols amb marcador</string>
+	<string name="no_bookmarks_matching_query">Cap marcador coincident</string>
+	<string name="no_bookmarks_matching_summary">Cap marcador coincideix amb el filtre actual</string>
+	<string name="download_bookmarked_chapters">Baixa els capítols amb marcador</string>
+	<string name="download_bookmarked_only">Només capítols amb marcador</string>
+	<string name="download_bookmarked_next_2">Amb marcador + 2 capítols següents</string>
+	<string name="download_bookmarked_next_3">Amb marcador + 3 capítols següents</string>
+	<string name="no_bookmarked_chapters_to_download">No hi ha capítols amb marcador per baixar</string>
+	<string name="migrate_bookmarks">Migra els marcadors a una altra font</string>
+	<string name="bookmark_migration_choose_series">Tria la sèrie a migrar</string>
+	<string name="bookmark_migration_searching">S\'estan cercant fonts actives…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d fonts · %3$d coincidències</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d capítols coincidents</string>
+	<string name="bookmark_migration_total_chapters">%1$d capítols</string>
+	<string name="bookmark_migration_no_candidates">No s\'han trobat fonts compatibles</string>
+	<string name="bookmark_migration_no_candidates_summary">Cap font activada coincideix amb aquesta sèrie i els seus capítols amb marcador</string>
+	<string name="bookmark_migration_confirm">Vols migrar %1$d marcador(s) de \"%2$s\" (%3$s) a \"%4$s\" (%5$s)?\n%6$d de %7$d capítols amb marcador coincideixen.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Vols migrar %1$d marcador(s) de \"%2$s\" (%3$s) a \"%4$s\" (%5$s)?\nEls capítols s\'aproximaran segons el progrés de lectura.</string>
+	<string name="bookmark_migration_success">Marcadors migrats a %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">No s\'han trobat marcadors per a aquesta sèrie</string>
+	<string name="bookmark_migration_rescan">Torna a cercar</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Sense capítols</string>
+	<string name="bookmarks_count_badge">%1$d marcadors</string>
+</resources>

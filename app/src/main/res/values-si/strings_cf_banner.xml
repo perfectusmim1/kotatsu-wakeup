@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$s සඳහා සත්‍යාපනය අවශ්‍යයි</string>
+	<string name="cf_banner_multiple_required">%1$s (+%2$dක් තව) සඳහා සත්‍යාපනය අවශ්‍යයි</string>
+	<string name="cf_banner_solve">විසඳන්න</string>
+	<string name="cf_banner_dismiss">ඉවත් කරන්න</string>
+</resources>

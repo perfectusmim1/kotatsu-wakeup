@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">Pictogram</string>
+	<string name="fav_icon_default">Hart</string>
+	<string name="fav_icon_star">Ster</string>
+	<string name="fav_icon_fire">Vuur</string>
+	<string name="fav_icon_crown">Kroon</string>
+	<string name="fav_icon_book">Boek</string>
+	<string name="fav_icon_bookmark">Bladwijzer</string>
+	<string name="fav_icon_eye">Oog</string>
+	<string name="fav_icon_bolt">Bliksem</string>
+	<string name="fav_icon_clock">Klok</string>
+	<string name="fav_icon_folder">Map</string>
+	<string name="fav_icon_check">Vinkje</string>
+	<string name="fav_icon_sparkles">Vonken</string>
+</resources>

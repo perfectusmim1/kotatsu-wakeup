@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">මූලාශ්‍ර ගිණුම්</string>
+	<string name="source_accounts_summary">%1$dක් පුරනය වී ඇත · %2$dකට සහය දක්වයි</string>
+	<string name="source_accounts_summary_none">සක්‍රිය සැසි නොමැත · %1$dකට සහය දක්වයි</string>
+	<string name="source_accounts_empty">ගිණුම් සහය ඇති මූලාශ්‍ර කිසිවක් හමු නොවීය</string>
+	<string name="source_account_signed_in">පුරනය වී ඇත</string>
+	<string name="source_account_not_signed_in">පුරනය වී නොමැත</string>
+	<string name="source_account_switch">ගිණුම මාරු කරන්න</string>
+	<string name="source_signed_out">පිටවී ඇත</string>
+	<string name="sign_up">ලියාපදිංචි වන්න</string>
+	<string name="auth_verify">තහවුරු කරන්න</string>
+	<string name="auth_refresh">නැවුම් කරන්න</string>
+	<string name="auth_not_verified_yet">සැසිය තවමත් තහවුරු කර නොමැත. පුරනය වීම අවසන් කර නැවත උත්සාහ කරන්න.</string>
+</resources>

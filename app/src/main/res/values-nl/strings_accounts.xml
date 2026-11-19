@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">Bronaccounts</string>
+	<string name="source_accounts_summary">%1$d ingelogd · %2$d ondersteund</string>
+	<string name="source_accounts_summary_none">Geen actieve sessies · %1$d ondersteund</string>
+	<string name="source_accounts_empty">Geen bronnen met accountondersteuning gevonden</string>
+	<string name="source_account_signed_in">Ingelogd</string>
+	<string name="source_account_not_signed_in">Niet ingelogd</string>
+	<string name="source_account_switch">Account wisselen</string>
+	<string name="source_signed_out">Uitgelogd</string>
+	<string name="sign_up">Registreren</string>
+	<string name="auth_verify">Verifiëren</string>
+	<string name="auth_refresh">Vernieuwen</string>
+	<string name="auth_not_verified_yet">Sessie nog niet geverifieerd. Voltooi het inloggen en probeer het opnieuw.</string>
+</resources>

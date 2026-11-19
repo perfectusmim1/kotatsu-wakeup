@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">అనువాద సెట్టింగ్‌లు</string>
+	<string name="translation_toggle">అనువాదాన్ని మార్చండి</string>
+	<string name="translation_enable">అనువాదాన్ని ప్రారంభించండి</string>
+	<string name="translation_disable">అనువాదాన్ని నిలిపివేయండి</string>
+	<string name="translation_active">క్రియాశీలంగా ఉంది</string>
+	<string name="translation_off">ఆఫ్</string>
+	<string name="translation_provider">అనువాద ప్రొవైడర్</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">ఆలోచనా స్థాయి</string>
+	<string name="translation_thinking_minimal">కనిష్ట</string>
+	<string name="translation_thinking_low">తక్కువ</string>
+	<string name="translation_thinking_medium">మధ్యస్థం</string>
+	<string name="translation_thinking_high">అధికం</string>
+	<string name="translation_source_lang">మూల భాష (OCR)</string>
+	<string name="translation_target_lang">లక్ష్య భాష</string>
+	<string name="translation_api_keys">Gemini API కీలు</string>
+	<string name="translation_deepl_api_keys">DeepL API కీలు</string>
+	<string name="translation_api_keys_hint">బహుళ కీలను కామాలు లేదా కొత్త లైన్లతో వేరు చేయండి</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d క్రియాశీల కీ కాన్ఫిగర్ చేయబడింది</item>
+		<item quantity="other">%1$d క్రియాశీల కీలు కాన్ఫిగర్ చేయబడ్డాయి</item>
+	</plurals>
+	<string name="translation_api_keys_empty">API కీ కాన్ఫిగర్ చేయబడలేదు</string>
+	<string name="translation_api_key_required">Gemini API కీని జోడించండి లేదా ప్రొవైడర్‌లను మార్చండి</string>
+	<string name="translation_deepl_api_key_required">DeepL API కీని జోడించండి లేదా ప్రొవైడర్‌లను మార్చండి</string>
+	<string name="translation_auto_translate">పేజీలను స్వయంచాలకంగా అనువదించండి</string>
+	<string name="translation_skip_sfx">ధ్వని ప్రభావాలను దాటవేయండి</string>
+	<string name="translation_filter_promo">ప్రోమో &amp; క్రెడిట్స్ పేజీలను దాటవేయండి</string>
+	<string name="translation_ocr_ready">OCR మోడల్ సిద్ధంగా ఉంది</string>
+	<string name="translation_ocr_auto_ready">స్వయంచాలక OCR గుర్తింపు సిద్ధంగా ఉంది</string>
+	<string name="translation_ocr_not_downloaded">మొదటి ఉపయోగంలో OCR మోడల్ డౌన్‌లోడ్ అవుతుంది</string>
+	<string name="translation_ocr_download">మోడల్‌ను డౌన్‌లోడ్ చేయండి</string>
+	<string name="translation_ocr_downloading">OCR మోడల్ డౌన్‌లోడ్ అవుతోంది… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">వచనాన్ని గుర్తిస్తోంది…</string>
+	<string name="translation_translating_text">అనువదిస్తోంది…</string>
+	<string name="translation_rendering_page">పేజీని రెండర్ చేస్తోంది…</string>
+	<string name="translation_clear_cache">అనువాద కాష్‌ను క్లియర్ చేయండి</string>
+	<string name="translation_cache_cleared">అనువాద కాష్ క్లియర్ చేయబడింది</string>
+	<string name="translation_cache_cleared_size">%1$s కాష్ చేసిన అనువాదాలు క్లియర్ చేయబడ్డాయి</string>
+	<string name="translation_error_generic">అనువాదం విఫలమైంది: %1$s</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">Налози извора</string>
+	<string name="source_accounts_summary">Пријављених: %1$d · подржаних: %2$d</string>
+	<string name="source_accounts_summary_none">Нема активних сесија · подржаних: %1$d</string>
+	<string name="source_accounts_empty">Није пронађен ниједан извор са подршком за налоге</string>
+	<string name="source_account_signed_in">Пријављен</string>
+	<string name="source_account_not_signed_in">Није пријављен</string>
+	<string name="source_account_switch">Промени налог</string>
+	<string name="source_signed_out">Одјављен</string>
+	<string name="sign_up">Региструј се</string>
+	<string name="auth_verify">Потврди</string>
+	<string name="auth_refresh">Освежи</string>
+	<string name="auth_not_verified_yet">Сесија још није потврђена. Завршите пријаву и покушајте поново.</string>
+</resources>

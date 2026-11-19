@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">هەژمارەکانی سەرچاوە</string>
+	<string name="source_accounts_summary">%1$d چوونەژوورەوە · %2$d پشتگیریکراو</string>
+	<string name="source_accounts_summary_none">هیچ دانیشتنێکی چالاک نییە · %1$d پشتگیریکراو</string>
+	<string name="source_accounts_empty">هیچ سەرچاوەیەک بە پشتگیری هەژمار نەدۆزرایەوە</string>
+	<string name="source_account_signed_in">چووەتە ژوورەوە</string>
+	<string name="source_account_not_signed_in">نەچووەتە ژوورەوە</string>
+	<string name="source_account_switch">گۆڕینی هەژمار</string>
+	<string name="source_signed_out">چووە دەرەوە</string>
+	<string name="sign_up">تۆمارکردن</string>
+	<string name="auth_verify">پشتڕاستکردنەوە</string>
+	<string name="auth_refresh">نوێکردنەوە</string>
+	<string name="auth_not_verified_yet">دانیشتنەکە هێشتا پشتڕاست نەکراوەتەوە. چوونەژوورەوە تەواو بکە و دووبارە هەوڵبدەرەوە.</string>
+</resources>

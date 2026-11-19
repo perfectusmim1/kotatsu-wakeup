@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">উৎসৰ একাউণ্টসমূহ</string>
+	<string name="source_accounts_summary">%1$d টা ছাইন ইন কৰা · %2$d টা সমৰ্থিত</string>
+	<string name="source_accounts_summary_none">কোনো সক্ৰিয় অধিৱেশন নাই · %1$d টা সমৰ্থিত</string>
+	<string name="source_accounts_empty">একাউণ্ট সমৰ্থন থকা কোনো উৎস পোৱা নগ\'ল</string>
+	<string name="source_account_signed_in">ছাইন ইন কৰা হৈছে</string>
+	<string name="source_account_not_signed_in">ছাইন ইন কৰা হোৱা নাই</string>
+	<string name="source_account_switch">একাউণ্ট সলনি কৰক</string>
+	<string name="source_signed_out">ছাইন আউট কৰা হ\'ল</string>
+	<string name="sign_up">ছাইন আপ কৰক</string>
+	<string name="auth_verify">সত্যাপন কৰক</string>
+	<string name="auth_refresh">সতেজ কৰক</string>
+	<string name="auth_not_verified_yet">অধিৱেশন এতিয়াও সত্যাপন হোৱা নাই। ছাইন ইন সম্পূৰ্ণ কৰি পুনৰ চেষ্টা কৰক।</string>
+</resources>

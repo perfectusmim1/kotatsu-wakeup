@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">Tetenger ditambahake</string>
+	<string name="bookmarks_sort_newest">Paling anyar ditambahake</string>
+	<string name="bookmarks_sort_oldest">Paling lawas ditambahake</string>
+	<string name="bookmarks_sort_chapter">Urutan bab</string>
+	<string name="search_bookmarks_hint">Golek seri utawa bab</string>
+	<string name="search_bookmarked_chapters_hint">Golek bab sing ditetengeri</string>
+	<string name="no_bookmarks_matching_query">Ora ana tetenger sing cocog</string>
+	<string name="no_bookmarks_matching_summary">Ora ana tetenger sing cocog karo saringan saiki</string>
+	<string name="download_bookmarked_chapters">Undhuh bab sing ditetengeri</string>
+	<string name="download_bookmarked_only">Mung bab sing ditetengeri</string>
+	<string name="download_bookmarked_next_2">Ditetengeri + 2 bab sabanjure</string>
+	<string name="download_bookmarked_next_3">Ditetengeri + 3 bab sabanjure</string>
+	<string name="no_bookmarked_chapters_to_download">Ora ana bab sing ditetengeri kanggo diundhuh</string>
+	<string name="migrate_bookmarks">Pindhah tetenger menyang sumber liya</string>
+	<string name="bookmark_migration_choose_series">Pilih seri sing arep dipindhah</string>
+	<string name="bookmark_migration_searching">Nggoleki sumber aktif…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d sumber · %3$d cocog</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d bab cocog</string>
+	<string name="bookmark_migration_total_chapters">%1$d bab</string>
+	<string name="bookmark_migration_no_candidates">Ora ana sumber sing cocog ditemokake</string>
+	<string name="bookmark_migration_no_candidates_summary">Ora ana sumber aktif sing cocog karo seri iki lan bab sing ditetengeri</string>
+	<string name="bookmark_migration_confirm">Pindhah %1$d tetenger saka \"%2$s\" (%3$s) menyang \"%4$s\" (%5$s)?\n%6$d saka %7$d bab sing ditetengeri cocog.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Pindhah %1$d tetenger saka \"%2$s\" (%3$s) menyang \"%4$s\" (%5$s)?\nBab bakal dikira-kira miturut kemajuan maca.</string>
+	<string name="bookmark_migration_success">Tetenger dipindhah menyang %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Ora ana tetenger kanggo seri iki</string>
+	<string name="bookmark_migration_rescan">Pindai maneh</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Ora ana bab</string>
+	<string name="bookmarks_count_badge">%1$d tetenger</string>
+</resources>

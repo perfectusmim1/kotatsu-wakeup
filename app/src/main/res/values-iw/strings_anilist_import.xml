@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">ייבא מ-AniList</string>
+	<string name="anilist_import_mode_label">יעד ייבוא</string>
+	<string name="anilist_import_by_status">לפי סטטוס</string>
+	<string name="anilist_import_single_category">קטגוריה אחת</string>
+	<string name="anilist_import_new_category">קטגוריה חדשה</string>
+	<string name="anilist_import_new_category_hint">שם הקטגוריה</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">טוען את ספריית ה-AniList שלך…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">הושלם (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">יובאו: %1$d · קיימים: %2$d · לא תואמים: %3$d</string>
+	<string name="anilist_import_empty">רשימת המנגה שלך ב-AniList ריקה.</string>
+	<string name="anilist_import_unmatched_title">כותרות ללא התאמה</string>
+	<string name="anilist_import_start">התחל ייבוא</string>
+	<string name="anilist_import_retry">ייבא שוב</string>
+	<string name="anilist_import_error_no_sources">הפעל לפחות מקור מנגה אחד לפני הייבוא.</string>
+</resources>

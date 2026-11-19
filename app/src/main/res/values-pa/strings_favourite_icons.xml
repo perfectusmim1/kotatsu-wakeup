@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">ਆਈਕਨ</string>
+	<string name="fav_icon_default">ਦਿਲ</string>
+	<string name="fav_icon_star">ਤਾਰਾ</string>
+	<string name="fav_icon_fire">ਅੱਗ</string>
+	<string name="fav_icon_crown">ਤਾਜ</string>
+	<string name="fav_icon_book">ਕਿਤਾਬ</string>
+	<string name="fav_icon_bookmark">ਬੁੱਕਮਾਰਕ</string>
+	<string name="fav_icon_eye">ਆਈ</string>
+	<string name="fav_icon_bolt">ਬੋਲਟ</string>
+	<string name="fav_icon_clock">ਘੜੀ</string>
+	<string name="fav_icon_folder">ਫੋਲਡਰ</string>
+	<string name="fav_icon_check">ਚੈੱਕ ਕਰੋ</string>
+	<string name="fav_icon_sparkles">ਚਮਕਦਾ ਹੈ</string>
+</resources>

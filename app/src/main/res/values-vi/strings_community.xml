@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="community_comment_dislike">Không thích</string>
 	<string name="community_comment_like">Thích</string>
@@ -45,4 +45,6 @@
 	<string name="community_widget_load_error">Không thể tải tiện ích bình luận. Kiểm tra kết nối hoặc mở trong trình duyệt.</string>
 	<string name="community_widget_unavailable">WebView không khả dụng trên thiết bị này. Mở bình luận trong trình duyệt.</string>
 	<string name="community_more_options">Thêm tùy chọn</string>
+	<string name="community_comment_translate">Dịch</string>
+	<string name="community_comment_show_original">Bản gốc</string>
 </resources>

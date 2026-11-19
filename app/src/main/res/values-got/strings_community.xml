@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="community_rate">𐍂𐌰𐍄𐌴</string>
+    <string name="community_rating_title">𐌲𐌰𐌼𐌰𐌹𐌽𐌳𐌿𐌸𐍃 𐍂𐌰𐍄𐌹𐌲𐌲</string>
+    <string name="community_your_rating">𐌾𐍉𐌿𐍂 𐍂𐌰𐍄𐌹𐌲𐌲: %1$d / %2$d</string>
+    <string name="community_your_rating_short">★%1$d</string>
+    <string name="community_submit_rating">𐍃𐌿𐌱𐌼𐌹𐍄</string>
+    <string name="community_rating_saved">𐍂𐌰𐍄𐌹𐌲𐌲 𐌲𐌰𐍆𐌰𐍃𐍄𐌹𐌸𐍃</string>
+    <string name="community_rating_count">%1$s 𐍂𐌰𐍄𐌹𐌲𐌲𐍃</string>
+    <string name="community_views_count">%1$s 𐍅𐌹𐌴𐍅𐍃</string>
+    <string name="community_follows_count">%1$s 𐍆𐍉𐌻𐌻𐍉𐍅𐍃</string>
+    <string name="community_comments_count">%1$s 𐌺𐍉𐌼𐌼𐌴𐌽𐍄𐍃</string>
+    <string name="community_comments_sort_old">𐌰𐌻𐌸𐌴𐌹𐍃</string>
+    <string name="community_web_comments">𐍅𐌴𐌱</string>
+    <string name="community_show_replies">𐌲𐌰𐌱𐌰𐌹𐍂𐌷𐍄𐌾𐌰𐌽 𐍂𐌴𐍀𐌻𐌹𐌴𐍃 (%1$d)</string>
+    <string name="community_hide_replies">𐌲𐌰𐍆𐌹𐌻𐌷𐌰𐌽 𐍂𐌴𐍀𐌻𐌹𐌴𐍃</string>
+    <string name="community_load_more">𐌻𐍉𐌰𐌳 𐌼𐌰𐌹𐍃</string>
+    <string name="community_load_more_replies">𐌻𐍉𐌰𐌳 𐌼𐌰𐌹𐍃 𐍂𐌴𐍀𐌻𐌹𐌴𐍃</string>
+    <string name="community_replying_to">𐍂𐌴𐍀𐌻𐌾𐌹𐌲𐌲 𐌳𐌿 %1$s</string>
+    <string name="community_editing_comment">𐌴𐌳𐌹𐍄𐌹𐌲𐌲 𐌺𐍉𐌼𐌼𐌴𐌽𐍄</string>
+    <string name="community_comment_edited">(𐌴𐌳𐌹𐍄𐌴𐌳)</string>
+    <string name="community_comment_deleted">𐌺𐍉𐌼𐌼𐌴𐌽𐍄 𐌳𐌴𐌻𐌴𐍄𐌴𐌳</string>
+    <string name="community_comment_delete_confirm">𐌿𐍃𐌵𐌹𐍃𐍄𐌾𐌰𐌽 𐌸𐌹𐍃 𐌺𐍉𐌼𐌼𐌴𐌽𐍄?</string>
+    <string name="community_comment_translate">𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌾𐌰𐌽</string>
+    <string name="community_comment_show_original">𐍉𐍂𐌹𐌲𐌹𐌽𐌰𐌻</string>
+    <string name="community_spoiler_warning">𐍃𐍀𐍉𐌹𐌻𐌴𐍂 — 𐍄𐌰𐍀 𐌳𐌿 𐍂𐌴𐍅𐌴𐌰𐌻</string>
+    <string name="community_spoiler_hide">𐌲𐌰𐍆𐌹𐌻𐌷𐌰𐌽 𐍃𐍀𐍉𐌹𐌻𐌴𐍂</string>
+    <string name="community_sign_in_to_comment">𐍄𐌰𐌹𐌺𐌽𐌾𐌰𐌽 𐌹𐌽 𐌳𐌿 𐍀𐍉𐍃𐍄 𐌺𐍉𐌼𐌼𐌴𐌽𐍄𐍃 𐌰𐌹𐌸𐌸𐌰𐌿 𐍂𐌴𐌰𐌺𐍄𐌹𐍉𐌽𐍃</string>
+    <string name="community_sign_in_to_rate">𐍄𐌰𐌹𐌺𐌽𐌾𐌰𐌽 𐌹𐌽 𐌳𐌿 𐍂𐌰𐍄𐌴 𐌰𐌽𐌰 %1$s</string>
+    <string name="community_widget_ssl_error">𐍃𐌴𐌺𐌿𐍂𐌴 𐌲𐌰𐍅𐌹𐍃𐍃 𐌳𐍂𐌰𐌿𐍃 𐍆𐌰𐌿𐍂 𐌸𐌹𐍃 𐌺𐍉𐌼𐌼𐌴𐌽𐍄 𐍅𐌹𐌳𐌲𐌴𐍄. 𐌾𐍉𐌿 𐌼𐌰𐌲 𐌿𐍃𐌻𐌿𐌺𐌰𐌽 𐍃𐌰 𐌻𐌰𐌿𐍆𐍃 𐌹𐌽 𐌾𐍉𐌿𐍂 𐌱𐍂𐍉𐍅𐍃𐌴𐍂 𐌹𐌽𐍃𐍄𐌴𐌰𐌳.</string>
+    <string name="community_widget_load_error">𐌺𐍉𐌿𐌻𐌳 𐌽𐌹 𐌻𐍉𐌰𐌳 𐍃𐌰 𐌺𐍉𐌼𐌼𐌴𐌽𐍄 𐍅𐌹𐌳𐌲𐌴𐍄. 𐌺𐌰𐌿𐍃𐌾𐌰𐌽 𐌾𐍉𐌿𐍂 𐌲𐌰𐍅𐌹𐍃𐍃 𐌰𐌹𐌸𐌸𐌰𐌿 𐌿𐍃𐌻𐌿𐌺𐌰𐌽 𐌹𐍄 𐌹𐌽 𐌾𐍉𐌿𐍂 𐌱𐍂𐍉𐍅𐍃𐌴𐍂.</string>
+    <string name="community_widget_unavailable">𐍅𐌴𐌱𐍅𐌹𐌴𐍅 𐌹𐍃𐍄 𐌿𐌽𐌰𐌽𐌳𐍅𐌰𐌹𐍂𐌸𐍃 𐌰𐌽𐌰 𐌸𐌹𐍃 𐌳𐌴𐍅𐌹𐌺𐌴. 𐌿𐍃𐌻𐌿𐌺𐌰𐌽 𐌺𐍉𐌼𐌼𐌴𐌽𐍄𐍃 𐌹𐌽 𐌾𐍉𐌿𐍂 𐌱𐍂𐍉𐍅𐍃𐌴𐍂 𐌹𐌽𐍃𐍄𐌴𐌰𐌳.</string>
+    <string name="community_more_options">𐌼𐌰𐌹𐍃 𐍉𐍀𐍄𐌹𐍉𐌽𐍃</string>
+</resources>

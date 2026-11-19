@@ -1,30 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <plurals name="months_ago">
-        <item quantity="other">%1$d เดือนที่ผ่านมา</item>
-    </plurals>
-    <plurals name="chapters">
-        <item quantity="other">%1$d ตอน</item>
-    </plurals>
-    <plurals name="new_chapters">
-        <item quantity="other">%1$d ตอนใหม่</item>
-    </plurals>
-    <plurals name="items">
-        <item quantity="other">%1$d รายการ</item>
-    </plurals>
-    <plurals name="days_ago">
-        <item quantity="other">%1$d วันที่ผ่านมา</item>
-    </plurals>
-    <plurals name="minutes_ago">
-        <item quantity="other">%1$d นาทีที่แล้ว</item>
-    </plurals>
-    <plurals name="hours_ago">
-        <item quantity="other">%1$d ชั่วโมงที่แล้ว</item>
-    </plurals>
-    <plurals name="hours">
-        <item quantity="other">%1$d ชั่วโมง</item>
-    </plurals>
-    <plurals name="minutes">
-        <item quantity="other">%1$d นาที</item>
-    </plurals>
+	<plurals name="search_results_count">
+		<item quantity="one">ผลลัพธ์ %1$d</item>
+		<item quantity="other">%1$d ผลลัพธ์</item>
+	</plurals>
+	<plurals name="items">
+		<item quantity="one">%1$d รายการ</item>
+		<item quantity="other">%1$d รายการ</item>
+	</plurals>
+	<plurals name="new_chapters">
+		<item quantity="one">%1$d ตอนใหม่</item>
+		<item quantity="other">%1$d ตอนใหม่</item>
+	</plurals>
+	<plurals name="chapters">
+		<item quantity="one">%1$d ตอน</item>
+		<item quantity="other">%1$d ตอน</item>
+	</plurals>
+	<plurals name="pages">
+		<item quantity="one">%1$dหน้า</item>
+		<item quantity="other">%1$d หน้า</item>
+	</plurals>
+	<plurals name="minutes_ago">
+		<item quantity="one">%1$d นาทีที่แล้ว</item>
+		<item quantity="other">%1$d นาทีที่แล้ว</item>
+	</plurals>
+	<plurals name="hours_ago">
+		<item quantity="one">%1$d ชั่วโมงที่แล้ว</item>
+		<item quantity="other">%1$d ชั่วโมงที่แล้ว</item>
+	</plurals>
+	<plurals name="days_ago">
+		<item quantity="one">%1$d วันที่ผ่านมา</item>
+		<item quantity="other">%1$d วันที่ผ่านมา</item>
+	</plurals>
+	<plurals name="months_ago">
+		<item quantity="one">%1$d เดือนที่ผ่านมา</item>
+		<item quantity="other">%1$d เดือนที่ผ่านมา</item>
+	</plurals>
+	<plurals name="hours">
+		<item quantity="one">%1$d ชั่วโมง</item>
+		<item quantity="other">%1$d ชั่วโมง</item>
+	</plurals>
+	<plurals name="minutes">
+		<item quantity="one">%1$d นาที</item>
+		<item quantity="other">%1$d นาที</item>
+	</plurals>
+	<plurals name="sources_count">
+		<item quantity="one">ที่มา %1$d</item>
+		<item quantity="other">%1$d แหล่งที่มา</item>
+	</plurals>
 </resources>

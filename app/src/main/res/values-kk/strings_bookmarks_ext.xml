@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="bookmark_added_many">Бетбелгілер қосылды</string>
+	<string name="bookmarks_sort_newest">Ең жаңа қосылғандар</string>
+	<string name="bookmarks_sort_oldest">Ең ескі қосылғандар</string>
+	<string name="bookmarks_sort_chapter">Тарау ретімен</string>
+	<string name="search_bookmarks_hint">Серия немесе тарау бойынша іздеу</string>
+	<string name="search_bookmarked_chapters_hint">Бетбелгідегі тарауларды іздеу</string>
+	<string name="no_bookmarks_matching_query">Сәйкес бетбелгілер жоқ</string>
+	<string name="no_bookmarks_matching_summary">Ағымдағы сүзгіңізге ешбір бетбелгі сәйкес келмеді</string>
+	<string name="download_bookmarked_chapters">Бетбелгідегі тарауларды жүктеу</string>
+	<string name="download_bookmarked_only">Тек бетбелгідегі тараулар</string>
+	<string name="download_bookmarked_next_2">Бетбелгідегі + келесі 2 тарау</string>
+	<string name="download_bookmarked_next_3">Бетбелгідегі + келесі 3 тарау</string>
+	<string name="no_bookmarked_chapters_to_download">Жүктелетін бетбелгідегі тараулар жоқ</string>
+	<string name="migrate_bookmarks">Бетбелгілерді басқа дереккөзге көшіру</string>
+	<string name="bookmark_migration_choose_series">Көшірілетін серияны таңдаңыз</string>
+	<string name="bookmark_migration_searching">Белсенді дереккөздерден ізделуде…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d дереккөз · %3$d сәйкестік</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d тарау сәйкес келді</string>
+	<string name="bookmark_migration_total_chapters">%1$d тарау</string>
+	<string name="bookmark_migration_no_candidates">Үйлесімді дереккөздер табылмады</string>
+	<string name="bookmark_migration_no_candidates_summary">Ешбір қосулы дереккөз осы серия мен оның бетбелгідегі тарауларына сәйкес келмеді</string>
+	<string name="bookmark_migration_confirm">%1$d бетбелгіні \"%2$s\" (%3$s) дереккөзінен \"%4$s\" (%5$s) дереккөзіне көшіру керек пе?\nБетбелгідегі %7$d тараудың %6$d-і сәйкес келді.</string>
+	<string name="bookmark_migration_confirm_no_overlap">%1$d бетбелгіні \"%2$s\" (%3$s) дереккөзінен \"%4$s\" (%5$s) дереккөзіне көшіру керек пе?\nТараулар оқу барысына қарай шамамен анықталады.</string>
+	<string name="bookmark_migration_success">Бетбелгілер %1$s дереккөзіне көшірілді</string>
+	<string name="bookmark_migration_no_bookmarks">Бұл серия үшін бетбелгілер табылмады</string>
+	<string name="bookmark_migration_rescan">Қайта сканерлеу</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Тараулар жоқ</string>
+	<string name="bookmarks_count_badge">%1$d бетбелгі</string>
+</resources>

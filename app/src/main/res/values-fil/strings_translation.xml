@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Mga setting ng pagsasalin</string>
+	<string name="translation_toggle">I-toggle ang pagsasalin</string>
+	<string name="translation_enable">Paganahin ang pagsasalin</string>
+	<string name="translation_disable">Huwag paganahin ang pagsasalin</string>
+	<string name="translation_active">Aktibo</string>
+	<string name="translation_off">Naka-off</string>
+	<string name="translation_provider">Tagabigay ng pagsasalin</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Antas ng pag-iisip</string>
+	<string name="translation_thinking_minimal">Minimal</string>
+	<string name="translation_thinking_low">Mababa</string>
+	<string name="translation_thinking_medium">Katamtaman</string>
+	<string name="translation_thinking_high">Mataas</string>
+	<string name="translation_source_lang">Pinagmulang wika (OCR)</string>
+	<string name="translation_target_lang">Target na wika</string>
+	<string name="translation_api_keys">Gemini API key</string>
+	<string name="translation_deepl_api_keys">DeepL API keys</string>
+	<string name="translation_api_keys_hint">Paghiwalayin ang maraming key gamit ang mga kuwit o bagong linya</string>
+	<string name="translation_api_keys_empty">Walang API key na na-configure</string>
+	<string name="translation_api_key_required">Magdagdag ng Gemini API key o lumipat ng mga provider</string>
+	<string name="translation_deepl_api_key_required">Magdagdag ng DeepL API key o lumipat ng mga provider</string>
+	<string name="translation_auto_translate">Awtomatikong isalin ang mga pahina</string>
+	<string name="translation_skip_sfx">Laktawan ang mga sound effect</string>
+	<string name="translation_filter_promo">Laktawan ang mga page ng promo at credits</string>
+	<string name="translation_ocr_ready">Handa na ang modelo ng OCR</string>
+	<string name="translation_ocr_auto_ready">I-auto-detect ang OCR na handa na</string>
+	<string name="translation_ocr_not_downloaded">Mga download ng modelong OCR sa unang paggamit</string>
+	<string name="translation_ocr_download">I-download ang modelo</string>
+	<string name="translation_ocr_downloading">Dina-download ang modelo ng OCR... %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Kinikilala ang text...</string>
+	<string name="translation_translating_text">Nagsasalin...</string>
+	<string name="translation_rendering_page">Nire-render ang page...</string>
+	<string name="translation_clear_cache">I-clear ang cache ng pagsasalin</string>
+	<string name="translation_cache_cleared">Na-clear ang cache ng pagsasalin</string>
+	<string name="translation_cache_cleared_size">Na-clear ang %1$s ng mga naka-cache na pagsasalin</string>
+	<string name="translation_error_generic">Nabigo ang pagsasalin: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">Na-configure ang %1$d aktibong key</item>
+		<item quantity="other">%1$d mga aktibong key na na-configure</item>
+	</plurals>
+</resources>

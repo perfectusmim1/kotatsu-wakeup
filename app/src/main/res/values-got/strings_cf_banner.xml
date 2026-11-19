@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">𐍅𐌴𐍂𐌹𐍆𐌹𐌺𐌰𐍄𐌹𐍉𐌽 𐍂𐌴𐌵𐌹𐍂𐌴𐌳 𐍆𐌰𐌿𐍂 %1$s</string>
+    <string name="cf_banner_multiple_required">𐍅𐌴𐍂𐌹𐍆𐌹𐌺𐌰𐍄𐌹𐍉𐌽 𐍂𐌴𐌵𐌹𐍂𐌴𐌳 𐍆𐌰𐌿𐍂 %1$s (+%2$d 𐌼𐌰𐌹𐍃)</string>
+    <string name="cf_banner_solve">𐍃𐍉𐌻𐍅𐌴</string>
+    <string name="cf_banner_dismiss">𐌳𐌹𐍃𐌼𐌹𐍃𐍃</string>
+</resources>

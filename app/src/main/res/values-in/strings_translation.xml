@@ -22,7 +22,7 @@
 	<string name="translation_ocr_auto_ready">OCR deteksi otomatis siap</string>
 	<string name="translation_ocr_not_downloaded">Model OCR diunduh saat penggunaan pertama</string>
 	<string name="translation_ocr_download">Unduh model</string>
-	<string name="translation_ocr_downloading">Mengunduh model OCR… %1$d%%</string>
+	<string name="translation_ocr_downloading">Mengunduh model OCR… %1$d%%%%%%</string>
 	<string name="translation_ocr_running">Mengenali teks…</string>
 	<string name="translation_translating_text">Menerjemahkan…</string>
 	<string name="translation_rendering_page">Merender halaman…</string>
@@ -33,4 +33,12 @@
 	<plurals name="translation_api_keys_count">
 		<item quantity="other">%1$d kunci aktif dikonfigurasi</item>
 	</plurals>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_gemini_thinking_level">Tingkat pemikiran</string>
+	<string name="translation_thinking_minimal">Minimal</string>
+	<string name="translation_thinking_low">Rendah</string>
+	<string name="translation_thinking_medium">Sedang</string>
+	<string name="translation_thinking_high">Tinggi</string>
+	<string name="translation_deepl_api_keys">Kunci API DeepL</string>
+	<string name="translation_deepl_api_key_required">Tambahkan kunci API DeepL atau ganti penyedia</string>
 </resources>

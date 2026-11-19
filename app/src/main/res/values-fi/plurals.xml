@@ -36,4 +36,16 @@
         <item quantity="one">%1$d minuutti</item>
         <item quantity="other">%1$d minuuttia</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d tulos</item>
+        <item quantity="other">%1$d tulosta</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d sivu</item>
+        <item quantity="other">%1$d sivua</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d lähde</item>
+        <item quantity="other">%1$d lähdettä</item>
+    </plurals>
 </resources>

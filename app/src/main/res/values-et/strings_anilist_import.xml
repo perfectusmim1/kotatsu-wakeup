@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Impordi AniListist</string>
+    <string name="anilist_import_mode_label">Impordi sihtkoht</string>
+    <string name="anilist_import_by_status">Oleku järgi</string>
+    <string name="anilist_import_single_category">Üks kategooria</string>
+    <string name="anilist_import_new_category">Uus kategooria</string>
+    <string name="anilist_import_new_category_hint">Kategooria nimi</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">AniListi kogu laadimine…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Lõpetatud (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Imporditud: %1$d · Olemas: %2$d · Vasteta: %3$d</string>
+    <string name="anilist_import_empty">Sinu AniListi manga nimekiri on tühi.</string>
+    <string name="anilist_import_unmatched_title">Vasteta pealkirjad</string>
+    <string name="anilist_import_start">Alusta importimist</string>
+    <string name="anilist_import_retry">Impordi uuesti</string>
+    <string name="anilist_import_error_no_sources">Enne importimist luba vähemalt üks manga allikas.</string>
+</resources>

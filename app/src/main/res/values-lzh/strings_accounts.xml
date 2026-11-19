@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">源帳簿</string>
+	<string name="source_accounts_summary">已入 %1$d · 可用 %2$d</string>
+	<string name="source_accounts_summary_none">未入 · 可用 %1$d</string>
+	<string name="source_accounts_empty">無支援帳簿之源</string>
+	<string name="source_account_signed_in">已入</string>
+	<string name="source_account_not_signed_in">未入</string>
+	<string name="source_account_switch">易帳簿</string>
+	<string name="source_signed_out">已出</string>
+	<string name="sign_up">註冊</string>
+	<string name="auth_verify">核驗</string>
+	<string name="auth_refresh">刷新</string>
+	<string name="auth_not_verified_yet">尚未核驗，請畢登入而再試。</string>
+</resources>

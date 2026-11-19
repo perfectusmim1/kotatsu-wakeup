@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="community_rate">နှုန်းထား</string>
+	<string name="community_rating_title">ရပ်ရွာအဆင့်သတ်မှတ်</string>
+	<string name="community_your_rating">သင့်အဆင့်သတ်မှတ်ချက်- %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">တင်ပြပါ။</string>
+	<string name="community_rating_saved">အဆင့်သတ်မှတ်ခြင်းကို သိမ်းဆည်းထားသည်။</string>
+	<string name="community_rating_count">%1$s အဆင့်သတ်မှတ်ချက်များ</string>
+	<string name="community_views_count">%1$s ကြည့်ရှုမှု</string>
+	<string name="community_follows_count">%1$s အောက်ပါအတိုင်း</string>
+	<string name="community_comments_count">%1$s မှတ်ချက်များ</string>
+	<string name="community_comments_sort_old">အဟောင်း</string>
+	<string name="community_web_comments">ဝဘ်</string>
+	<string name="community_show_replies">ပြန်စာပြပါ (%1$d)</string>
+	<string name="community_hide_replies">ပြန်ကြားချက်များကို ဖျောက်ပါ။</string>
+	<string name="community_load_more">ပိုတင်ပါ။</string>
+	<string name="community_load_more_replies">နောက်ထပ်ပြန်စာများကို တင်ပါ။</string>
+	<string name="community_replying_to">%1$s သို့ စာပြန်နေသည်</string>
+	<string name="community_editing_comment">မှတ်ချက်ကို တည်းဖြတ်ခြင်း။</string>
+	<string name="community_comment_edited">(တည်းဖြတ်)</string>
+	<string name="community_comment_deleted">မှတ်ချက်ကို ဖျက်လိုက်ပါပြီ။</string>
+	<string name="community_comment_delete_confirm">ဤမှတ်ချက်ကို ဖျက်မလား။</string>
+	<string name="community_comment_translate">ဘာသာပြန်ပါ။</string>
+	<string name="community_comment_show_original">မူရင်း</string>
+	<string name="community_spoiler_warning">Spoiler — ဖော်ပြရန် နှိပ်ပါ။</string>
+	<string name="community_spoiler_hide">spoiler ဖျောက်ပါ။</string>
+	<string name="community_sign_in_to_comment">မှတ်ချက်များ သို့မဟုတ် တုံ့ပြန်မှုများကို ပို့စ်တင်ရန် ဝင်ရောက်ပါ။</string>
+	<string name="community_sign_in_to_rate">%1$s တွင် အဆင့်သတ်မှတ်ရန် လက်မှတ်ထိုးဝင်ပါ</string>
+	<string name="community_widget_ssl_error">ဤမှတ်ချက်ဝစ်ဂျက်အတွက် လုံခြုံသောချိတ်ဆက်မှု မအောင်မြင်ပါ။ ၎င်းအစား သင့်ဘရောက်ဆာတွင် စာမျက်နှာကို သင်ဖွင့်နိုင်သည်။</string>
+	<string name="community_widget_load_error">မှတ်ချက်ဝစ်ဂျက်ကို တင်၍မရပါ။ သင့်ချိတ်ဆက်မှုကို စစ်ဆေးပါ သို့မဟုတ် သင့်ဘရောက်ဆာတွင် ၎င်းကိုဖွင့်ပါ။</string>
+	<string name="community_widget_unavailable">WebView ကို ဤစက်ပစ္စည်းတွင် မရရှိနိုင်ပါ။ ၎င်းအစား သင့်ဘရောက်ဆာတွင် မှတ်ချက်များကိုဖွင့်ပါ။</string>
+	<string name="community_more_options">နောက်ထပ် ရွေးချယ်စရာများ</string>
+</resources>

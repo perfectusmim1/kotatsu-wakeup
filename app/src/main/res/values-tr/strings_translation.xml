@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="translation_settings">Çeviri ayarları</string>
 	<string name="translation_toggle">Çeviriyi aç/kapat</string>

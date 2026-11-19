@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">Käännösasetukset</string>
+    <string name="translation_toggle">Vaihda käännös</string>
+    <string name="translation_enable">Ota käännös käyttöön</string>
+    <string name="translation_disable">Poista käännös käytöstä</string>
+    <string name="translation_active">Käytössä</string>
+    <string name="translation_off">Pois</string>
+    <string name="translation_provider">Käännöspalvelu</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google Kääntäjä</string>
+    <string name="translation_gemini_thinking_level">Päättelytaso</string>
+    <string name="translation_thinking_minimal">Minimaalinen</string>
+    <string name="translation_thinking_low">Matala</string>
+    <string name="translation_thinking_medium">Keskitaso</string>
+    <string name="translation_thinking_high">Korkea</string>
+    <string name="translation_source_lang">Lähdekieli (OCR)</string>
+    <string name="translation_target_lang">Kohdekieli</string>
+    <string name="translation_api_keys">Gemini API -avaimet</string>
+    <string name="translation_deepl_api_keys">DeepL API -avaimet</string>
+    <string name="translation_api_keys_hint">Erota useat avaimet pilkuilla tai rivinvaihdoilla</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d aktiivinen avain määritetty</item>
+        <item quantity="other">%1$d aktiivista avainta määritetty</item>
+    </plurals>
+    <string name="translation_api_keys_empty">API-avainta ei ole määritetty</string>
+    <string name="translation_api_key_required">Lisää Gemini API -avain tai vaihda palvelua</string>
+    <string name="translation_deepl_api_key_required">Lisää DeepL API -avain tai vaihda palvelua</string>
+    <string name="translation_auto_translate">Käännä sivut automaattisesti</string>
+    <string name="translation_skip_sfx">Ohita ääniefektit</string>
+    <string name="translation_filter_promo">Ohita mainos- ja tekijäsivut</string>
+    <string name="translation_ocr_ready">OCR-malli valmis</string>
+    <string name="translation_ocr_auto_ready">Automaattinen OCR valmis</string>
+    <string name="translation_ocr_not_downloaded">OCR-malli ladataan ensimmäisellä käyttökerralla</string>
+    <string name="translation_ocr_download">Lataa malli</string>
+    <string name="translation_ocr_downloading">Ladataan OCR-mallia… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">Tunnistetaan tekstiä…</string>
+    <string name="translation_translating_text">Käännetään…</string>
+    <string name="translation_rendering_page">Renderöidään sivua…</string>
+    <string name="translation_clear_cache">Tyhjennä käännösvälimuisti</string>
+    <string name="translation_cache_cleared">Käännösvälimuisti tyhjennetty</string>
+    <string name="translation_cache_cleared_size">Tyhjennetty %1$s välimuistissa olleita käännöksiä</string>
+    <string name="translation_error_generic">Käännös epäonnistui: %1$s</string>
+</resources>

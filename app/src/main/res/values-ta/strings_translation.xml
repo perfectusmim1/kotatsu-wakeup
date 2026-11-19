@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">மொழிபெயர்ப்பு அமைப்புகள்</string>
+	<string name="translation_toggle">மொழிபெயர்ப்பை நிலைமாற்று</string>
+	<string name="translation_enable">மொழிபெயர்ப்பை இயக்கு</string>
+	<string name="translation_disable">மொழிபெயர்ப்பை முடக்கு</string>
+	<string name="translation_active">செயலில்</string>
+	<string name="translation_off">ஆஃப்</string>
+	<string name="translation_provider">மொழிபெயர்ப்பு வழங்குநர்</string>
+	<string name="translation_provider_gemini">மிதுனம்</string>
+	<string name="translation_provider_deepl">ஆழமான எல்</string>
+	<string name="translation_provider_google">கூகுள் மொழிபெயர்ப்பு</string>
+	<string name="translation_gemini_thinking_level">சிந்தனை நிலை</string>
+	<string name="translation_thinking_minimal">குறைந்தபட்சம்</string>
+	<string name="translation_thinking_low">குறைந்த</string>
+	<string name="translation_thinking_medium">நடுத்தர</string>
+	<string name="translation_thinking_high">உயர்</string>
+	<string name="translation_source_lang">மூல மொழி (OCR)</string>
+	<string name="translation_target_lang">இலக்கு மொழி</string>
+	<string name="translation_api_keys">ஜெமினி API விசைகள்</string>
+	<string name="translation_deepl_api_keys">டீப்எல் ஏபிஐ விசைகள்</string>
+	<string name="translation_api_keys_hint">பல விசைகளை காற்புள்ளிகள் அல்லது புதிய கோடுகளுடன் பிரிக்கவும்</string>
+	<string name="translation_api_keys_empty">ஏபிஐ விசை எதுவும் கட்டமைக்கப்படவில்லை</string>
+	<string name="translation_api_key_required">ஜெமினி API விசையைச் சேர்க்கவும் அல்லது வழங்குநர்களை மாற்றவும்</string>
+	<string name="translation_deepl_api_key_required">DeepL API விசையைச் சேர்க்கவும் அல்லது வழங்குநர்களை மாற்றவும்</string>
+	<string name="translation_auto_translate">பக்கங்களை தானாக மொழிபெயர்க்கவும்</string>
+	<string name="translation_skip_sfx">ஒலி விளைவுகளைத் தவிர்க்கவும்</string>
+	<string name="translation_filter_promo">விளம்பரம் &amp; கிரெடிட் பக்கங்களைத் தவிர்க்கவும்</string>
+	<string name="translation_ocr_ready">OCR மாதிரி தயார்</string>
+	<string name="translation_ocr_auto_ready">தானாக கண்டறியும் OCR தயார்</string>
+	<string name="translation_ocr_not_downloaded">முதல் பயன்பாட்டில் OCR மாதிரி பதிவிறக்கம்</string>
+	<string name="translation_ocr_download">பதிவிறக்க மாதிரி</string>
+	<string name="translation_ocr_downloading">OCR மாதிரியைப் பதிவிறக்குகிறது… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">உரையை அங்கீகரிக்கிறது…</string>
+	<string name="translation_translating_text">மொழிபெயர்க்கிறது…</string>
+	<string name="translation_rendering_page">ரெண்டரிங் பக்கம்…</string>
+	<string name="translation_clear_cache">மொழிபெயர்ப்பு தற்காலிக சேமிப்பை அழிக்கவும்</string>
+	<string name="translation_cache_cleared">மொழிபெயர்ப்பு தற்காலிக சேமிப்பு அழிக்கப்பட்டது</string>
+	<string name="translation_cache_cleared_size">%1$s தற்காலிக சேமிப்பு மொழிபெயர்ப்புகள் அழிக்கப்பட்டன</string>
+	<string name="translation_error_generic">மொழிபெயர்ப்பு தோல்வி: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d செயலில் உள்ள விசை உள்ளமைக்கப்பட்டது</item>
+		<item quantity="other">%1$d செயலில் உள்ள விசைகள் கட்டமைக்கப்பட்டுள்ளன</item>
+	</plurals>
+</resources>

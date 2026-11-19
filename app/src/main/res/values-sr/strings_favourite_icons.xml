@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">Икона</string>
+	<string name="fav_icon_default">Срце</string>
+	<string name="fav_icon_star">Звезда</string>
+	<string name="fav_icon_fire">Ватра</string>
+	<string name="fav_icon_crown">Круна</string>
+	<string name="fav_icon_book">Књига</string>
+	<string name="fav_icon_bookmark">Обележивач</string>
+	<string name="fav_icon_eye">Око</string>
+	<string name="fav_icon_bolt">Муња</string>
+	<string name="fav_icon_clock">Сат</string>
+	<string name="fav_icon_folder">Фасцикла</string>
+	<string name="fav_icon_check">Квачица</string>
+	<string name="fav_icon_sparkles">Искре</string>
+</resources>

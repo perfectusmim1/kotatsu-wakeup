@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Importálás AniListről</string>
+    <string name="anilist_import_mode_label">Importálás célja</string>
+    <string name="anilist_import_by_status">Állapot szerint</string>
+    <string name="anilist_import_single_category">Egyetlen kategória</string>
+    <string name="anilist_import_new_category">Új kategória</string>
+    <string name="anilist_import_new_category_hint">Kategória neve</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">AniList könyvtár betöltése…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Kész (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Importált: %1$d · Meglévő: %2$d · Párosítatlan: %3$d</string>
+    <string name="anilist_import_empty">Az AniList mangalistád üres.</string>
+    <string name="anilist_import_unmatched_title">Párosítatlan címek</string>
+    <string name="anilist_import_start">Importálás indítása</string>
+    <string name="anilist_import_retry">Importálás újra</string>
+    <string name="anilist_import_error_no_sources">Engedélyezz legalább egy mangaforrást az importálás előtt.</string>
+</resources>

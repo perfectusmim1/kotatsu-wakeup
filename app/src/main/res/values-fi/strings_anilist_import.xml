@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Tuo AniLististä</string>
+    <string name="anilist_import_mode_label">Tuontikohde</string>
+    <string name="anilist_import_by_status">Tilan mukaan</string>
+    <string name="anilist_import_single_category">Yksittäinen kategoria</string>
+    <string name="anilist_import_new_category">Uusi kategoria</string>
+    <string name="anilist_import_new_category_hint">Kategorian nimi</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">Ladataan AniList-kirjastoa…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Valmis (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Tuotu: %1$d · Olemassa: %2$d · Täsmäämättömät: %3$d</string>
+    <string name="anilist_import_empty">AniList-mangalistasi on tyhjä.</string>
+    <string name="anilist_import_unmatched_title">Täsmäämättömät nimikkeet</string>
+    <string name="anilist_import_start">Aloita tuonti</string>
+    <string name="anilist_import_retry">Tuo uudelleen</string>
+    <string name="anilist_import_error_no_sources">Ota käyttöön vähintään yksi mangalähde ennen tuontia.</string>
+</resources>

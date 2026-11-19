@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">Аударма баптаулары</string>
+	<string name="translation_toggle">Аударманы ауыстыру</string>
+	<string name="translation_enable">Аударманы қосу</string>
+	<string name="translation_disable">Аударманы өшіру</string>
+	<string name="translation_active">Белсенді</string>
+	<string name="translation_off">Өшірулі</string>
+	<string name="translation_provider">Аударма провайдері</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Ойлау деңгейі</string>
+	<string name="translation_thinking_minimal">Ең төмен</string>
+	<string name="translation_thinking_low">Төмен</string>
+	<string name="translation_thinking_medium">Орташа</string>
+	<string name="translation_thinking_high">Жоғары</string>
+	<string name="translation_source_lang">Түпнұсқа тілі (OCR)</string>
+	<string name="translation_target_lang">Мақсатты тіл</string>
+	<string name="translation_api_keys">Gemini API кілттері</string>
+	<string name="translation_deepl_api_keys">DeepL API кілттері</string>
+	<string name="translation_api_keys_hint">Бірнеше кілтті үтірмен немесе жаңа жолмен бөліңіз</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d белсенді кілт бапталды</item>
+		<item quantity="other">%1$d белсенді кілт бапталды</item>
+	</plurals>
+	<string name="translation_api_keys_empty">API кілті бапталмаған</string>
+	<string name="translation_api_key_required">Gemini API кілтін қосыңыз немесе провайдерді ауыстырыңыз</string>
+	<string name="translation_deepl_api_key_required">DeepL API кілтін қосыңыз немесе провайдерді ауыстырыңыз</string>
+	<string name="translation_auto_translate">Беттерді автоматты аудару</string>
+	<string name="translation_skip_sfx">Дыбыс әсерлерін өткізіп жіберу</string>
+	<string name="translation_filter_promo">Жарнама және титр беттерін өткізіп жіберу</string>
+	<string name="translation_ocr_ready">OCR моделі дайын</string>
+	<string name="translation_ocr_auto_ready">OCR автоанықтауы дайын</string>
+	<string name="translation_ocr_not_downloaded">OCR моделі алғаш рет пайдаланғанда жүктеледі</string>
+	<string name="translation_ocr_download">Модельді жүктеу</string>
+	<string name="translation_ocr_downloading">OCR моделі жүктелуде… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Мәтін танылуда…</string>
+	<string name="translation_translating_text">Аударылуда…</string>
+	<string name="translation_rendering_page">Бет өңделуде…</string>
+	<string name="translation_clear_cache">Аударма кэшін тазалау</string>
+	<string name="translation_cache_cleared">Аударма кэші тазаланды</string>
+	<string name="translation_cache_cleared_size">Кэштелген аудармалардың %1$s тазартылды</string>
+	<string name="translation_error_generic">Аударма сәтсіз аяқталды: %1$s</string>
+</resources>

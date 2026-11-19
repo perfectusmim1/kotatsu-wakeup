@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">අයිකනය</string>
+	<string name="fav_icon_default">හදවත</string>
+	<string name="fav_icon_star">තරුව</string>
+	<string name="fav_icon_fire">ගින්දර</string>
+	<string name="fav_icon_crown">ඔටුන්න</string>
+	<string name="fav_icon_book">පොත</string>
+	<string name="fav_icon_bookmark">පිටු සලකුණ</string>
+	<string name="fav_icon_eye">ඇස</string>
+	<string name="fav_icon_bolt">විදුලි කෙටීම</string>
+	<string name="fav_icon_clock">ඔරලෝසුව</string>
+	<string name="fav_icon_folder">ෆෝල්ඩරය</string>
+	<string name="fav_icon_check">හරි ලකුණ</string>
+	<string name="fav_icon_sparkles">දිලිසෙන තරු</string>
+</resources>

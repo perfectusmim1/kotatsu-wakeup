@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Uvezi s AniLista</string>
+    <string name="anilist_import_mode_label">Odredište uvoza</string>
+    <string name="anilist_import_by_status">Prema statusu</string>
+    <string name="anilist_import_single_category">Jedna kategorija</string>
+    <string name="anilist_import_new_category">Nova kategorija</string>
+    <string name="anilist_import_new_category_hint">Naziv kategorije</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">Učitavanje vaše AniList biblioteke…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Dovršeno (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Uvezeno: %1$d · Postojeće: %2$d · Neusklađeno: %3$d</string>
+    <string name="anilist_import_empty">Vaš AniList popis mangi je prazan.</string>
+    <string name="anilist_import_unmatched_title">Neusklađeni naslovi</string>
+    <string name="anilist_import_start">Pokreni uvoz</string>
+    <string name="anilist_import_retry">Uvezi ponovo</string>
+    <string name="anilist_import_error_no_sources">Omogućite barem jedan izvor mange prije uvoza.</string>
+</resources>

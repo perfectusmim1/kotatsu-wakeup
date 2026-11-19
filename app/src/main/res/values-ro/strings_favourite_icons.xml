@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">Pictogramă</string>
+	<string name="fav_icon_default">Inimă</string>
+	<string name="fav_icon_star">Stea</string>
+	<string name="fav_icon_fire">Foc</string>
+	<string name="fav_icon_crown">Coroană</string>
+	<string name="fav_icon_book">Carte</string>
+	<string name="fav_icon_bookmark">Marcaj</string>
+	<string name="fav_icon_eye">Ochi</string>
+	<string name="fav_icon_bolt">Fulger</string>
+	<string name="fav_icon_clock">Ceas</string>
+	<string name="fav_icon_folder">Dosar</string>
+	<string name="fav_icon_check">Bifă</string>
+	<string name="fav_icon_sparkles">Scântei</string>
+</resources>

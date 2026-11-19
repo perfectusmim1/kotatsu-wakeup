@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">ഐക്കൺ</string>
+	<string name="fav_icon_default">ഹൃദയം</string>
+	<string name="fav_icon_star">നക്ഷത്രം</string>
+	<string name="fav_icon_fire">തീ</string>
+	<string name="fav_icon_crown">കിരീടം</string>
+	<string name="fav_icon_book">പുസ്തകം</string>
+	<string name="fav_icon_bookmark">ബുക്ക്മാർക്ക്</string>
+	<string name="fav_icon_eye">കണ്ണ്</string>
+	<string name="fav_icon_bolt">മിന്നൽ</string>
+	<string name="fav_icon_clock">ഘടികാരം</string>
+	<string name="fav_icon_folder">ഫോൾഡർ</string>
+	<string name="fav_icon_check">ശരി</string>
+	<string name="fav_icon_sparkles">തിളക്കം</string>
+</resources>

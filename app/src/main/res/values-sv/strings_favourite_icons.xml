@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">Ikon</string>
+	<string name="fav_icon_default">Hjärta</string>
+	<string name="fav_icon_star">Stjärna</string>
+	<string name="fav_icon_fire">Eld</string>
+	<string name="fav_icon_crown">Krona</string>
+	<string name="fav_icon_book">Bok</string>
+	<string name="fav_icon_bookmark">Bokmärke</string>
+	<string name="fav_icon_eye">Öga</string>
+	<string name="fav_icon_bolt">Blixt</string>
+	<string name="fav_icon_clock">Klocka</string>
+	<string name="fav_icon_folder">Mapp</string>
+	<string name="fav_icon_check">Bock</string>
+	<string name="fav_icon_sparkles">Gnistor</string>
+</resources>

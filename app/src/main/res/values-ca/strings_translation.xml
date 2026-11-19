@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Configuració de traducció</string>
+	<string name="translation_toggle">Commuta la traducció</string>
+	<string name="translation_enable">Activa la traducció</string>
+	<string name="translation_disable">Desactiva la traducció</string>
+	<string name="translation_active">Activa</string>
+	<string name="translation_off">Desactivada</string>
+	<string name="translation_provider">Proveïdor de traducció</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Nivell de raonament</string>
+	<string name="translation_thinking_minimal">Mínim</string>
+	<string name="translation_thinking_low">Baix</string>
+	<string name="translation_thinking_medium">Mitjà</string>
+	<string name="translation_thinking_high">Alt</string>
+	<string name="translation_source_lang">Idioma d\'origen (OCR)</string>
+	<string name="translation_target_lang">Idioma de destinació</string>
+	<string name="translation_api_keys">Claus API de Gemini</string>
+	<string name="translation_deepl_api_keys">Claus API de DeepL</string>
+	<string name="translation_api_keys_hint">Separa múltiples claus amb comes o salts de línia</string>
+	<string name="translation_api_keys_empty">Cap clau API configurada</string>
+	<string name="translation_api_key_required">Afegeix una clau API de Gemini o canvia de proveïdor</string>
+	<string name="translation_deepl_api_key_required">Afegeix una clau API de DeepL o canvia de proveïdor</string>
+	<string name="translation_auto_translate">Tradueix les pàgines automàticament</string>
+	<string name="translation_skip_sfx">Omet els efectes de so</string>
+	<string name="translation_filter_promo">Omet pàgines promocionals i de crèdits</string>
+	<string name="translation_ocr_ready">Model OCR preparat</string>
+	<string name="translation_ocr_auto_ready">OCR amb detecció automàtica preparat</string>
+	<string name="translation_ocr_not_downloaded">El model OCR es baixa en el primer ús</string>
+	<string name="translation_ocr_download">Baixa el model</string>
+	<string name="translation_ocr_downloading">S\'està baixant el model OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Reconeixent el text…</string>
+	<string name="translation_translating_text">Traduint…</string>
+	<string name="translation_rendering_page">Renderitzant la pàgina…</string>
+	<string name="translation_clear_cache">Neteja la memòria cau de traduccions</string>
+	<string name="translation_cache_cleared">S\'ha netejat la memòria cau de traduccions</string>
+	<string name="translation_cache_cleared_size">S\'han alliberat %1$s de traduccions en memòria cau</string>
+	<string name="translation_error_generic">Error de traducció: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d clau activa configurada</item>
+		<item quantity="other">%1$d claus actives configurades</item>
+	</plurals>
+</resources>

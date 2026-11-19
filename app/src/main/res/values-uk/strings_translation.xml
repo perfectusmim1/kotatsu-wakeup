@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="translation_settings">Налаштування перекладу</string>
 	<string name="translation_toggle">Перемкнути переклад</string>
@@ -22,7 +22,7 @@
 	<string name="translation_ocr_auto_ready">Автоматичний OCR готовий</string>
 	<string name="translation_ocr_not_downloaded">Модель OCR завантажиться під час першого використання</string>
 	<string name="translation_ocr_download">Завантажити модель</string>
-	<string name="translation_ocr_downloading">Завантаження моделі OCR… %1$d%%</string>
+	<string name="translation_ocr_downloading">Завантаження моделі OCR… %1$d%%%%%%</string>
 	<string name="translation_ocr_running">Розпізнавання тексту…</string>
 	<string name="translation_translating_text">Переклад…</string>
 	<string name="translation_rendering_page">Відтворення сторінки…</string>
@@ -36,4 +36,12 @@
 		<item quantity="many">Налаштовано %1$d активних ключів</item>
 		<item quantity="other">Налаштовано %1$d активних ключів</item>
 	</plurals>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_gemini_thinking_level">Рівень мислення</string>
+	<string name="translation_thinking_minimal">Мінімальний</string>
+	<string name="translation_thinking_low">Низький</string>
+	<string name="translation_thinking_medium">Середній</string>
+	<string name="translation_thinking_high">Високий</string>
+	<string name="translation_deepl_api_keys">Ключі API DeepL</string>
+	<string name="translation_deepl_api_key_required">Додайте ключ API DeepL або змініть постачальника</string>
 </resources>

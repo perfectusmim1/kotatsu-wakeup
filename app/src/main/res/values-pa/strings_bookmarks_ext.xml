@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="bookmark_added_many">ਬੁੱਕਮਾਰਕ ਸ਼ਾਮਲ ਕੀਤੇ ਗਏ</string>
+	<string name="bookmarks_sort_newest">ਸਭ ਤੋਂ ਨਵਾਂ ਜੋੜਿਆ ਗਿਆ</string>
+	<string name="bookmarks_sort_oldest">ਸਭ ਤੋਂ ਪੁਰਾਣਾ ਜੋੜਿਆ ਗਿਆ</string>
+	<string name="bookmarks_sort_chapter">ਅਧਿਆਇ ਕ੍ਰਮ</string>
+	<string name="search_bookmarks_hint">ਲੜੀ ਜਾਂ ਅਧਿਆਇ ਖੋਜੋ</string>
+	<string name="search_bookmarked_chapters_hint">ਬੁੱਕਮਾਰਕ ਕੀਤੇ ਚੈਪਟਰ ਖੋਜੋ</string>
+	<string name="no_bookmarks_matching_query">ਕੋਈ ਮੇਲ ਖਾਂਦੇ ਬੁੱਕਮਾਰਕ ਨਹੀਂ ਹਨ</string>
+	<string name="no_bookmarks_matching_summary">ਕੋਈ ਵੀ ਬੁੱਕਮਾਰਕ ਤੁਹਾਡੇ ਮੌਜੂਦਾ ਫਿਲਟਰ ਨਾਲ ਮੇਲ ਨਹੀਂ ਖਾਂਦਾ</string>
+	<string name="download_bookmarked_chapters">ਬੁੱਕਮਾਰਕ ਕੀਤੇ ਚੈਪਟਰ ਡਾਊਨਲੋਡ ਕਰੋ</string>
+	<string name="download_bookmarked_only">ਸਿਰਫ਼ ਬੁੱਕਮਾਰਕ ਕੀਤੇ ਅਧਿਆਏ</string>
+	<string name="download_bookmarked_next_2">ਬੁੱਕਮਾਰਕ ਕੀਤੇ + ਅਗਲੇ 2 ਅਧਿਆਏ</string>
+	<string name="download_bookmarked_next_3">ਬੁੱਕਮਾਰਕ ਕੀਤੇ + ਅਗਲੇ 3 ਅਧਿਆਏ</string>
+	<string name="no_bookmarked_chapters_to_download">ਡਾਊਨਲੋਡ ਕਰਨ ਲਈ ਕੋਈ ਬੁੱਕਮਾਰਕ ਕੀਤੇ ਚੈਪਟਰ ਨਹੀਂ ਹਨ</string>
+	<string name="migrate_bookmarks">ਬੁੱਕਮਾਰਕਸ ਨੂੰ ਕਿਸੇ ਹੋਰ ਸਰੋਤ \'ਤੇ ਮਾਈਗ੍ਰੇਟ ਕਰੋ</string>
+	<string name="bookmark_migration_choose_series">ਮਾਈਗ੍ਰੇਟ ਕਰਨ ਲਈ ਲੜੀ ਚੁਣੋ</string>
+	<string name="bookmark_migration_searching">ਕਿਰਿਆਸ਼ੀਲ ਸਰੋਤ ਖੋਜ ਰਿਹਾ ਹੈ...</string>
+	<string name="bookmark_migration_progress">%1$d/%2$dਸਰੋਤ ·%3$dਮੈਚ</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$dਚੈਪਟਰ ਮੇਲ ਖਾਂਦੇ ਹਨ</string>
+	<string name="bookmark_migration_total_chapters">%1$dਅਧਿਆਏ</string>
+	<string name="bookmark_migration_no_candidates">ਕੋਈ ਅਨੁਕੂਲ ਸਰੋਤ ਨਹੀਂ ਮਿਲੇ</string>
+	<string name="bookmark_migration_no_candidates_summary">ਕੋਈ ਸਮਰਥਿਤ ਸਰੋਤ ਇਸ ਲੜੀ ਅਤੇ ਇਸਦੇ ਬੁੱਕਮਾਰਕ ਕੀਤੇ ਅਧਿਆਵਾਂ ਨਾਲ ਮੇਲ ਨਹੀਂ ਖਾਂਦਾ</string>
+	<string name="bookmark_migration_confirm">%1$dਬੁੱਕਮਾਰਕ(ਆਂ) ਨੂੰ\"%2$s\"(%3$s) ਤੋਂ\"%4$s\"(%5$s) ਵਿੱਚ ਮਾਈਗਰੇਟ ਕਰਨਾ ਹੈ?\n%7$dਵਿੱਚੋਂ%6$dਬੁੱਕਮਾਰਕ ਕੀਤੇ ਅਧਿਆਏ ਮੇਲ ਖਾਂਦੇ ਹਨ।</string>
+	<string name="bookmark_migration_confirm_no_overlap">%1$dਬੁੱਕਮਾਰਕ(ਆਂ) ਨੂੰ\"%2$s\"(%3$s) ਤੋਂ\"%4$s\"(%5$s) ਵਿੱਚ ਮਾਈਗਰੇਟ ਕਰਨਾ ਹੈ?\nਅਧਿਆਇ ਪੜ੍ਹਨ ਦੀ ਪ੍ਰਗਤੀ ਦੁਆਰਾ ਅਨੁਮਾਨਿਤ ਕੀਤੇ ਜਾਣਗੇ।</string>
+	<string name="bookmark_migration_success">ਬੁੱਕਮਾਰਕ%1$sਵਿੱਚ ਮਾਈਗਰੇਟ ਕੀਤੇ ਗਏ</string>
+	<string name="bookmark_migration_no_bookmarks">ਇਸ ਲੜੀ ਲਈ ਕੋਈ ਬੁੱਕਮਾਰਕ ਨਹੀਂ ਮਿਲੇ</string>
+	<string name="bookmark_migration_rescan">ਮੁੜ-ਸਕੈਨ ਕਰੋ</string>
+	<string name="bookmark_migration_unavailable_no_chapters">ਕੋਈ ਚੈਪਟਰ ਨਹੀਂ</string>
+	<string name="bookmarks_count_badge">%1$dਬੁੱਕਮਾਰਕ</string>
+</resources>

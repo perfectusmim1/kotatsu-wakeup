@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">Översättningsinställningar</string>
+	<string name="translation_toggle">Växla översättning</string>
+	<string name="translation_enable">Aktivera översättning</string>
+	<string name="translation_disable">Inaktivera översättning</string>
+	<string name="translation_active">Aktiv</string>
+	<string name="translation_off">Av</string>
+	<string name="translation_provider">Översättningsleverantör</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Översätt</string>
+	<string name="translation_gemini_thinking_level">Tänkenivå</string>
+	<string name="translation_thinking_minimal">Minimal</string>
+	<string name="translation_thinking_low">Låg</string>
+	<string name="translation_thinking_medium">Medel</string>
+	<string name="translation_thinking_high">Hög</string>
+	<string name="translation_source_lang">Källspråk (OCR)</string>
+	<string name="translation_target_lang">Målspråk</string>
+	<string name="translation_api_keys">Gemini API-nycklar</string>
+	<string name="translation_deepl_api_keys">DeepL API-nycklar</string>
+	<string name="translation_api_keys_hint">Separera flera nycklar med kommatecken eller nya rader</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d aktiv nyckel konfigurerad</item>
+		<item quantity="other">%1$d aktiva nycklar konfigurerade</item>
+	</plurals>
+	<string name="translation_api_keys_empty">Ingen API-nyckel konfigurerad</string>
+	<string name="translation_api_key_required">Lägg till en Gemini API-nyckel eller byt leverantör</string>
+	<string name="translation_deepl_api_key_required">Lägg till en DeepL API-nyckel eller byt leverantör</string>
+	<string name="translation_auto_translate">Översätt sidor automatiskt</string>
+	<string name="translation_skip_sfx">Hoppa över ljudeffekter</string>
+	<string name="translation_filter_promo">Hoppa över reklam- och eftertextsidor</string>
+	<string name="translation_ocr_ready">OCR-modell redo</string>
+	<string name="translation_ocr_auto_ready">Automatisk OCR-identifiering redo</string>
+	<string name="translation_ocr_not_downloaded">OCR-modellen laddas ner vid första användning</string>
+	<string name="translation_ocr_download">Ladda ner modell</string>
+	<string name="translation_ocr_downloading">Laddar ner OCR-modell… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Läser av text…</string>
+	<string name="translation_translating_text">Översätter…</string>
+	<string name="translation_rendering_page">Renderar sida…</string>
+	<string name="translation_clear_cache">Rensa översättningscache</string>
+	<string name="translation_cache_cleared">Översättningscache rensad</string>
+	<string name="translation_cache_cleared_size">Rensade %1$s cachade översättningar</string>
+	<string name="translation_error_generic">Översättningen misslyckades: %1$s</string>
+</resources>

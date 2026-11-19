@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">ذرائع دے کھاتے</string>
+	<string name="source_accounts_summary">%1$d لاگ ان · %2$d معاونت یافتہ</string>
+	<string name="source_accounts_summary_none">کوئی فعال سیشن نہیں · %1$d معاونت یافتہ</string>
+	<string name="source_accounts_empty">کھاتے دی معاونت والا کوئی ذریعہ نہیں لبھیا</string>
+	<string name="source_account_signed_in">لاگ ان اے</string>
+	<string name="source_account_not_signed_in">لاگ ان نہیں</string>
+	<string name="source_account_switch">کھاتہ بدلو</string>
+	<string name="source_signed_out">لاگ آؤٹ ہو گیا</string>
+	<string name="sign_up">سائن اپ کرو</string>
+	<string name="auth_verify">تصدیق کرو</string>
+	<string name="auth_refresh">تازہ کرو</string>
+	<string name="auth_not_verified_yet">سیشن دی ہالی تائیں تصدیق نہیں ہوئی۔ لاگ ان پورا کر کے دوبارہ کوشش کرو۔</string>
+</resources>

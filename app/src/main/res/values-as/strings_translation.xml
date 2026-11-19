@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">অনুবাদৰ ছেটিংছ</string>
+	<string name="translation_toggle">অনুবাদ টগল কৰক</string>
+	<string name="translation_enable">অনুবাদ সক্ৰিয় কৰক</string>
+	<string name="translation_disable">অনুবাদ নিষ্ক্ৰিয় কৰক</string>
+	<string name="translation_active">সক্ৰিয়</string>
+	<string name="translation_off">বন্ধ</string>
+	<string name="translation_provider">অনুবাদ প্ৰদানকাৰী</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google অনুবাদ</string>
+	<string name="translation_gemini_thinking_level">চিন্তাৰ স্তৰ</string>
+	<string name="translation_thinking_minimal">ন্যূনতম</string>
+	<string name="translation_thinking_low">কম</string>
+	<string name="translation_thinking_medium">মধ্যমীয়া</string>
+	<string name="translation_thinking_high">উচ্চ</string>
+	<string name="translation_source_lang">উৎস ভাষা (OCR)</string>
+	<string name="translation_target_lang">লক্ষ্য ভাষা</string>
+	<string name="translation_api_keys">Gemini API কীসমূহ</string>
+	<string name="translation_deepl_api_keys">DeepL API কীসমূহ</string>
+	<string name="translation_api_keys_hint">একাধিক কী কমা বা নতুন শাৰীৰে পৃথক কৰক</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d টা সক্ৰিয় কী কনফিগাৰ কৰা হৈছে</item>
+		<item quantity="other">%1$d টা সক্ৰিয় কী কনফিগাৰ কৰা হৈছে</item>
+	</plurals>
+	<string name="translation_api_keys_empty">কোনো API কী কনফিগাৰ কৰা হোৱা নাই</string>
+	<string name="translation_api_key_required">এটা Gemini API কী যোগ কৰক বা প্ৰদানকাৰী সলনি কৰক</string>
+	<string name="translation_deepl_api_key_required">এটা DeepL API কী যোগ কৰক বা প্ৰদানকাৰী সলনি কৰক</string>
+	<string name="translation_auto_translate">পৃষ্ঠাসমূহ স্বয়ংক্ৰিয়ভাৱে অনুবাদ কৰক</string>
+	<string name="translation_skip_sfx">শব্দৰ প্ৰভাৱ এৰাই চলক</string>
+	<string name="translation_filter_promo">প্ৰ\'ম\' &amp; ক্ৰেডিট পৃষ্ঠা এৰাই চলক</string>
+	<string name="translation_ocr_ready">OCR মডেল সাজু</string>
+	<string name="translation_ocr_auto_ready">স্বয়ং-চিনাক্ত OCR সাজু</string>
+	<string name="translation_ocr_not_downloaded">প্ৰথম ব্যৱহাৰত OCR মডেল ডাউনলোড হ\'ব</string>
+	<string name="translation_ocr_download">মডেল ডাউনলোড কৰক</string>
+	<string name="translation_ocr_downloading">OCR মডেল ডাউনলোড হৈ আছে… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">লিখনী চিনাক্ত কৰা হৈছে…</string>
+	<string name="translation_translating_text">অনুবাদ কৰা হৈছে…</string>
+	<string name="translation_rendering_page">পৃষ্ঠা ৰেণ্ডাৰ কৰা হৈছে…</string>
+	<string name="translation_clear_cache">অনুবাদৰ কেছ পৰিষ্কাৰ কৰক</string>
+	<string name="translation_cache_cleared">অনুবাদৰ কেছ পৰিষ্কাৰ কৰা হ\'ল</string>
+	<string name="translation_cache_cleared_size">কেছ কৰা অনুবাদৰ %1$s পৰিষ্কাৰ কৰা হ\'ল</string>
+	<string name="translation_error_generic">অনুবাদ বিফল হ\'ল: %1$s</string>
+</resources>

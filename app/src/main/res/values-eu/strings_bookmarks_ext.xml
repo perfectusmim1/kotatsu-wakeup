@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">Laster-markak gehitu dira</string>
+    <string name="bookmarks_sort_newest">Gehitutako berrienak</string>
+    <string name="bookmarks_sort_oldest">Gehitutako zaharrenak</string>
+    <string name="bookmarks_sort_chapter">Kapituluen ordena</string>
+    <string name="search_bookmarks_hint">Bilatu seriea edo kapitulua</string>
+    <string name="search_bookmarked_chapters_hint">Bilatu laster-markatutako kapituluak</string>
+    <string name="no_bookmarks_matching_query">Ez dago bat datorren laster-markarik</string>
+    <string name="no_bookmarks_matching_summary">Ez dago zure uneko iragazkiarekin bat datorren laster-markarik</string>
+    <string name="download_bookmarked_chapters">Deskargatu laster-markatutako kapituluak</string>
+    <string name="download_bookmarked_only">Laster-markatutako kapituluak soilik</string>
+    <string name="download_bookmarked_next_2">Laster-markatutakoa + hurrengo 2 kapituluak</string>
+    <string name="download_bookmarked_next_3">Laster-markatutakoa + hurrengo 3 kapituluak</string>
+    <string name="no_bookmarked_chapters_to_download">Ez dago deskargatzeko laster-markatutako kapitulurik</string>
+    <string name="migrate_bookmarks">Migratu laster-markak beste iturri batera</string>
+    <string name="bookmark_migration_choose_series">Aukeratu migratzeko seriea</string>
+    <string name="bookmark_migration_searching">Iturri aktiboak bilatzen…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d iturri · %3$d bat-etortze</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d kapitulu bat datoz</string>
+    <string name="bookmark_migration_total_chapters">%1$d kapitulu</string>
+    <string name="bookmark_migration_no_candidates">Ez da iturri bateragarririk aurkitu</string>
+    <string name="bookmark_migration_no_candidates_summary">Gaitutako iturririk ez dator bat serie honekin eta bere laster-markatutako kapituluekin</string>
+    <string name="bookmark_migration_confirm">Migratu %1$d laster-marka \"%2$s\" (%3$s) iturritik \"%4$s\" (%5$s) iturrira?\nLaster-markatutako %7$d kapitulutik %6$d bat datoz.</string>
+    <string name="bookmark_migration_confirm_no_overlap">Migratu %1$d laster-marka \"%2$s\" (%3$s) iturritik \"%4$s\" (%5$s) iturrira?\nKapituluak irakurketa-aurrerapenaren arabera hurbilduko dira.</string>
+    <string name="bookmark_migration_success">Laster-markak %1$s iturrira migratu dira</string>
+    <string name="bookmark_migration_no_bookmarks">Ez da laster-markarik aurkitu serie honetarako</string>
+    <string name="bookmark_migration_rescan">Bilatu berriro</string>
+    <string name="bookmark_migration_unavailable_no_chapters">Kapitulurik ez</string>
+    <string name="bookmarks_count_badge">%1$d laster-marka</string>
+</resources>

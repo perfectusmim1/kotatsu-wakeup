@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">חשבונות מקור</string>
+	<string name="source_accounts_summary">%1$d מחוברים · %2$d נתמכים</string>
+	<string name="source_accounts_summary_none">אין הפעלות פעילות · %1$d נתמכים</string>
+	<string name="source_accounts_empty">לא נמצאו מקורות התומכים בחשבונות</string>
+	<string name="source_account_signed_in">מחובר</string>
+	<string name="source_account_not_signed_in">לא מחובר</string>
+	<string name="source_account_switch">החלף חשבון</string>
+	<string name="source_signed_out">התנתק</string>
+	<string name="sign_up">הרשמה</string>
+	<string name="auth_verify">אמת</string>
+	<string name="auth_refresh">רענן</string>
+	<string name="auth_not_verified_yet">ההפעלה טרם אומתה. סיים את ההתחברות ונסה שוב.</string>
+</resources>

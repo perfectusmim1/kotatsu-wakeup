@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="import_from_anilist">Inbringen fro AniList</string>
+    <string name="anilist_import_mode_label">Inbringen destination</string>
+    <string name="anilist_import_by_status">By estat</string>
+    <string name="anilist_import_single_category">Single kinde</string>
+    <string name="anilist_import_new_category">Newe kinde</string>
+    <string name="anilist_import_new_category_hint">Kinde name</string>
+    <string name="anilist_import_new_category_default">AniList</string>
+    <string name="anilist_import_fetching">Ladynge thy AniList librarie…</string>
+    <string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+    <string name="anilist_import_completed_status">Completed (%1$d/%2$d)</string>
+    <string name="anilist_import_counts">Imported: %1$d · Existing: %2$d · Unmatched: %3$d</string>
+    <string name="anilist_import_empty">Thy AniList manga rolle is voide.</string>
+    <string name="anilist_import_unmatched_title">Unmatched titles</string>
+    <string name="anilist_import_start">Bigynnen inbringen</string>
+    <string name="anilist_import_retry">Inbringen ageyn</string>
+    <string name="anilist_import_error_no_sources">Enablen at least one manga welle biforn importing.</string>
+</resources>

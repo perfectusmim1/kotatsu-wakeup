@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">Патрабуецца праверка для %1$s</string>
+	<string name="cf_banner_multiple_required">Патрабуецца праверка для %1$s (+яшчэ %2$d)</string>
+	<string name="cf_banner_solve">Рашыць</string>
+	<string name="cf_banner_dismiss">Схаваць</string>
+</resources>

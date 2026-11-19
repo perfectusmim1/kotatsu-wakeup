@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">ការកំណត់ការបកប្រែ</string>
+	<string name="translation_toggle">បិទ/បើកការបកប្រែ</string>
+	<string name="translation_enable">បើកការបកប្រែ</string>
+	<string name="translation_disable">បិទការបកប្រែ</string>
+	<string name="translation_active">សកម្ម</string>
+	<string name="translation_off">បិទ</string>
+	<string name="translation_provider">អ្នកផ្តល់សេវាបកប្រែ</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">កម្រិតគិត</string>
+	<string name="translation_thinking_minimal">អប្បបរមា</string>
+	<string name="translation_thinking_low">ទាប</string>
+	<string name="translation_thinking_medium">មធ្យម</string>
+	<string name="translation_thinking_high">ខ្ពស់</string>
+	<string name="translation_source_lang">ភាសាដើម (OCR)</string>
+	<string name="translation_target_lang">ភាសាគោលដៅ</string>
+	<string name="translation_api_keys">សោ Gemini API</string>
+	<string name="translation_deepl_api_keys">សោ DeepL API</string>
+	<string name="translation_api_keys_hint">បំបែកសោច្រើនដោយសញ្ញាក្បៀស ឬបន្ទាត់ថ្មី</string>
+	<string name="translation_api_keys_empty">មិនទាន់បានកំណត់រចនាសម្ព័ន្ធសោ API ទេ</string>
+	<string name="translation_api_key_required">បន្ថែមសោ Gemini API ឬប្តូរអ្នកផ្តល់សេវា</string>
+	<string name="translation_deepl_api_key_required">បន្ថែមសោ DeepL API ឬប្តូរអ្នកផ្តល់សេវា</string>
+	<string name="translation_auto_translate">បកប្រែទំព័រដោយស្វ័យប្រវត្តិ</string>
+	<string name="translation_skip_sfx">រំលងបែបផែនសំឡេង</string>
+	<string name="translation_filter_promo">រំលងទំព័រផ្សព្វផ្សាយ និងក្រេឌីត</string>
+	<string name="translation_ocr_ready">ម៉ូដែល OCR រួចរាល់</string>
+	<string name="translation_ocr_auto_ready">ការរកឃើញ OCR ស្វ័យប្រវត្តិរួចរាល់</string>
+	<string name="translation_ocr_not_downloaded">ម៉ូដែល OCR ទាញយកនៅពេលប្រើដំបូង</string>
+	<string name="translation_ocr_download">ទាញយកម៉ូដែល</string>
+	<string name="translation_ocr_downloading">កំពុងទាញយកម៉ូដែល OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">កំពុងសម្គាល់អក្សរ…</string>
+	<string name="translation_translating_text">កំពុងបកប្រែ…</string>
+	<string name="translation_rendering_page">កំពុងបង្ហាញទំព័រ…</string>
+	<string name="translation_clear_cache">សម្អាតឃ្លាំងសម្ងាត់ការបកប្រែ</string>
+	<string name="translation_cache_cleared">បានសម្អាតឃ្លាំងសម្ងាត់ការបកប្រែ</string>
+	<string name="translation_cache_cleared_size">បានសម្អាត %1$s នៃឃ្លាំងសម្ងាត់ការបកប្រែ</string>
+	<string name="translation_error_generic">ការបកប្រែបានបរាជ័យ៖ %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">បានកំណត់រចនាសម្ព័ន្ធសោសកម្ម %1$d</item>
+		<item quantity="other">បានកំណត់រចនាសម្ព័ន្ធសោសកម្ម %1$d</item>
+	</plurals>
+</resources>

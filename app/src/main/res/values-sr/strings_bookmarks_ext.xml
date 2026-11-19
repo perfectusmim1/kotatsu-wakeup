@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="bookmark_added_many">Обележивачи су додати</string>
+	<string name="bookmarks_sort_newest">Најновије додато</string>
+	<string name="bookmarks_sort_oldest">Најстарије додато</string>
+	<string name="bookmarks_sort_chapter">Редослед поглавља</string>
+	<string name="search_bookmarks_hint">Претражи серијал или поглавље</string>
+	<string name="search_bookmarked_chapters_hint">Претражи обележена поглавља</string>
+	<string name="no_bookmarks_matching_query">Нема одговарајућих обележивача</string>
+	<string name="no_bookmarks_matching_summary">Ниједан обележивач не одговара тренутном филтеру</string>
+	<string name="download_bookmarked_chapters">Преузми обележена поглавља</string>
+	<string name="download_bookmarked_only">Само обележена поглавља</string>
+	<string name="download_bookmarked_next_2">Обележена + следећа 2 поглавља</string>
+	<string name="download_bookmarked_next_3">Обележена + следећа 3 поглавља</string>
+	<string name="no_bookmarked_chapters_to_download">Нема обележених поглавља за преузимање</string>
+	<string name="migrate_bookmarks">Премести обележиваче на други извор</string>
+	<string name="bookmark_migration_choose_series">Изаберите серијал за премештање</string>
+	<string name="bookmark_migration_searching">Претрага активних извора…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d извора · %3$d подударања</string>
+	<string name="bookmark_migration_chapters_matched">Подударено %1$d/%2$d поглавља</string>
+	<string name="bookmark_migration_total_chapters">%1$d поглавља</string>
+	<string name="bookmark_migration_no_candidates">Нису пронађени компатибилни извори</string>
+	<string name="bookmark_migration_no_candidates_summary">Ниједан омогућен извор не одговара овом серијалу и његовим обележеним поглављима</string>
+	<string name="bookmark_migration_confirm">Преместити %1$d обележивач(а) из \"%2$s\" (%3$s) на \"%4$s\" (%5$s)?\nПодударено %6$d од %7$d обележених поглавља.</string>
+	<string name="bookmark_migration_confirm_no_overlap">Преместити %1$d обележивач(а) из \"%2$s\" (%3$s) на \"%4$s\" (%5$s)?\nПоглавља ће бити приближно одређена према напретку читања.</string>
+	<string name="bookmark_migration_success">Обележивачи су премештени на %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">Нису пронађени обележивачи за овај серијал</string>
+	<string name="bookmark_migration_rescan">Поново скенирај</string>
+	<string name="bookmark_migration_unavailable_no_chapters">Нема поглавља</string>
+	<string name="bookmarks_count_badge">%1$d обележивача</string>
+</resources>

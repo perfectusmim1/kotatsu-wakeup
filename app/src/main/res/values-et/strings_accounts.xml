@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_accounts">Allikate kontod</string>
+    <string name="source_accounts_summary">%1$d sisse logitud · %2$d toetatud</string>
+    <string name="source_accounts_summary_none">Aktiivseid seansse pole · %1$d toetatud</string>
+    <string name="source_accounts_empty">Kontotoega allikaid ei leitud</string>
+    <string name="source_account_signed_in">Sisse logitud</string>
+    <string name="source_account_not_signed_in">Pole sisse logitud</string>
+    <string name="source_account_switch">Vaheta kontot</string>
+    <string name="source_signed_out">Välja logitud</string>
+    <string name="sign_up">Registreeru</string>
+    <string name="auth_verify">Kinnita</string>
+    <string name="auth_refresh">Värskenda</string>
+    <string name="auth_not_verified_yet">Seanss pole veel kinnitatud. Lõpeta sisselogimine ja proovi uuesti.</string>
+</resources>

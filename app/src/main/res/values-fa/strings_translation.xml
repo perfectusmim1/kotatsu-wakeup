@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">تنظیمات ترجمه</string>
+    <string name="translation_toggle">تغییر وضعیت ترجمه</string>
+    <string name="translation_enable">فعال کردن ترجمه</string>
+    <string name="translation_disable">غیرفعال کردن ترجمه</string>
+    <string name="translation_active">فعال</string>
+    <string name="translation_off">خاموش</string>
+    <string name="translation_provider">ارائه‌دهنده ترجمه</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">مترجم گوگل</string>
+    <string name="translation_gemini_thinking_level">سطح پردازش فکری</string>
+    <string name="translation_thinking_minimal">حداقل</string>
+    <string name="translation_thinking_low">کم</string>
+    <string name="translation_thinking_medium">متوسط</string>
+    <string name="translation_thinking_high">زیاد</string>
+    <string name="translation_source_lang">زبان مبدأ (OCR)</string>
+    <string name="translation_target_lang">زبان مقصد</string>
+    <string name="translation_api_keys">کلیدهای API جمینای</string>
+    <string name="translation_deepl_api_keys">کلیدهای API دیپ‌ال (DeepL)</string>
+    <string name="translation_api_keys_hint">چند کلید را با ویرگول یا خط جدید از هم جدا کنید</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d کلید فعال پیکربندی شده</item>
+        <item quantity="other">%1$d کلید فعال پیکربندی شده</item>
+    </plurals>
+    <string name="translation_api_keys_empty">هیچ کلید API پیکربندی نشده است</string>
+    <string name="translation_api_key_required">یک کلید API جمینای اضافه کنید یا ارائه‌دهنده را تغییر دهید</string>
+    <string name="translation_deepl_api_key_required">یک کلید API دیپ‌ال اضافه کنید یا ارائه‌دهنده را تغییر دهید</string>
+    <string name="translation_auto_translate">ترجمه خودکار صفحات</string>
+    <string name="translation_skip_sfx">نادیده گرفتن جلوه‌های صوتی</string>
+    <string name="translation_filter_promo">نادیده گرفتن صفحات تبلیغاتی و عوامل</string>
+    <string name="translation_ocr_ready">مدل OCR آماده است</string>
+    <string name="translation_ocr_auto_ready">تشخیص خودکار OCR آماده است</string>
+    <string name="translation_ocr_not_downloaded">مدل OCR در اولین استفاده دانلود می‌شود</string>
+    <string name="translation_ocr_download">دانلود مدل</string>
+    <string name="translation_ocr_downloading">در حال دانلود مدل OCR… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">در حال تشخیص متن…</string>
+    <string name="translation_translating_text">در حال ترجمه…</string>
+    <string name="translation_rendering_page">در حال رندر صفحه…</string>
+    <string name="translation_clear_cache">پاک کردن حافظه پنهان ترجمه</string>
+    <string name="translation_cache_cleared">حافظه پنهان ترجمه پاک شد</string>
+    <string name="translation_cache_cleared_size">%1$s از ترجمه‌های ذخیره شده پاک شد</string>
+    <string name="translation_error_generic">ترجمه ناموفق بود: %1$s</string>
+</resources>

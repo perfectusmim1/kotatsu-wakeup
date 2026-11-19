@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">చిహ్నం</string>
+	<string name="fav_icon_default">హృదయం</string>
+	<string name="fav_icon_star">నక్షత్రం</string>
+	<string name="fav_icon_fire">అగ్ని</string>
+	<string name="fav_icon_crown">కిరీటం</string>
+	<string name="fav_icon_book">పుస్తకం</string>
+	<string name="fav_icon_bookmark">బుక్‌మార్క్</string>
+	<string name="fav_icon_eye">కన్ను</string>
+	<string name="fav_icon_bolt">మెరుపు</string>
+	<string name="fav_icon_clock">గడియారం</string>
+	<string name="fav_icon_folder">ఫోల్డర్</string>
+	<string name="fav_icon_check">టిక్</string>
+	<string name="fav_icon_sparkles">మెరుపులు</string>
+</resources>

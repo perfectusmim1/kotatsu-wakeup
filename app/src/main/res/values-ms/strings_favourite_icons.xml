@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">ikon</string>
+	<string name="fav_icon_default">hati</string>
+	<string name="fav_icon_star">Bintang</string>
+	<string name="fav_icon_fire">kebakaran</string>
+	<string name="fav_icon_crown">Mahkota</string>
+	<string name="fav_icon_book">Buku</string>
+	<string name="fav_icon_bookmark">Penanda buku</string>
+	<string name="fav_icon_eye">Mata</string>
+	<string name="fav_icon_bolt">Bolt</string>
+	<string name="fav_icon_clock">jam</string>
+	<string name="fav_icon_folder">folder</string>
+	<string name="fav_icon_check">Semak</string>
+	<string name="fav_icon_sparkles">Berkilau</string>
+</resources>

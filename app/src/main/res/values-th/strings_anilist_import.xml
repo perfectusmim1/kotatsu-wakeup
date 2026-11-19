@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">นำเข้าจาก AniList</string>
+	<string name="anilist_import_mode_label">ปลายทางการนำเข้า</string>
+	<string name="anilist_import_by_status">ตามสถานะ</string>
+	<string name="anilist_import_single_category">หมวดเดียว</string>
+	<string name="anilist_import_new_category">หมวดหมู่ใหม่</string>
+	<string name="anilist_import_new_category_hint">ชื่อหมวดหมู่</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">กำลังโหลดไลบรารี AniList ของคุณ...</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">เสร็จสมบูรณ์ (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">นำเข้า: %1$d · ที่มีอยู่: %2$d · ไม่ตรงกัน: %3$d</string>
+	<string name="anilist_import_empty">รายการมังงะ AniList ของคุณว่างเปล่า</string>
+	<string name="anilist_import_unmatched_title">ชื่อที่ไม่ตรงกัน</string>
+	<string name="anilist_import_start">เริ่มการนำเข้า</string>
+	<string name="anilist_import_retry">นำเข้าอีกครั้ง</string>
+	<string name="anilist_import_error_no_sources">เปิดใช้งานแหล่งมังงะอย่างน้อยหนึ่งแหล่งก่อนที่จะนำเข้า</string>
+</resources>

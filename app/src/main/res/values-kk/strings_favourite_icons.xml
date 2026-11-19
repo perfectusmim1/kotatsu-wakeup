@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">Белгіше</string>
+	<string name="fav_icon_default">Жүрек</string>
+	<string name="fav_icon_star">Жұлдыз</string>
+	<string name="fav_icon_fire">От</string>
+	<string name="fav_icon_crown">Тәж</string>
+	<string name="fav_icon_book">Кітап</string>
+	<string name="fav_icon_bookmark">Бетбелгі</string>
+	<string name="fav_icon_eye">Көз</string>
+	<string name="fav_icon_bolt">Найзағай</string>
+	<string name="fav_icon_clock">Сағат</string>
+	<string name="fav_icon_folder">Қалта</string>
+	<string name="fav_icon_check">Белгі</string>
+	<string name="fav_icon_sparkles">Ұшқындар</string>
+</resources>

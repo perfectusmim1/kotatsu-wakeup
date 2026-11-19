@@ -135,6 +135,16 @@ internal class DynamicPriorityGate(private val maxPermits: Int = 1) {
 	} catch (_: Throwable) {
 		Float.MAX_VALUE
 	}
+
+	fun hasWaiterWithPriorityBelow(threshold: Float): Boolean = synchronized(lock) {
+		for (i in 0 until waiters.size) {
+			val w = waiters[i]
+			if (!w.cancelled && safePriority(w) < threshold) {
+				return@synchronized true
+			}
+		}
+		false
+	}
 }
 
 @ActivityRetainedScoped
@@ -189,6 +199,9 @@ class ReaderUpscaleCoordinator private constructor(
 
 	init {
 		runCatching { StripPlanner.runSelfCheck() }
+		if (initialSettings.mode == UpscaleMode.AI) {
+			scope.launch { onnxEngine.warmUpSessionIfModelReady() }
+		}
 		var prevMode = initialSettings.mode
 		settingsSnapshot
 			.drop(1)
@@ -201,6 +214,9 @@ class ReaderUpscaleCoordinator private constructor(
 						_runtimeStatus.value = UpscaleRuntimeStatus()
 					} else {
 						_runtimeStatus.update { it.copy(errorMessage = null) }
+						if (snap.mode == UpscaleMode.AI) {
+							scope.launch { onnxEngine.warmUpSessionIfModelReady() }
+						}
 					}
 				}
 			}
@@ -270,6 +286,90 @@ class ReaderUpscaleCoordinator private constructor(
 		return freed
 	}
 
+	suspend fun getCachedStripIfPresent(
+		pageIdentity: String,
+		strip: StripPlan,
+		mode: UpscaleMode,
+		srcWidth: Int,
+	): Bitmap? {
+		if (!mode.isEnabled || srcWidth <= 0) return null
+		val maxInW = if (mode == UpscaleMode.AI) StripPlanner.AI_MAX_INPUT_WIDTH else StripPlanner.DEFAULT_MAX_TEX_SIZE / 2
+		val sizeSpec = StripPlanner.computeStripOutputSize(
+			srcW = srcWidth,
+			validH = strip.validHeight,
+			maxInputWidthOverride = maxInW,
+		)
+		val cacheKey = stripCache.buildStripKey(
+			pageIdentity = pageIdentity,
+			stripIndex = strip.index,
+			mode = mode,
+			outWidth = sizeSpec.outWidth,
+			outHeight = sizeSpec.outHeight,
+		)
+		return stripCache.getCachedBitmap(cacheKey)
+	}
+
+	/**
+	 * Yapay Zekâ (AI) modunda şerit kuyrukta/çıkarımda beklerken kullanıcının bulanık sayfa görmemesi için
+	 * ~25ms içinde hızlı Anime4K önizleme şeridi üretir (priorityGate kilidine takılmaz).
+	 */
+	suspend fun renderFastPreviewStrip(
+		pageIdentity: String,
+		strip: StripPlan,
+		srcWidth: Int,
+		decodeSourceStrip: suspend () -> Bitmap?,
+	): Bitmap? {
+		if (srcWidth <= 0) return null
+		val sizeSpec = StripPlanner.computeStripOutputSize(
+			srcW = srcWidth,
+			validH = strip.validHeight,
+			maxInputWidthOverride = StripPlanner.AI_MAX_INPUT_WIDTH,
+		)
+		val previewCacheKey = stripCache.buildStripKey(
+			pageIdentity = pageIdentity,
+			stripIndex = strip.index,
+			mode = UpscaleMode.FAST,
+			outWidth = sizeSpec.outWidth,
+			outHeight = sizeSpec.outHeight,
+		)
+		stripCache.getCachedBitmap(previewCacheKey)?.let { return it }
+
+		val rawStripBitmap = decodeSourceStrip() ?: return null
+		val scaledInputBitmap = if (sizeSpec.inputWidth < rawStripBitmap.width) {
+			val targetInH = (rawStripBitmap.height * sizeSpec.inputScale).toInt().coerceAtLeast(1)
+			Bitmap.createScaledBitmap(rawStripBitmap, sizeSpec.inputWidth, targetInH, true).also {
+				if (it !== rawStripBitmap) {
+					rawStripBitmap.recycle()
+				}
+			}
+		} else {
+			rawStripBitmap
+		}
+		val scaledCropTop = (strip.cropTop * sizeSpec.inputScale).toInt().coerceAtLeast(0)
+		val scaledCropBottom = (strip.cropBottom * sizeSpec.inputScale).toInt().coerceAtLeast(0)
+		return try {
+			anime4kEngine.upscale(
+				source = scaledInputBitmap,
+				outWidth = sizeSpec.outWidth,
+				outHeight = sizeSpec.outHeight,
+				cropTop = scaledCropTop,
+				cropBottom = scaledCropBottom,
+			).also { bmp ->
+				if (!bmp.isRecycled) {
+					stripCache.putCachedBitmap(previewCacheKey, bmp)
+				}
+			}
+		} catch (ce: CancellationException) {
+			throw ce
+		} catch (_: Throwable) {
+			null
+		} finally {
+			if (!scaledInputBitmap.isRecycled) {
+				scaledInputBitmap.recycle()
+			}
+		}
+	}
+
 	suspend fun upscaleStrip(
 		pageIdentity: String,
 		strip: StripPlan,
@@ -280,9 +380,11 @@ class ReaderUpscaleCoordinator private constructor(
 	): Bitmap? {
 		if (!mode.isEnabled || srcWidth <= 0) return null
 		val generation = generationCounter.get()
+		val maxInW = if (mode == UpscaleMode.AI) StripPlanner.AI_MAX_INPUT_WIDTH else StripPlanner.DEFAULT_MAX_TEX_SIZE / 2
 		val sizeSpec = StripPlanner.computeStripOutputSize(
 			srcW = srcWidth,
 			validH = strip.validHeight,
+			maxInputWidthOverride = maxInW,
 		)
 		val cacheKey = stripCache.buildStripKey(
 			pageIdentity = pageIdentity,
@@ -312,6 +414,13 @@ class ReaderUpscaleCoordinator private constructor(
 
 				stripCache.getCachedBitmap(cacheKey)?.let { cached ->
 					return@withPermit cached
+				}
+
+				// Eğer bu şerit ekran dışı (lookahead) bir şeritse ve kuyrukta ekranda görünür bir şerit bekliyorsa hemen sırayı devret
+				if (priorityProducer() >= OFF_SCREEN_PRIORITY_PENALTY &&
+					priorityGate.hasWaiterWithPriorityBelow(ON_SCREEN_PRIORITY_THRESHOLD)
+				) {
+					return@withPermit null
 				}
 
 				val rawStripBitmap = decodeSourceStrip() ?: return@withPermit null
@@ -362,6 +471,22 @@ class ReaderUpscaleCoordinator private constructor(
 									)
 								}
 							},
+							onSessionReady = {
+								_runtimeStatus.update { current ->
+									if (current.stage.isModelBusy()) {
+										current.copy(
+											stage = if (activeJobsCount.get() > 0) UpscaleStage.PROCESSING else UpscaleStage.IDLE,
+											downloadPercent = 100,
+										)
+									} else {
+										current
+									}
+								}
+							},
+							shouldPreempt = {
+								priorityProducer() >= OFF_SCREEN_PRIORITY_PENALTY &&
+									priorityGate.hasWaiterWithPriorityBelow(ON_SCREEN_PRIORITY_THRESHOLD)
+							},
 						)
 					}
 				} finally {
@@ -400,5 +525,7 @@ class ReaderUpscaleCoordinator private constructor(
 
 	companion object {
 		const val DEFAULT_SPLIT_RATIO = 0.5f
+		const val ON_SCREEN_PRIORITY_THRESHOLD = 50_000f
+		const val OFF_SCREEN_PRIORITY_PENALTY = 100_000f
 	}
 }

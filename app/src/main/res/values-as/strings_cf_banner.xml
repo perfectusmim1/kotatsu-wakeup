@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$s ৰ বাবে সত্যাপনৰ প্ৰয়োজন</string>
+	<string name="cf_banner_multiple_required">%1$s (+%2$d অধিক) ৰ বাবে সত্যাপনৰ প্ৰয়োজন</string>
+	<string name="cf_banner_solve">সমাধান কৰক</string>
+	<string name="cf_banner_dismiss">বাতিল কৰক</string>
+</resources>

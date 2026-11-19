@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList-ൽ നിന്ന് ഇറക്കുമതി ചെയ്യുക</string>
+	<string name="anilist_import_mode_label">ഇറക്കുമതി ലക്ഷ്യസ്ഥാനം</string>
+	<string name="anilist_import_by_status">നില അനുസരിച്ച്</string>
+	<string name="anilist_import_single_category">ഒറ്റ വിഭാഗം</string>
+	<string name="anilist_import_new_category">പുതിയ വിഭാഗം</string>
+	<string name="anilist_import_new_category_hint">വിഭാഗത്തിന്റെ പേര്</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">നിങ്ങളുടെ AniList ലൈബ്രറി ലോഡ് ചെയ്യുന്നു…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">പൂർത്തിയായി (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">ഇറക്കുമതി ചെയ്തത്: %1$d · നിലവിലുള്ളത്: %2$d · പൊരുത്തപ്പെടാത്തത്: %3$d</string>
+	<string name="anilist_import_empty">നിങ്ങളുടെ AniList മാംഗ പട്ടിക ശൂന്യമാണ്.</string>
+	<string name="anilist_import_unmatched_title">പൊരുത്തപ്പെടാത്ത ശീർഷകങ്ങൾ</string>
+	<string name="anilist_import_start">ഇറക്കുമതി ആരംഭിക്കുക</string>
+	<string name="anilist_import_retry">വീണ്ടും ഇറക്കുമതി ചെയ്യുക</string>
+	<string name="anilist_import_error_no_sources">ഇറക്കുമതി ചെയ്യുന്നതിന് മുമ്പ് കുറഞ്ഞത് ഒരു മാംഗ ഉറവിടമെങ്കിലും പ്രവർത്തനക്ഷമമാക്കുക.</string>
+</resources>

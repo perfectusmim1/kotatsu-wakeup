@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">Vahvistus vaaditaan lähteelle %1$s</string>
+    <string name="cf_banner_multiple_required">Vahvistus vaaditaan lähteelle %1$s (+%2$d muuta)</string>
+    <string name="cf_banner_solve">Ratkaise</string>
+    <string name="cf_banner_dismiss">Hylkää</string>
+</resources>

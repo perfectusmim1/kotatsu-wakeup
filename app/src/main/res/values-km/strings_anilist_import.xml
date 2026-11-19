@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">នាំចូលពី AniList</string>
+	<string name="anilist_import_mode_label">គោលដៅនាំចូល</string>
+	<string name="anilist_import_by_status">តាមស្ថានភាព</string>
+	<string name="anilist_import_single_category">ប្រភេទតែមួយ</string>
+	<string name="anilist_import_new_category">ប្រភេទថ្មី</string>
+	<string name="anilist_import_new_category_hint">ឈ្មោះប្រភេទ</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">កំពុងផ្ទុកបណ្ណាល័យ AniList របស់អ្នក…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">បានបញ្ចប់ (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">បាននាំចូល៖ %1$d · មានស្រាប់៖ %2$d · មិនត្រូវគ្នា៖ %3$d</string>
+	<string name="anilist_import_empty">បញ្ជីម៉ាំងហ្គា AniList របស់អ្នកទទេ។</string>
+	<string name="anilist_import_unmatched_title">ចំណងជើងដែលមិនត្រូវគ្នា</string>
+	<string name="anilist_import_start">ចាប់ផ្តើមនាំចូល</string>
+	<string name="anilist_import_retry">នាំចូលម្តងទៀត</string>
+	<string name="anilist_import_error_no_sources">សូមបើកប្រភពម៉ាំងហ្គាយ៉ាងហោចណាស់មួយមុនពេលនាំចូល។</string>
+</resources>

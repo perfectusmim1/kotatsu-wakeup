@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">Importă din AniList</string>
+	<string name="anilist_import_mode_label">Destinație import</string>
+	<string name="anilist_import_by_status">După stare</string>
+	<string name="anilist_import_single_category">O singură categorie</string>
+	<string name="anilist_import_new_category">Categorie nouă</string>
+	<string name="anilist_import_new_category_hint">Numele categoriei</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Se încarcă biblioteca ta AniList…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Finalizat (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Importate: %1$d · Existente: %2$d · Nepotrivite: %3$d</string>
+	<string name="anilist_import_empty">Lista ta de manga AniList este goală.</string>
+	<string name="anilist_import_unmatched_title">Titluri nepotrivite</string>
+	<string name="anilist_import_start">Începe importul</string>
+	<string name="anilist_import_retry">Importă din nou</string>
+	<string name="anilist_import_error_no_sources">Activează cel puțin o sursă de manga înainte de a importa.</string>
+</resources>

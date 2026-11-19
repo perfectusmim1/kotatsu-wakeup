@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cf_banner_required">Vèrificacion nècèssèra per %1$s</string>
+    <string name="cf_banner_multiple_required">Vèrificacion nècèssèra per %1$s (+%2$d ôtros)</string>
+    <string name="cf_banner_solve">Rèsoudre</string>
+    <string name="cf_banner_dismiss">Ignorâr</string>
+</resources>

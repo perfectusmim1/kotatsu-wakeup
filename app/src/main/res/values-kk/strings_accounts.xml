@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">Дереккөз тіркелгілері</string>
+	<string name="source_accounts_summary">%1$d кірген · %2$d қолдау көрсетіледі</string>
+	<string name="source_accounts_summary_none">Белсенді сеанстар жоқ · %1$d қолдау көрсетіледі</string>
+	<string name="source_accounts_empty">Тіркелгі қолдауы бар дереккөздер табылмады</string>
+	<string name="source_account_signed_in">Кірді</string>
+	<string name="source_account_not_signed_in">Кірмеген</string>
+	<string name="source_account_switch">Тіркелгіні ауыстыру</string>
+	<string name="source_signed_out">Шықты</string>
+	<string name="sign_up">Тіркелу</string>
+	<string name="auth_verify">Растау</string>
+	<string name="auth_refresh">Жаңарту</string>
+	<string name="auth_not_verified_yet">Сеанс әлі расталмады. Кіруді аяқтап, қайталап көріңіз.</string>
+</resources>

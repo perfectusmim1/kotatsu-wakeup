@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">বুকমাৰ্কসমূহ যোগ কৰা হ\'ল</string>
+	<string name="bookmarks_sort_newest">শেহতীয়াকৈ যোগ কৰা</string>
+	<string name="bookmarks_sort_oldest">পুৰণিকৈ যোগ কৰা</string>
+	<string name="bookmarks_sort_chapter">অধ্যায়ৰ ক্ৰম</string>
+	<string name="search_bookmarks_hint">চিৰিজ বা অধ্যায় সন্ধান কৰক</string>
+	<string name="search_bookmarked_chapters_hint">বুকমাৰ্ক কৰা অধ্যায়সমূহ সন্ধান কৰক</string>
+	<string name="no_bookmarks_matching_query">কোনো মিল থকা বুকমাৰ্ক নাই</string>
+	<string name="no_bookmarks_matching_summary">আপোনাৰ বৰ্তমানৰ ফিল্টাৰৰ সৈতে কোনো বুকমাৰ্ক মিল খোৱা নাই</string>
+	<string name="download_bookmarked_chapters">বুকমাৰ্ক কৰা অধ্যায়সমূহ ডাউনলোড কৰক</string>
+	<string name="download_bookmarked_only">কেৱল বুকমাৰ্ক কৰা অধ্যায়সমূহ</string>
+	<string name="download_bookmarked_next_2">বুকমাৰ্ক কৰা + পৰৱৰ্তী ২ টা অধ্যায়</string>
+	<string name="download_bookmarked_next_3">বুকমাৰ্ক কৰা + পৰৱৰ্তী ৩ টা অধ্যায়</string>
+	<string name="no_bookmarked_chapters_to_download">ডাউনলোড কৰিবলৈ কোনো বুকমাৰ্ক কৰা অধ্যায় নাই</string>
+	<string name="migrate_bookmarks">বুকমাৰ্কসমূহ আন উৎসলৈ স্থানান্তৰ কৰক</string>
+	<string name="bookmark_migration_choose_series">স্থানান্তৰ কৰিবলৈ চিৰিজ বাছনি কৰক</string>
+	<string name="bookmark_migration_searching">সক্ৰিয় উৎসসমূহ সন্ধান কৰা হৈছে…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d উৎস · %3$d টা মিল</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d টা অধ্যায় মিলিছে</string>
+	<string name="bookmark_migration_total_chapters">%1$d টা অধ্যায়</string>
+	<string name="bookmark_migration_no_candidates">কোনো সুসংগত উৎস পোৱা নগ\'ল</string>
+	<string name="bookmark_migration_no_candidates_summary">কোনো সক্ৰিয় উৎস এই চিৰিজ আৰু ইয়াৰ বুকমাৰ্ক কৰা অধ্যায়সমূহৰ সৈতে মিল খোৱা নাই</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s) ৰ পৰা \"%4$s\" (%5$s) লৈ %1$d টা বুকমাৰ্ক স্থানান্তৰ কৰিবনে?\n%7$d টা বুকমাৰ্ক কৰা অধ্যায়ৰ ভিতৰত %6$d টা মিলিছে।</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s) ৰ পৰা \"%4$s\" (%5$s) লৈ %1$d টা বুকমাৰ্ক স্থানান্তৰ কৰিবনে?\nপঢ়াৰ অগ্ৰগতি অনুসৰি অধ্যায়সমূহ অনুমান কৰা হ\'ব।</string>
+	<string name="bookmark_migration_success">বুকমাৰ্কসমূহ %1$s লৈ স্থানান্তৰ কৰা হ\'ল</string>
+	<string name="bookmark_migration_no_bookmarks">এই চিৰিজৰ বাবে কোনো বুকমাৰ্ক পোৱা নগ\'ল</string>
+	<string name="bookmark_migration_rescan">পুনৰ স্কেন কৰক</string>
+	<string name="bookmark_migration_unavailable_no_chapters">কোনো অধ্যায় নাই</string>
+	<string name="bookmarks_count_badge">%1$d টা বুকমাৰ্ক</string>
+</resources>

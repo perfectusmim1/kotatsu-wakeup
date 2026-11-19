@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">Conturi surse</string>
+	<string name="source_accounts_summary">%1$d conectate · %2$d compatibile</string>
+	<string name="source_accounts_summary_none">Nicio sesiune activă · %1$d compatibile</string>
+	<string name="source_accounts_empty">Nu s-au găsit surse cu suport pentru conturi</string>
+	<string name="source_account_signed_in">Conectat</string>
+	<string name="source_account_not_signed_in">Neconectat</string>
+	<string name="source_account_switch">Schimbă contul</string>
+	<string name="source_signed_out">Deconectat</string>
+	<string name="sign_up">Înregistrare</string>
+	<string name="auth_verify">Verifică</string>
+	<string name="auth_refresh">Reîmprospătează</string>
+	<string name="auth_not_verified_yet">Sesiunea nu a fost verificată încă. Finalizează conectarea și încearcă din nou.</string>
+</resources>

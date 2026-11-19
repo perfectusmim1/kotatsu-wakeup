@@ -36,4 +36,16 @@
         <item quantity="one">%1$d ঘন্টা</item>
         <item quantity="other">%1$d টি ঘন্টা</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$dটি ফলাফল</item>
+        <item quantity="other">%1$dটি ফলাফল</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d পৃষ্ঠা</item>
+        <item quantity="other">%1$d পৃষ্ঠা</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$dটি উৎস</item>
+        <item quantity="other">%1$dটি উৎস</item>
+    </plurals>
 </resources>

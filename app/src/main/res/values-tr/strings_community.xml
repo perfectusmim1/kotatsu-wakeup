@@ -1,24 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-	<!-- Existing community keys missing from values-tr/strings.xml -->
-	<string name="community">Topluluk</string>
-	<string name="community_rating">Okuyucu puanı</string>
-	<string name="community_rating_summary">%1$s · %2$s</string>
-	<string name="community_rating_none">Henüz puan yok</string>
-	<string name="community_comments">Yorumlar</string>
-	<string name="community_comments_sort_top">En İyi</string>
-	<string name="community_comments_sort_new">Yeni</string>
-	<string name="community_comments_empty">Henüz yorum yok. İlk yorumu sen yap.</string>
-	<string name="community_comment_hint">Yorum ekle</string>
-	<string name="community_comment_spoiler">Spoiler</string>
-	<string name="community_comment_send">Gönder</string>
-	<string name="community_comment_reply">Yanıtla</string>
-	<string name="community_comment_edit">Düzenle</string>
-	<string name="community_comment_delete">Sil</string>
-	<string name="community_comment_like">Beğen</string>
-	<string name="community_comment_dislike">Beğenme</string>
-
-	<!-- New community UI strings -->
 	<string name="community_rate">Puan ver</string>
 	<string name="community_rating_title">Topluluk puanı</string>
 	<string name="community_your_rating">Puanın: %1$d / %2$d</string>

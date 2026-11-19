@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$s ପାଇଁ ଯାଞ୍ଚ ଆବଶ୍ୟକ</string>
+	<string name="cf_banner_multiple_required">%1$s (+%2$d ଅଧିକ) ପାଇଁ ଯାଞ୍ଚ ଆବଶ୍ୟକ</string>
+	<string name="cf_banner_solve">ସମାଧାନ କରନ୍ତୁ</string>
+	<string name="cf_banner_dismiss">ବାତିଲ୍ କରନ୍ତୁ</string>
+</resources>

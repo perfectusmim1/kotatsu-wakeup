@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">Імпарт з AniList</string>
+	<string name="anilist_import_mode_label">Месца імпарту</string>
+	<string name="anilist_import_by_status">Па статусе</string>
+	<string name="anilist_import_single_category">Адна катэгорыя</string>
+	<string name="anilist_import_new_category">Новая катэгорыя</string>
+	<string name="anilist_import_new_category_hint">Назва катэгорыі</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Загрузка вашай бібліятэкі AniList…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Завершана (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Імпартавана: %1$d · Існуюць: %2$d · Без супадзення: %3$d</string>
+	<string name="anilist_import_empty">Ваш спіс мангі на AniList пусты.</string>
+	<string name="anilist_import_unmatched_title">Тайтлы без супадзення</string>
+	<string name="anilist_import_start">Пачаць імпарт</string>
+	<string name="anilist_import_retry">Імпартаваць зноў</string>
+	<string name="anilist_import_error_no_sources">Уключыце хаця б адну крыніцу мангі перад імпартам.</string>
+</resources>

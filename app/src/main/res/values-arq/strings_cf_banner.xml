@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">مطلوب تحقق لـ %1$s</string>
+	<string name="cf_banner_multiple_required">مطلوب تحقق لـ %1$s (+%2$d أخرى)</string>
+	<string name="cf_banner_solve">حل</string>
+	<string name="cf_banner_dismiss">إغلاق</string>
+</resources>

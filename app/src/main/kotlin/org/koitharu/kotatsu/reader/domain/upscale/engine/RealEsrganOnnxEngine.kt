@@ -56,6 +56,14 @@ class RealEsrganOnnxEngine @Inject constructor(
 		onProgress: (suspend (percent: Int) -> Unit)? = null,
 	): File = modelManager.ensureModel(onProgress)
 
+	suspend fun warmUpSessionIfModelReady() {
+		if (!modelManager.isModelReady()) return
+		runCatching {
+			val modelFile = modelManager.ensureModel(null)
+			loadOrReuseSession(modelFile, onInitializing = null)
+		}
+	}
+
 	suspend fun upscale(
 		source: Bitmap,
 		outWidth: Int,
@@ -64,6 +72,8 @@ class RealEsrganOnnxEngine @Inject constructor(
 		cropBottom: Int,
 		onDownloadProgress: (suspend (percent: Int) -> Unit)? = null,
 		onInitializing: (suspend () -> Unit)? = null,
+		onSessionReady: (suspend () -> Unit)? = null,
+		shouldPreempt: (() -> Boolean)? = null,
 	): Bitmap {
 		val srcW = source.width
 		val srcH = source.height
@@ -71,10 +81,14 @@ class RealEsrganOnnxEngine @Inject constructor(
 
 		val modelFile = modelManager.ensureModel(onDownloadProgress)
 		val ortSession = loadOrReuseSession(modelFile, onInitializing)
+		onSessionReady?.invoke()
 
 		return inferenceMutex.withLock {
 			withContext(Dispatchers.Default) {
 				currentCoroutineContext().ensureActive()
+				if (shouldPreempt?.invoke() == true) {
+					throw kotlinx.coroutines.CancellationException("Preempted by visible strip before inference")
+				}
 
 				val srcPixelCount = srcW * srcH
 				var srcPixels = reusedSrcPixels
@@ -139,6 +153,9 @@ class RealEsrganOnnxEngine @Inject constructor(
 					if (tIdx > 0) {
 						yield()
 						currentCoroutineContext().ensureActive()
+						if (shouldPreempt?.invoke() == true) {
+							throw kotlinx.coroutines.CancellationException("Preempted by visible strip between tiles")
+						}
 					}
 
 					val tile = tiles[tIdx]
@@ -242,12 +259,13 @@ class RealEsrganOnnxEngine @Inject constructor(
 		return@withLock withContext(Dispatchers.IO) {
 			val options = OrtSession.SessionOptions().apply {
 				val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(2)
-				setIntraOpNumThreads(min(4, max(2, cores / 2)))
+				setIntraOpNumThreads(cores.coerceIn(4, 8))
 				setInterOpNumThreads(1)
 				setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL)
 				setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
 				setMemoryPatternOptimization(true)
 				setCPUArenaAllocator(true)
+				runCatching { addXnnpack(emptyMap()) }
 			}
 			try {
 				current?.close()

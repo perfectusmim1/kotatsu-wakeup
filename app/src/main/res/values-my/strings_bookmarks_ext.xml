@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="bookmark_added_many">စာညှပ်များ ထည့်ထားသည်။</string>
+	<string name="bookmarks_sort_newest">အသစ်ဆုံးထည့်ထားသည်။</string>
+	<string name="bookmarks_sort_oldest">အသက်အကြီးဆုံးက ဆက်ပြောသည်။</string>
+	<string name="bookmarks_sort_chapter">အခန်းအော်ဒါ</string>
+	<string name="search_bookmarks_hint">စီးရီး သို့မဟုတ် အခန်းကို ရှာဖွေပါ။</string>
+	<string name="search_bookmarked_chapters_hint">မှတ်သားထားသော အခန်းများကို ရှာပါ။</string>
+	<string name="no_bookmarks_matching_query">ကိုက်ညီသော စာညှပ်များ မရှိပါ။</string>
+	<string name="no_bookmarks_matching_summary">သင့်လက်ရှိ စစ်ထုတ်မှုနှင့် ကိုက်ညီသော စာညှပ်များမရှိပါ။</string>
+	<string name="download_bookmarked_chapters">မှတ်သားထားသော အခန်းများကို ဒေါင်းလုဒ်လုပ်ပါ။</string>
+	<string name="download_bookmarked_only">မှတ်သားထားသော အခန်းများသာ</string>
+	<string name="download_bookmarked_next_2">မှတ်သားထားပြီး + နောက်အခန်း 2 ခု</string>
+	<string name="download_bookmarked_next_3">မှတ်သားထားပြီး + နောက်အခန်း 3 ခု</string>
+	<string name="no_bookmarked_chapters_to_download">ဒေါင်းလုဒ်လုပ်ရန် မှတ်သားထားသော အခန်းများမရှိပါ။</string>
+	<string name="migrate_bookmarks">စာညှပ်များကို အခြားအရင်းအမြစ်သို့ ရွှေ့ပြောင်းပါ။</string>
+	<string name="bookmark_migration_choose_series">ပြောင်းရွှေ့ရန် စီးရီးများကို ရွေးပါ။</string>
+	<string name="bookmark_migration_searching">လက်ရှိ အရင်းအမြစ်များကို ရှာဖွေနေသည်...</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d အရင်းအမြစ် · %3$d ကိုက်ညီမှု</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d အခန်းများ လိုက်ဖက်ပါသည်။</string>
+	<string name="bookmark_migration_total_chapters">%1$d အခန်းများ</string>
+	<string name="bookmark_migration_no_candidates">ကိုက်ညီမှုရှိသော အရင်းအမြစ်များ မတွေ့ပါ။</string>
+	<string name="bookmark_migration_no_candidates_summary">ဤစီးရီးနှင့် ၎င်း၏စာညှပ်ထားသော အခန်းများနှင့် ကိုက်ညီသည့် ဖွင့်ထားသည့် အရင်းအမြစ် မရှိပါ။</string>
+	<string name="bookmark_migration_confirm">%1$d bookmark(s) ကို \"%2$s\" (%3$s) မှ \"%4$s\" (%5$s) သို့ ရွှေ့ပြောင်းပါ။\n%6$d မှ %7$d bookmarked chapters နှင့် ကိုက်ညီပါသည်။</string>
+	<string name="bookmark_migration_confirm_no_overlap">%1$d bookmark(s) ကို \"%2$s\" (%3$s) မှ \"%4$s\" (%5$s) သို့ ပြောင်းရွှေ့မည်လား။\nအခန်းများကို ဖတ်ရှုခြင်းတိုးတက်မှုဖြင့် ခန့်မှန်းပေးပါမည်။</string>
+	<string name="bookmark_migration_success">စာညှပ်များကို %1$s သို့ ပြောင်းရွှေ့ထားသည်</string>
+	<string name="bookmark_migration_no_bookmarks">ဤစီးရီးအတွက် စာညှပ်များ မတွေ့ပါ။</string>
+	<string name="bookmark_migration_rescan">ပြန်စကင်န်လုပ်ပါ။</string>
+	<string name="bookmark_migration_unavailable_no_chapters">အခန်းများမရှိပါ။</string>
+	<string name="bookmarks_count_badge">%1$d စာညှပ်များ</string>
+</resources>

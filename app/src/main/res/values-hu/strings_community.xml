@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="community_rate">Értékelés</string>
+    <string name="community_rating_title">Közösségi értékelés</string>
+    <string name="community_your_rating">Értékelésed: %1$d / %2$d</string>
+    <string name="community_your_rating_short">★%1$d</string>
+    <string name="community_submit_rating">Beküldés</string>
+    <string name="community_rating_saved">Értékelés elmentve</string>
+    <string name="community_rating_count">%1$s értékelés</string>
+    <string name="community_views_count">%1$s megtekintés</string>
+    <string name="community_follows_count">%1$s követés</string>
+    <string name="community_comments_count">%1$s hozzászólás</string>
+    <string name="community_comments_sort_old">Régiek</string>
+    <string name="community_web_comments">Web</string>
+    <string name="community_show_replies">Válaszok megjelenítése (%1$d)</string>
+    <string name="community_hide_replies">Válaszok elrejtése</string>
+    <string name="community_load_more">Továbbiak betöltése</string>
+    <string name="community_load_more_replies">További válaszok betöltése</string>
+    <string name="community_replying_to">Válasz neki: %1$s</string>
+    <string name="community_editing_comment">Hozzászólás szerkesztése</string>
+    <string name="community_comment_edited">(szerkesztve)</string>
+    <string name="community_comment_deleted">Hozzászólás törölve</string>
+    <string name="community_comment_delete_confirm">Törlöd ezt a hozzászólást?</string>
+    <string name="community_comment_translate">Fordítás</string>
+    <string name="community_comment_show_original">Eredeti</string>
+    <string name="community_spoiler_warning">Spoiler — Koppints a felfedéshez</string>
+    <string name="community_spoiler_hide">Spoiler elrejtése</string>
+    <string name="community_sign_in_to_comment">Jelentkezz be hozzászóláshoz vagy reagáláshoz</string>
+    <string name="community_sign_in_to_rate">Jelentkezz be az értékeléshez itt: %1$s</string>
+    <string name="community_widget_ssl_error">A biztonságos kapcsolat sikertelen ennél a hozzászólás-modulnál. Megnyithatod az oldalt a böngésződben is.</string>
+    <string name="community_widget_load_error">Nem sikerült betölteni a hozzászólás-modult. Ellenőrizd a kapcsolatot, vagy nyisd meg böngészőben.</string>
+    <string name="community_widget_unavailable">A WebView nem érhető el ezen az eszközön. Nyisd meg a hozzászólásokat a böngészőben.</string>
+    <string name="community_more_options">További lehetőségek</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">బుక్‌మార్క్‌లు జోడించబడ్డాయి</string>
+	<string name="bookmarks_sort_newest">కొత్తవి ముందుగా</string>
+	<string name="bookmarks_sort_oldest">పాతవి ముందుగా</string>
+	<string name="bookmarks_sort_chapter">అధ్యాయ క్రమం</string>
+	<string name="search_bookmarks_hint">సిరీస్ లేదా అధ్యాయాన్ని శోధించండి</string>
+	<string name="search_bookmarked_chapters_hint">బుక్‌మార్క్ చేసిన అధ్యాయాలను శోధించండి</string>
+	<string name="no_bookmarks_matching_query">సరిపోలే బుక్‌మార్క్‌లు లేవు</string>
+	<string name="no_bookmarks_matching_summary">మీ ప్రస్తుత ఫిల్టర్‌కు సరిపోలే బుక్‌మార్క్‌లు ఏవీ లేవు</string>
+	<string name="download_bookmarked_chapters">బుక్‌మార్క్ చేసిన అధ్యాయాలను డౌన్‌లోడ్ చేయండి</string>
+	<string name="download_bookmarked_only">బుక్‌మార్క్ చేసిన అధ్యాయాలు మాత్రమే</string>
+	<string name="download_bookmarked_next_2">బుక్‌మార్క్ చేసినవి + తదుపరి 2 అధ్యాయాలు</string>
+	<string name="download_bookmarked_next_3">బుక్‌మార్క్ చేసినవి + తదుపరి 3 అధ్యాయాలు</string>
+	<string name="no_bookmarked_chapters_to_download">డౌన్‌లోడ్ చేయడానికి బుక్‌మార్క్ చేసిన అధ్యాయాలు లేవు</string>
+	<string name="migrate_bookmarks">బుక్‌మార్క్‌లను మరొక మూలానికి మార్చండి</string>
+	<string name="bookmark_migration_choose_series">మార్చడానికి సిరీస్‌ను ఎంచుకోండి</string>
+	<string name="bookmark_migration_searching">క్రియాశీల మూలాలను శోధిస్తోంది…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d మూలాలు · %3$d సరిపోలికలు</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d అధ్యాయాలు సరిపోలాయి</string>
+	<string name="bookmark_migration_total_chapters">%1$d అధ్యాయాలు</string>
+	<string name="bookmark_migration_no_candidates">అనుకూలమైన మూలాలు కనుగొనబడలేదు</string>
+	<string name="bookmark_migration_no_candidates_summary">ప్రారంభించబడిన ఏ మూలం కూడా ఈ సిరీస్ మరియు దాని బుక్‌మార్క్ చేసిన అధ్యాయాలతో సరిపోలలేదు</string>
+	<string name="bookmark_migration_confirm">\"%2$s\" (%3$s) నుండి \"%4$s\" (%5$s)కి %1$d బుక్‌మార్క్‌(ల)ను మార్చాలా?\n%7$d బుక్‌మార్క్ చేసిన అధ్యాయాలలో %6$d సరిపోలాయి.</string>
+	<string name="bookmark_migration_confirm_no_overlap">\"%2$s\" (%3$s) నుండి \"%4$s\" (%5$s)కి %1$d బుక్‌మార్క్‌(ల)ను మార్చాలా?\nచదివిన పురోగతి ఆధారంగా అధ్యాయాలు అంచనా వేయబడతాయి.</string>
+	<string name="bookmark_migration_success">బుక్‌మార్క్‌లు %1$sకి మార్చబడ్డాయి</string>
+	<string name="bookmark_migration_no_bookmarks">ఈ సిరీస్ కోసం బుక్‌మార్క్‌లు కనుగొనబడలేదు</string>
+	<string name="bookmark_migration_rescan">మళ్లీ స్కాన్ చేయండి</string>
+	<string name="bookmark_migration_unavailable_no_chapters">అధ్యాయాలు లేవు</string>
+	<string name="bookmarks_count_badge">%1$d బుక్‌మార్క్‌లు</string>
+</resources>

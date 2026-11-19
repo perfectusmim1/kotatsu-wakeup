@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">Ацаніць</string>
+	<string name="community_rating_title">Ацэнка супольнасці</string>
+	<string name="community_your_rating">Ваша ацэнка: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Адправіць</string>
+	<string name="community_rating_saved">Ацэнка захавана</string>
+	<string name="community_rating_count">%1$s ацэнак</string>
+	<string name="community_views_count">%1$s праглядаў</string>
+	<string name="community_follows_count">%1$s падпісчыкаў</string>
+	<string name="community_comments_count">%1$s каментарыяў</string>
+	<string name="community_comments_sort_old">Старыя</string>
+	<string name="community_web_comments">Вэб</string>
+	<string name="community_show_replies">Паказаць адказы (%1$d)</string>
+	<string name="community_hide_replies">Схаваць адказы</string>
+	<string name="community_load_more">Загрузіць яшчэ</string>
+	<string name="community_load_more_replies">Загрузіць яшчэ адказы</string>
+	<string name="community_replying_to">Адказ для %1$s</string>
+	<string name="community_editing_comment">Рэдагаванне каментарыя</string>
+	<string name="community_comment_edited">(зменена)</string>
+	<string name="community_comment_deleted">Каментарый выдалены</string>
+	<string name="community_comment_delete_confirm">Выдаліць гэты каментарый?</string>
+	<string name="community_comment_translate">Перакласці</string>
+	<string name="community_comment_show_original">Арыгінал</string>
+	<string name="community_spoiler_warning">Спойлер — Націсніце, каб паказаць</string>
+	<string name="community_spoiler_hide">Схаваць спойлер</string>
+	<string name="community_sign_in_to_comment">Увайдзіце, каб пакідаць каментарыі або рэакцыі</string>
+	<string name="community_sign_in_to_rate">Увайдзіце, каб ацаніць на %1$s</string>
+	<string name="community_widget_ssl_error">Памылка бяспечнага злучэння для гэтага віджэта каментарыяў. Замест гэтага вы можаце адкрыць старонку ў браўзеры.</string>
+	<string name="community_widget_load_error">Не ўдалося загрузіць віджэт каментарыяў. Праверце злучэнне або адкрыйце яго ў браўзеры.</string>
+	<string name="community_widget_unavailable">WebView недаступны на гэтай прыладзе. Адкрыйце каментарыі ў браўзеры.</string>
+	<string name="community_more_options">Больш опцый</string>
+</resources>

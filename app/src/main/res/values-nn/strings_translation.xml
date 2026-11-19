@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Oversettelsesinnstillinger</string>
+	<string name="translation_toggle">Slå av/på oversettelse</string>
+	<string name="translation_enable">Aktiver oversettelse</string>
+	<string name="translation_disable">Deaktiver oversettelse</string>
+	<string name="translation_active">Aktiv</string>
+	<string name="translation_off">Av</string>
+	<string name="translation_provider">Oversettelsesleverandør</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Oversetter</string>
+	<string name="translation_gemini_thinking_level">Tenkenivå</string>
+	<string name="translation_thinking_minimal">Minimalt</string>
+	<string name="translation_thinking_low">Lavt</string>
+	<string name="translation_thinking_medium">Middels</string>
+	<string name="translation_thinking_high">Høyt</string>
+	<string name="translation_source_lang">Kildespråk (OCR)</string>
+	<string name="translation_target_lang">Målspråk</string>
+	<string name="translation_api_keys">Gemini API-nøkler</string>
+	<string name="translation_deepl_api_keys">DeepL API-nøkler</string>
+	<string name="translation_api_keys_hint">Skill flere nøkler med komma eller linjeskift</string>
+	<string name="translation_api_keys_empty">Ingen API-nøkkel konfigurert</string>
+	<string name="translation_api_key_required">Legg til en Gemini API-nøkkel eller bytt leverandør</string>
+	<string name="translation_deepl_api_key_required">Legg til en DeepL API-nøkkel eller bytt leverandør</string>
+	<string name="translation_auto_translate">Oversett sider automatisk</string>
+	<string name="translation_skip_sfx">Hopp over lydeffekter</string>
+	<string name="translation_filter_promo">Hopp over reklame- og rulletekstsider</string>
+	<string name="translation_ocr_ready">OCR-modell klar</string>
+	<string name="translation_ocr_auto_ready">Automatisk OCR-gjenkjenning klar</string>
+	<string name="translation_ocr_not_downloaded">OCR-modell lastes ned ved første bruk</string>
+	<string name="translation_ocr_download">Last ned modell</string>
+	<string name="translation_ocr_downloading">Laster ned OCR-modell… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Gjenkjenner tekst…</string>
+	<string name="translation_translating_text">Oversetter…</string>
+	<string name="translation_rendering_page">Gjengir side…</string>
+	<string name="translation_clear_cache">Tøm oversettelsesbuffer</string>
+	<string name="translation_cache_cleared">Oversettelsesbuffer tømt</string>
+	<string name="translation_cache_cleared_size">Tømte %1$s av bufrede oversettelser</string>
+	<string name="translation_error_generic">Oversettelse mislyktes: %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d aktiv nøkkel konfigurert</item>
+		<item quantity="other">%1$d aktive nøkler konfigurert</item>
+	</plurals>
+</resources>

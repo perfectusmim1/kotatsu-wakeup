@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">Cal verificació per a %1</string>
+	<string name="cf_banner_multiple_required">Cal verificació per a %1 (+%2 més)</string>
+	<string name="cf_banner_solve">Resol</string>
+	<string name="cf_banner_dismiss">Descarta</string>
+</resources>

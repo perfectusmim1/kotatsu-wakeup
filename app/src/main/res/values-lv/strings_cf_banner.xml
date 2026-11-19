@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">Nepieciešama verifikācija %1$s</string>
+	<string name="cf_banner_multiple_required">Nepieciešama verifikācija %1$s (+%2$d vairāk)</string>
+	<string name="cf_banner_solve">Atrisināt</string>
+	<string name="cf_banner_dismiss">Atlaist</string>
+</resources>

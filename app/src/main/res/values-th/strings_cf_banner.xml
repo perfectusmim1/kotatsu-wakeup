@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">ต้องมีการยืนยันสำหรับ %1$s</string>
+	<string name="cf_banner_multiple_required">ต้องมีการยืนยันสำหรับ %1$s (+%2$d เพิ่มเติม)</string>
+	<string name="cf_banner_solve">แก้</string>
+	<string name="cf_banner_dismiss">ยกเลิก</string>
+</resources>

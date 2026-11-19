@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="source_accounts">Kɔnti nga be fin’n</string>
+	<string name="source_accounts_summary">%1$d be wluli lɔ · %2$d be suannin be bo</string>
+	<string name="source_accounts_summary_none">Be diman junman · %1$d be suan be bo</string>
+	<string name="source_accounts_empty">Be wunman lika fi mɔ be kwla uka be konte’n su’n</string>
+	<string name="source_account_signed_in">Ɔ wluli lɔ</string>
+	<string name="source_account_not_signed_in">Be wluman lɔ</string>
+	<string name="source_account_switch">Kaci ɔ konte</string>
+	<string name="source_signed_out">Be fiteli</string>
+	<string name="sign_up">Klɛ ɔ dunman</string>
+	<string name="auth_verify">Nian sɛ</string>
+	<string name="auth_refresh">Refresh</string>
+	<string name="auth_not_verified_yet">Session be nin a nianman su. Wie wlu lɔ kɔkun yo ekun.</string>
+</resources>

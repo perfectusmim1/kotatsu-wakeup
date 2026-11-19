@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">ဘာသာပြန်ခြင်း ဆက်တင်များ</string>
+	<string name="translation_toggle">ဘာသာပြန်ခြင်းကို ပြောင်းပါ။</string>
+	<string name="translation_enable">ဘာသာပြန်ခြင်းကို ဖွင့်ပါ။</string>
+	<string name="translation_disable">ဘာသာပြန်ခြင်းကို ပိတ်ပါ။</string>
+	<string name="translation_active">လှုပ်လှုပ်ရှားရှား</string>
+	<string name="translation_off">ပိတ်သည်။</string>
+	<string name="translation_provider">ဘာသာပြန်ပေးသူ</string>
+	<string name="translation_provider_gemini">မေထုန်</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">ဂူဂယ်လ်ဘာသာပြန်</string>
+	<string name="translation_gemini_thinking_level">တွေးခေါ်မှုအဆင့်</string>
+	<string name="translation_thinking_minimal">အနည်းငယ်မျှသာ</string>
+	<string name="translation_thinking_low">နိမ့်သည်။</string>
+	<string name="translation_thinking_medium">လတ်</string>
+	<string name="translation_thinking_high">မြင့်သည်။</string>
+	<string name="translation_source_lang">အရင်းအမြစ်ဘာသာစကား (OCR)</string>
+	<string name="translation_target_lang">ပစ်မှတ်ဘာသာစကား</string>
+	<string name="translation_api_keys">Gemini API သော့များ</string>
+	<string name="translation_deepl_api_keys">DeepL API သော့များ</string>
+	<string name="translation_api_keys_hint">ကီးများစွာကို ကော်မာ သို့မဟုတ် လိုင်းအသစ်များဖြင့် ခွဲပါ။</string>
+	<string name="translation_api_keys_empty">API သော့ကို ပြင်ဆင်သတ်မှတ်ထားခြင်းမရှိပါ။</string>
+	<string name="translation_api_key_required">Gemini API သော့ကိုထည့်ပါ သို့မဟုတ် ပံ့ပိုးပေးသူများကို ပြောင်းပါ။</string>
+	<string name="translation_deepl_api_key_required">DeepL API သော့ကိုထည့်ပါ သို့မဟုတ် ပံ့ပိုးပေးသူများကို ပြောင်းပါ။</string>
+	<string name="translation_auto_translate">စာမျက်နှာများကို အလိုအလျောက် ဘာသာပြန်ပါ။</string>
+	<string name="translation_skip_sfx">အသံသက်ရောက်မှုများကို ကျော်ပါ။</string>
+	<string name="translation_filter_promo">ပရိုမိုးရှင်းနှင့် ခရက်ဒစ်စာမျက်နှာများကို ကျော်ပါ။</string>
+	<string name="translation_ocr_ready">OCR မော်ဒယ် အဆင်သင့်ဖြစ်ပါပြီ။</string>
+	<string name="translation_ocr_auto_ready">OCR ကို အလိုအလျောက် သိရှိရန် အဆင်သင့်ဖြစ်ပါပြီ။</string>
+	<string name="translation_ocr_not_downloaded">OCR မော်ဒယ်လ်ကို ပထမဆုံးအသုံးပြုပြီး ဒေါင်းလုဒ်လုပ်ပါ။</string>
+	<string name="translation_ocr_download">မော်ဒယ်ကို ဒေါင်းလုဒ်လုပ်ပါ။</string>
+	<string name="translation_ocr_downloading">OCR မော်ဒယ်ကို ဒေါင်းလုဒ်လုပ်နေသည်… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">စာသားကို အသိအမှတ်ပြုနေသည်...</string>
+	<string name="translation_translating_text">ဘာသာပြန်နေသည်...</string>
+	<string name="translation_rendering_page">ပုံဖေါ်ခြင်းစာမျက်နှာ…</string>
+	<string name="translation_clear_cache">ဘာသာပြန်ချက် ကက်ရှ်ကို ရှင်းလင်းပါ။</string>
+	<string name="translation_cache_cleared">ဘာသာပြန်ချက် ကက်ရှ်ကို ရှင်းပြီးပါပြီ။</string>
+	<string name="translation_cache_cleared_size">ကက်ရှ်လုပ်ထားသော ဘာသာပြန်ဆိုမှုများ၏ %1$s ကို ရှင်းလင်းထားသည်။</string>
+	<string name="translation_error_generic">ဘာသာပြန်ဆိုမှု မအောင်မြင်ပါ- %1$s</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d လက်ရှိသော့ကို ပြင်ဆင်သတ်မှတ်ထားသည်။</item>
+		<item quantity="other">%1$d လက်ရှိသော့များကို ပြင်ဆင်သတ်မှတ်ထားသည်။</item>
+	</plurals>
+</resources>

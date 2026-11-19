@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="bookmark_added_many">Закладки добавлены</string>
 	<string name="bookmarks_sort_newest">Сначала новые</string>

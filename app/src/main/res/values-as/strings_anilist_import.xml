@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList ৰ পৰা আমদানি কৰক</string>
+	<string name="anilist_import_mode_label">আমদানিৰ গন্তব্যস্থান</string>
+	<string name="anilist_import_by_status">স্থিতি অনুসৰি</string>
+	<string name="anilist_import_single_category">একক শ্ৰেণী</string>
+	<string name="anilist_import_new_category">নতুন শ্ৰেণী</string>
+	<string name="anilist_import_new_category_hint">শ্ৰেণীৰ নাম</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">আপোনাৰ AniList লাইব্ৰেৰী লোড হৈ আছে…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">সম্পূৰ্ণ হ\'ল (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">আমদানি: %1$d · বিদ্যমান: %2$d · অমিল: %3$d</string>
+	<string name="anilist_import_empty">আপোনাৰ AniList মাংগা তালিকা খালী।</string>
+	<string name="anilist_import_unmatched_title">অমিল শিৰোনামসমূহ</string>
+	<string name="anilist_import_start">আমদানি আৰম্ভ কৰক</string>
+	<string name="anilist_import_retry">পুনৰ আমদানি কৰক</string>
+	<string name="anilist_import_error_no_sources">আমদানি কৰাৰ আগতে অন্ততঃ এটা মাংগা উৎস সক্ৰিয় কৰক।</string>
+</resources>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">Tõlke seaded</string>
+    <string name="translation_toggle">Lülita tõlge sisse/välja</string>
+    <string name="translation_enable">Luba tõlge</string>
+    <string name="translation_disable">Keela tõlge</string>
+    <string name="translation_active">Aktiivne</string>
+    <string name="translation_off">Väljas</string>
+    <string name="translation_provider">Tõlketeenuse pakkuja</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google Translate</string>
+    <string name="translation_gemini_thinking_level">Mõtlemistase</string>
+    <string name="translation_thinking_minimal">Minimaalne</string>
+    <string name="translation_thinking_low">Madal</string>
+    <string name="translation_thinking_medium">Keskmine</string>
+    <string name="translation_thinking_high">Kõrge</string>
+    <string name="translation_source_lang">Lähtekeel (OCR)</string>
+    <string name="translation_target_lang">Sihtkeel</string>
+    <string name="translation_api_keys">Gemini API võtmed</string>
+    <string name="translation_deepl_api_keys">DeepL API võtmed</string>
+    <string name="translation_api_keys_hint">Eralda mitu võtit koma või reavahetusega</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d aktiivne võti seadistatud</item>
+        <item quantity="other">%1$d aktiivset võtit seadistatud</item>
+    </plurals>
+    <string name="translation_api_keys_empty">API võti pole seadistatud</string>
+    <string name="translation_api_key_required">Lisa Gemini API võti või vaheta teenusepakkujat</string>
+    <string name="translation_deepl_api_key_required">Lisa DeepL API võti või vaheta teenusepakkujat</string>
+    <string name="translation_auto_translate">Tõlgi leheküljed automaatselt</string>
+    <string name="translation_skip_sfx">Jäta heliefektid vahele</string>
+    <string name="translation_filter_promo">Jäta reklaami- ja tiitrilehed vahele</string>
+    <string name="translation_ocr_ready">OCR-mudel on valmis</string>
+    <string name="translation_ocr_auto_ready">Automaatse tuvastuse OCR on valmis</string>
+    <string name="translation_ocr_not_downloaded">OCR-mudel laaditakse alla esimesel kasutuskorral</string>
+    <string name="translation_ocr_download">Laadi mudel alla</string>
+    <string name="translation_ocr_downloading">OCR-mudeli allalaadimine… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">Teksti tuvastamine…</string>
+    <string name="translation_translating_text">Tõlkimine…</string>
+    <string name="translation_rendering_page">Lehekülje renderdamine…</string>
+    <string name="translation_clear_cache">Tühjenda tõlke vahemälu</string>
+    <string name="translation_cache_cleared">Tõlke vahemälu tühjendatud</string>
+    <string name="translation_cache_cleared_size">Vabastati %1$s vahemällu salvestatud tõlkeid</string>
+    <string name="translation_error_generic">Tõlkimine ebaõnnestus: %1$s</string>
+</resources>

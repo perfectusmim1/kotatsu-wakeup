@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">Ikona</string>
+    <string name="fav_icon_default">Srce</string>
+    <string name="fav_icon_star">Zvijezda</string>
+    <string name="fav_icon_fire">Vatra</string>
+    <string name="fav_icon_crown">Kruna</string>
+    <string name="fav_icon_book">Knjiga</string>
+    <string name="fav_icon_bookmark">Zabilješka</string>
+    <string name="fav_icon_eye">Oko</string>
+    <string name="fav_icon_bolt">Munja</string>
+    <string name="fav_icon_clock">Sat</string>
+    <string name="fav_icon_folder">Mapa</string>
+    <string name="fav_icon_check">Kvačica</string>
+    <string name="fav_icon_sparkles">Iskre</string>
+</resources>

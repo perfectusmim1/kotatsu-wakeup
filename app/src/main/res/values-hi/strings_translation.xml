@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">अनुवाद सेटिंग्स</string>
+    <string name="translation_toggle">अनुवाद टॉगल करें</string>
+    <string name="translation_enable">अनुवाद सक्षम करें</string>
+    <string name="translation_disable">अनुवाद अक्षम करें</string>
+    <string name="translation_active">सक्रिय</string>
+    <string name="translation_off">बंद</string>
+    <string name="translation_provider">अनुवाद प्रदाता</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google अनुवाद</string>
+    <string name="translation_gemini_thinking_level">सोच स्तर</string>
+    <string name="translation_thinking_minimal">न्यूनतम</string>
+    <string name="translation_thinking_low">कम</string>
+    <string name="translation_thinking_medium">मध्यम</string>
+    <string name="translation_thinking_high">उच्च</string>
+    <string name="translation_source_lang">स्रोत भाषा (OCR)</string>
+    <string name="translation_target_lang">लक्ष्य भाषा</string>
+    <string name="translation_api_keys">Gemini API कुंजियाँ</string>
+    <string name="translation_deepl_api_keys">DeepL API कुंजियाँ</string>
+    <string name="translation_api_keys_hint">एकाधिक कुंजियों को अल्पविराम या नई पंक्तियों से अलग करें</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d सक्रिय कुंजी कॉन्फ़िगर की गई</item>
+        <item quantity="other">%1$d सक्रिय कुंजियाँ कॉन्फ़िगर की गईं</item>
+    </plurals>
+    <string name="translation_api_keys_empty">कोई API कुंजी कॉन्फ़िगर नहीं है</string>
+    <string name="translation_api_key_required">एक Gemini API कुंजी जोड़ें या प्रदाता बदलें</string>
+    <string name="translation_deepl_api_key_required">एक DeepL API कुंजी जोड़ें या प्रदाता बदलें</string>
+    <string name="translation_auto_translate">पृष्ठों का स्वतः अनुवाद करें</string>
+    <string name="translation_skip_sfx">ध्वनि प्रभाव छोड़ें</string>
+    <string name="translation_filter_promo">प्रचार और क्रेडिट पृष्ठ छोड़ें</string>
+    <string name="translation_ocr_ready">OCR मॉडल तैयार है</string>
+    <string name="translation_ocr_auto_ready">ऑटो-डिटेक्ट OCR तैयार है</string>
+    <string name="translation_ocr_not_downloaded">OCR मॉडल पहली बार उपयोग करने पर डाउनलोड होता है</string>
+    <string name="translation_ocr_download">मॉडल डाउनलोड करें</string>
+    <string name="translation_ocr_downloading">OCR मॉडल डाउनलोड हो रहा है… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">टेक्स्ट पहचाना जा रहा है…</string>
+    <string name="translation_translating_text">अनुवाद हो रहा है…</string>
+    <string name="translation_rendering_page">पृष्ठ रेंडर हो रहा है…</string>
+    <string name="translation_clear_cache">अनुवाद कैश साफ़ करें</string>
+    <string name="translation_cache_cleared">अनुवाद कैश साफ़ किया गया</string>
+    <string name="translation_cache_cleared_size">कैश किए गए अनुवादों का %1$s साफ़ किया गया</string>
+    <string name="translation_error_generic">अनुवाद विफल: %1$s</string>
+</resources>

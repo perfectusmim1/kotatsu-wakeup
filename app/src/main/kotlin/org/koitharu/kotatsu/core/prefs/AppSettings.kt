@@ -663,7 +663,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		set(value) = prefs.edit { putString(KEY_READER_UPSCALE_MODE, value.id) }
 
 	var isUpscaleHighResEnabled: Boolean
-		get() = prefs.getBoolean(KEY_READER_UPSCALE_HIGH_RES, false)
+		get() = prefs.getBoolean(KEY_READER_UPSCALE_HIGH_RES, true)
 		set(value) = prefs.edit { putBoolean(KEY_READER_UPSCALE_HIGH_RES, value) }
 
 	fun getUpscaleSettingsSnapshot(): UpscaleSettingsSnapshot = UpscaleSettingsSnapshot(

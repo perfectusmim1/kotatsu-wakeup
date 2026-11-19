@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Nastavení překladu</string>
+	<string name="translation_toggle">Přepnout překlad</string>
+	<string name="translation_enable">Povolit překlad</string>
+	<string name="translation_disable">Zakázat překlad</string>
+	<string name="translation_active">Aktivní</string>
+	<string name="translation_off">Vypnuto</string>
+	<string name="translation_provider">Poskytovatel překladu</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Překladač Google</string>
+	<string name="translation_gemini_thinking_level">Úroveň uvažování</string>
+	<string name="translation_thinking_minimal">Minimální</string>
+	<string name="translation_thinking_low">Nízká</string>
+	<string name="translation_thinking_medium">Střední</string>
+	<string name="translation_thinking_high">Vysoká</string>
+	<string name="translation_source_lang">Zdrojový jazyk (OCR)</string>
+	<string name="translation_target_lang">Cílový jazyk</string>
+	<string name="translation_api_keys">API klíče Gemini</string>
+	<string name="translation_deepl_api_keys">API klíče DeepL</string>
+	<string name="translation_api_keys_hint">Více klíčů oddělte čárkou nebo novým řádkem</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">Nastaven %1$d aktivní klíč</item>
+		<item quantity="few">Nastaveny %1$d aktivní klíče</item>
+		<item quantity="many">Nastaveno %1$d aktivního klíče</item>
+		<item quantity="other">Nastaveno %1$d aktivních klíčů</item>
+	</plurals>
+	<string name="translation_api_keys_empty">Není nastaven žádný API klíč</string>
+	<string name="translation_api_key_required">Přidejte API klíč Gemini nebo změňte poskytovatele</string>
+	<string name="translation_deepl_api_key_required">Přidejte API klíč DeepL nebo změňte poskytovatele</string>
+	<string name="translation_auto_translate">Automaticky překládat stránky</string>
+	<string name="translation_skip_sfx">Přeskakovat zvukové efekty</string>
+	<string name="translation_filter_promo">Přeskakovat promo stránky a titulky</string>
+	<string name="translation_ocr_ready">Model OCR připraven</string>
+	<string name="translation_ocr_auto_ready">Automatická detekce OCR připravena</string>
+	<string name="translation_ocr_not_downloaded">Model OCR se stáhne při prvním použití</string>
+	<string name="translation_ocr_download">Stáhnout model</string>
+	<string name="translation_ocr_downloading">Stahování modelu OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Rozpoznávání textu…</string>
+	<string name="translation_translating_text">Překládání…</string>
+	<string name="translation_rendering_page">Vykreslování stránky…</string>
+	<string name="translation_clear_cache">Vymazat mezipaměť překladu</string>
+	<string name="translation_cache_cleared">Mezipaměť překladu vymazána</string>
+	<string name="translation_cache_cleared_size">Vymazáno %1$s uložených překladů</string>
+	<string name="translation_error_generic">Chyba překladu: %1$s</string>
+</resources>

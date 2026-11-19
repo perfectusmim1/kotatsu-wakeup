@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="source_accounts">Аккаунты источников</string>
 	<string name="source_accounts_summary">%1$d выполнено · %2$d поддерживается</string>

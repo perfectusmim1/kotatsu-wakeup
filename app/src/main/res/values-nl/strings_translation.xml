@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="translation_settings">Vertaalinstellingen</string>
+	<string name="translation_toggle">Vertaling aan/uit</string>
+	<string name="translation_enable">Vertaling inschakelen</string>
+	<string name="translation_disable">Vertaling uitschakelen</string>
+	<string name="translation_active">Actief</string>
+	<string name="translation_off">Uit</string>
+	<string name="translation_provider">Vertaalprovider</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Translate</string>
+	<string name="translation_gemini_thinking_level">Denkniveau</string>
+	<string name="translation_thinking_minimal">Minimaal</string>
+	<string name="translation_thinking_low">Laag</string>
+	<string name="translation_thinking_medium">Gemiddeld</string>
+	<string name="translation_thinking_high">Hoog</string>
+	<string name="translation_source_lang">Brontaal (OCR)</string>
+	<string name="translation_target_lang">Doeltaal</string>
+	<string name="translation_api_keys">Gemini API-sleutels</string>
+	<string name="translation_deepl_api_keys">DeepL API-sleutels</string>
+	<string name="translation_api_keys_hint">Scheid meerdere sleutels met komma\'s of nieuwe regels</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">%1$d actieve sleutel geconfigureerd</item>
+		<item quantity="other">%1$d actieve sleutels geconfigureerd</item>
+	</plurals>
+	<string name="translation_api_keys_empty">Geen API-sleutel geconfigureerd</string>
+	<string name="translation_api_key_required">Voeg een Gemini API-sleutel toe of kies een andere provider</string>
+	<string name="translation_deepl_api_key_required">Voeg een DeepL API-sleutel toe of kies een andere provider</string>
+	<string name="translation_auto_translate">Pagina\'s automatisch vertalen</string>
+	<string name="translation_skip_sfx">Geluidseffecten overslaan</string>
+	<string name="translation_filter_promo">Promo- en colofonpagina\'s overslaan</string>
+	<string name="translation_ocr_ready">OCR-model gereed</string>
+	<string name="translation_ocr_auto_ready">Automatische OCR-detectie gereed</string>
+	<string name="translation_ocr_not_downloaded">OCR-model wordt gedownload bij eerste gebruik</string>
+	<string name="translation_ocr_download">Model downloaden</string>
+	<string name="translation_ocr_downloading">OCR-model downloaden… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Tekst herkennen…</string>
+	<string name="translation_translating_text">Vertalen…</string>
+	<string name="translation_rendering_page">Pagina renderen…</string>
+	<string name="translation_clear_cache">Vertaalcache wissen</string>
+	<string name="translation_cache_cleared">Vertaalcache gewist</string>
+	<string name="translation_cache_cleared_size">%1$s aan gecachte vertalingen gewist</string>
+	<string name="translation_error_generic">Vertaling mislukt: %1$s</string>
+</resources>

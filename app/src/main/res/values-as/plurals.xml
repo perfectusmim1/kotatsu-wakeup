@@ -36,4 +36,16 @@
         <item quantity="one">%1$d নতুন অধ্যায়</item>
         <item quantity="other">%1$d নতুন অধ্যাযয়সমূহ</item>
     </plurals>
+	<plurals name="pages">
+		<item quantity="one">%1$d পৃষ্ঠা</item>
+		<item quantity="other">%1$d পৃষ্ঠাসমূহ</item>
+	</plurals>
+	<plurals name="search_results_count">
+		<item quantity="one">%1$d ফলাফল</item>
+		<item quantity="other">%1$d ফলাফলসমূহ</item>
+	</plurals>
+	<plurals name="sources_count">
+		<item quantity="one">%1$d উৎস</item>
+		<item quantity="other">%1$d উৎসসমূহ</item>
+	</plurals>
 </resources>

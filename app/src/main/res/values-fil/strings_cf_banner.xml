@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">Kinakailangan ang pag-verify para sa %1$s</string>
+	<string name="cf_banner_multiple_required">Kinakailangan ang pag-verify para sa %1$s (+%2$d higit pa)</string>
+	<string name="cf_banner_solve">Lutasin</string>
+	<string name="cf_banner_dismiss">I-dismiss</string>
+</resources>

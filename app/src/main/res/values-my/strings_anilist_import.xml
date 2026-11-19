@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">AniList မှတင်သွင်းခြင်း။</string>
+	<string name="anilist_import_mode_label">တင်သွင်းမည့်နေရာ</string>
+	<string name="anilist_import_by_status">အဆင့်အတန်းအလိုက်</string>
+	<string name="anilist_import_single_category">လူပျိုအမျိုးအစား</string>
+	<string name="anilist_import_new_category">အမျိုးအစားအသစ်</string>
+	<string name="anilist_import_new_category_hint">အမျိုးအစားအမည်</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">သင်၏ AniList ဒစ်ဂျစ်တိုက်ကို ဖွင့်နေသည်…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">ပြီးပါပြီ (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">တင်သွင်းထားသည်- %1$d · ရှိပြီးသား- %2$d · တူညီမှုမရှိသော- %3$d</string>
+	<string name="anilist_import_empty">သင်၏ AniList manga စာရင်းသည် ဗလာဖြစ်နေသည်။</string>
+	<string name="anilist_import_unmatched_title">မယှဉ်နိုင်သော ခေါင်းစဉ်များ</string>
+	<string name="anilist_import_start">စတင်တင်သွင်းပါ။</string>
+	<string name="anilist_import_retry">ထပ်မံတင်သွင်းသည်။</string>
+	<string name="anilist_import_error_no_sources">မတင်သွင်းမီ အနည်းဆုံး မန်ဂါရင်းမြစ်တစ်ခုကို ဖွင့်ပါ။</string>
+</resources>

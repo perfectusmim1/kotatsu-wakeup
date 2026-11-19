@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="source_accounts">图源账号</string>
 	<string name="source_accounts_summary">%1$d 个已登录 · %2$d 个支持</string>

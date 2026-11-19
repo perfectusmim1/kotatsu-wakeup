@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">Källkonton</string>
+	<string name="source_accounts_summary">%1$d inloggade · %2$d stöds</string>
+	<string name="source_accounts_summary_none">Inga aktiva sessioner · %1$d stöds</string>
+	<string name="source_accounts_empty">Inga källor med kontostöd hittades</string>
+	<string name="source_account_signed_in">Inloggad</string>
+	<string name="source_account_not_signed_in">Ej inloggad</string>
+	<string name="source_account_switch">Byt konto</string>
+	<string name="source_signed_out">Utloggad</string>
+	<string name="sign_up">Registrera dig</string>
+	<string name="auth_verify">Verifiera</string>
+	<string name="auth_refresh">Uppdatera</string>
+	<string name="auth_not_verified_yet">Sessionen är inte verifierad ännu. Slutför inloggningen och försök igen.</string>
+</resources>

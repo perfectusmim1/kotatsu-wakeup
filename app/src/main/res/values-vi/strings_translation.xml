@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
 	<string name="translation_settings">Cài đặt dịch thuật</string>
 	<string name="translation_toggle">Bật/tắt dịch</string>
@@ -22,7 +22,7 @@
 	<string name="translation_ocr_auto_ready">OCR tự nhận diện đã sẵn sàng</string>
 	<string name="translation_ocr_not_downloaded">Mô hình OCR sẽ tải xuống khi dùng lần đầu</string>
 	<string name="translation_ocr_download">Tải mô hình</string>
-	<string name="translation_ocr_downloading">Đang tải mô hình OCR… %1$d%%</string>
+	<string name="translation_ocr_downloading">Đang tải mô hình OCR… %1$d%%%%%%</string>
 	<string name="translation_ocr_running">Đang nhận diện chữ…</string>
 	<string name="translation_translating_text">Đang dịch…</string>
 	<string name="translation_rendering_page">Đang kết xuất trang…</string>
@@ -33,4 +33,12 @@
 	<plurals name="translation_api_keys_count">
 		<item quantity="other">Đã cấu hình %1$d khóa hoạt động</item>
 	</plurals>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_gemini_thinking_level">Mức độ suy nghĩ</string>
+	<string name="translation_thinking_minimal">Tối thiểu</string>
+	<string name="translation_thinking_low">Thấp</string>
+	<string name="translation_thinking_medium">Trung bình</string>
+	<string name="translation_thinking_high">Cao</string>
+	<string name="translation_deepl_api_keys">Khóa API DeepL</string>
+	<string name="translation_deepl_api_key_required">Thêm khóa API DeepL hoặc chuyển nhà cung cấp</string>
 </resources>

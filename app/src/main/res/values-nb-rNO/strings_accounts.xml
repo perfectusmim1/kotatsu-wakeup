@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="source_accounts">Kildekontoer</string>
+	<string name="source_accounts_summary">%1$d innlogget · %2$d støttet</string>
+	<string name="source_accounts_summary_none">Ingen aktive økter · %1$d støttet</string>
+	<string name="source_accounts_empty">Ingen kilder med kontostøtte funnet</string>
+	<string name="source_account_signed_in">Innlogget</string>
+	<string name="source_account_not_signed_in">Ikke innlogget</string>
+	<string name="source_account_switch">Bytt konto</string>
+	<string name="source_signed_out">Logget ut</string>
+	<string name="sign_up">Registrer deg</string>
+	<string name="auth_verify">Bekreft</string>
+	<string name="auth_refresh">Oppdater</string>
+	<string name="auth_not_verified_yet">Økten er ikke bekreftet ennå. Fullfør innloggingen og prøv igjen.</string>
+</resources>

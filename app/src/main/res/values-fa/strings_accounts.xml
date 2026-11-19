@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_accounts">حساب‌های منابع</string>
+    <string name="source_accounts_summary">%1$d وارد شده · %2$d پشتیبانی‌شده</string>
+    <string name="source_accounts_summary_none">بدون نشست فعال · %1$d پشتیبانی‌شده</string>
+    <string name="source_accounts_empty">منبعی با پشتیبانی از حساب کاربری یافت نشد</string>
+    <string name="source_account_signed_in">وارد شده</string>
+    <string name="source_account_not_signed_in">وارد نشده</string>
+    <string name="source_account_switch">تغییر حساب</string>
+    <string name="source_signed_out">خارج شده</string>
+    <string name="sign_up">ثبت‌نام</string>
+    <string name="auth_verify">تأیید</string>
+    <string name="auth_refresh">تازه‌سازی</string>
+    <string name="auth_not_verified_yet">نشست هنوز تأیید نشده است. ورود را کامل کنید و دوباره امتحان کنید.</string>
+</resources>

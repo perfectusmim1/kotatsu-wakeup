@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="community_rate">Beoordelen</string>
+	<string name="community_rating_title">Communitybeoordeling</string>
+	<string name="community_your_rating">Jouw beoordeling: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Verzenden</string>
+	<string name="community_rating_saved">Beoordeling opgeslagen</string>
+	<string name="community_rating_count">%1$s beoordelingen</string>
+	<string name="community_views_count">%1$s weergaven</string>
+	<string name="community_follows_count">%1$s volgers</string>
+	<string name="community_comments_count">%1$s reacties</string>
+	<string name="community_comments_sort_old">Oud</string>
+	<string name="community_web_comments">Web</string>
+	<string name="community_show_replies">Antwoorden tonen (%1$d)</string>
+	<string name="community_hide_replies">Antwoorden verbergen</string>
+	<string name="community_load_more">Meer laden</string>
+	<string name="community_load_more_replies">Meer antwoorden laden</string>
+	<string name="community_replying_to">Antwoorden op %1$s</string>
+	<string name="community_editing_comment">Reactie bewerken</string>
+	<string name="community_comment_edited">(bewerkt)</string>
+	<string name="community_comment_deleted">Reactie verwijderd</string>
+	<string name="community_comment_delete_confirm">Deze reactie verwijderen?</string>
+	<string name="community_comment_translate">Vertalen</string>
+	<string name="community_comment_show_original">Origineel</string>
+	<string name="community_spoiler_warning">Spoiler — Tik om te tonen</string>
+	<string name="community_spoiler_hide">Spoiler verbergen</string>
+	<string name="community_sign_in_to_comment">Log in om reacties of emoties te plaatsen</string>
+	<string name="community_sign_in_to_rate">Log in om te beoordelen op %1$s</string>
+	<string name="community_widget_ssl_error">Beveiligde verbinding mislukt voor deze reactiewidget. Je kunt de pagina in plaats daarvan in je browser openen.</string>
+	<string name="community_widget_load_error">Kan de reactiewidget niet laden. Controleer je verbinding of open deze in je browser.</string>
+	<string name="community_widget_unavailable">WebView is niet beschikbaar op dit apparaat. Open reacties in plaats daarvan in je browser.</string>
+	<string name="community_more_options">Meer opties</string>
+</resources>

@@ -5,8 +5,10 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.os.Build
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -14,6 +16,7 @@ import androidx.core.view.isVisible
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.util.ext.resolveDp
 import org.koitharu.kotatsu.core.util.ext.resolveSp
+import java.util.Collections
 import kotlin.math.abs
 
 /**
@@ -32,6 +35,7 @@ class UpscaleCompareOverlayView @JvmOverloads constructor(
 			val clamped = value.coerceIn(0.02f, 0.98f)
 			if (field != clamped) {
 				field = clamped
+				updateGestureExclusion()
 				invalidate()
 			}
 		}
@@ -48,9 +52,10 @@ class UpscaleCompareOverlayView @JvmOverloads constructor(
 
 	private var isDragging = false
 
-	private val lineTouchTargetHalfPx = context.resources.resolveDp(24f)
+	private val lineTouchTargetHalfPx = context.resources.resolveDp(36f)
 	private val handleRadiusPx = context.resources.resolveDp(18f)
-	private val handleTouchRadiusPx = context.resources.resolveDp(32f)
+	private val handleTouchRadiusPx = context.resources.resolveDp(44f)
+	private val exclusionRect = Rect()
 	private val badgeTopOffsetPx = context.resources.resolveDp(52f)
 	private val badgeSideMarginPx = context.resources.resolveDp(14f)
 	private val badgePadHPx = context.resources.resolveDp(10f)
@@ -165,6 +170,30 @@ class UpscaleCompareOverlayView @JvmOverloads constructor(
 		val next = (x / width.toFloat()).coerceIn(0.02f, 0.98f)
 		splitRatio = next
 		onSplitRatioChanged?.invoke(next)
+	}
+
+	override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+		super.onSizeChanged(w, h, oldw, oldh)
+		updateGestureExclusion()
+	}
+
+	private fun updateGestureExclusion() {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+		if (!isVisible || width <= 0 || height <= 0) {
+			systemGestureExclusionRects = emptyList()
+			return
+		}
+		val splitX = (width * splitRatio).toInt()
+		val centerY = height / 2
+		val halfW = handleTouchRadiusPx.toInt()
+		val halfH = (handleTouchRadiusPx * 2f).toInt()
+		exclusionRect.set(
+			(splitX - halfW).coerceAtLeast(0),
+			(centerY - halfH).coerceAtLeast(0),
+			(splitX + halfW).coerceAtMost(width),
+			(centerY + halfH).coerceAtMost(height),
+		)
+		systemGestureExclusionRects = Collections.singletonList(exclusionRect)
 	}
 
 	override fun onDraw(canvas: Canvas) {

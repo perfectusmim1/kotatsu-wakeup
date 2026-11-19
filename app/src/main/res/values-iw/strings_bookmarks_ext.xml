@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">הסימניות נוספו</string>
+	<string name="bookmarks_sort_newest">החדשות ביותר</string>
+	<string name="bookmarks_sort_oldest">הישנות ביותר</string>
+	<string name="bookmarks_sort_chapter">סדר פרקים</string>
+	<string name="search_bookmarks_hint">חפש סדרה או פרק</string>
+	<string name="search_bookmarked_chapters_hint">חפש פרקים עם סימנייה</string>
+	<string name="no_bookmarks_matching_query">אין סימניות תואמות</string>
+	<string name="no_bookmarks_matching_summary">אף סימנייה לא תאמה את המסנן הנוכחי שלך</string>
+	<string name="download_bookmarked_chapters">הורד פרקים עם סימנייה</string>
+	<string name="download_bookmarked_only">פרקים עם סימנייה בלבד</string>
+	<string name="download_bookmarked_next_2">עם סימנייה + 2 הפרקים הבאים</string>
+	<string name="download_bookmarked_next_3">עם סימנייה + 3 הפרקים הבאים</string>
+	<string name="no_bookmarked_chapters_to_download">אין פרקים עם סימנייה להורדה</string>
+	<string name="migrate_bookmarks">העבר סימניות למקור אחר</string>
+	<string name="bookmark_migration_choose_series">בחר סדרה להעברה</string>
+	<string name="bookmark_migration_searching">מחפש במקורות פעילים…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d מקורות · %3$d התאמות</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d פרקים תואמים</string>
+	<string name="bookmark_migration_total_chapters">%1$d פרקים</string>
+	<string name="bookmark_migration_no_candidates">לא נמצאו מקורות תואמים</string>
+	<string name="bookmark_migration_no_candidates_summary">אף מקור מופעל לא תאם לסדרה זו ולפרקים המסומנים שלה</string>
+	<string name="bookmark_migration_confirm">להעביר %1$d סימניות מ-\"%2$s\" (%3$s) אל \"%4$s\" (%5$s)?\n%6$d מתוך %7$d פרקים מסומנים תואמים.</string>
+	<string name="bookmark_migration_confirm_no_overlap">להעביר %1$d סימניות מ-\"%2$s\" (%3$s) אל \"%4$s\" (%5$s)?\nהפרקים יושלמו בקירוב לפי התקדמות הקריאה.</string>
+	<string name="bookmark_migration_success">הסימניות הועברו אל %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">לא נמצאו סימניות עבור סדרה זו</string>
+	<string name="bookmark_migration_rescan">סרוק שוב</string>
+	<string name="bookmark_migration_unavailable_no_chapters">אין פרקים</string>
+	<string name="bookmarks_count_badge">%1$d סימניות</string>
+</resources>

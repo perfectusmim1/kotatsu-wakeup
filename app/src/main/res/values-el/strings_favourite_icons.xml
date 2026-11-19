@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_icon">Εικονίδιο</string>
+    <string name="fav_icon_default">Καρδιά</string>
+    <string name="fav_icon_star">Αστέρι</string>
+    <string name="fav_icon_fire">Φωτιά</string>
+    <string name="fav_icon_crown">Στέμμα</string>
+    <string name="fav_icon_book">Βιβλίο</string>
+    <string name="fav_icon_bookmark">Σελιδοδείκτης</string>
+    <string name="fav_icon_eye">Μάτι</string>
+    <string name="fav_icon_bolt">Κεραυνός</string>
+    <string name="fav_icon_clock">Ρολόι</string>
+    <string name="fav_icon_folder">Φάκελος</string>
+    <string name="fav_icon_check">Έλεγχος</string>
+    <string name="fav_icon_sparkles">Λάμψεις</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="import_from_anilist">AniList වෙතින් ආයාත කරන්න</string>
+	<string name="anilist_import_mode_label">ආයාත ගමනාන්තය</string>
+	<string name="anilist_import_by_status">තත්ත්වය අනුව</string>
+	<string name="anilist_import_single_category">තනි ප්‍රවර්ගය</string>
+	<string name="anilist_import_new_category">නව ප්‍රවර්ගය</string>
+	<string name="anilist_import_new_category_hint">ප්‍රවර්ගයේ නම</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">ඔබේ AniList පුස්තකාලය පූරණය වෙමින්…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">සම්පූර්ණයි (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">ආයාත කළ: %1$d · පවතින: %2$d · නොගැළපෙන: %3$d</string>
+	<string name="anilist_import_empty">ඔබේ AniList මැන්ගා ලැයිස්තුව හිස්ය.</string>
+	<string name="anilist_import_unmatched_title">නොගැළපෙන මාතෘකා</string>
+	<string name="anilist_import_start">ආයාත කිරීම අරඹන්න</string>
+	<string name="anilist_import_retry">නැවත ආයාත කරන්න</string>
+	<string name="anilist_import_error_no_sources">ආයාත කිරීමට පෙර අවම වශයෙන් එක් මැන්ගා මූලාශ්‍රයක්වත් සබල කරන්න.</string>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="community_rate">Бағалау</string>
+	<string name="community_rating_title">Қауымдастық бағасы</string>
+	<string name="community_your_rating">Сіздің бағаңыз: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Жіберу</string>
+	<string name="community_rating_saved">Баға сақталды</string>
+	<string name="community_rating_count">%1$s баға</string>
+	<string name="community_views_count">%1$s қаралым</string>
+	<string name="community_follows_count">%1$s жазылым</string>
+	<string name="community_comments_count">%1$s пікір</string>
+	<string name="community_comments_sort_old">Ескілер</string>
+	<string name="community_web_comments">Веб</string>
+	<string name="community_show_replies">Жауаптарды көрсету (%1$d)</string>
+	<string name="community_hide_replies">Жауаптарды жасыру</string>
+	<string name="community_load_more">Тағы жүктеу</string>
+	<string name="community_load_more_replies">Тағы жауаптарды жүктеу</string>
+	<string name="community_replying_to">%1$s пікіріне жауап беру</string>
+	<string name="community_editing_comment">Пікірді өңдеу</string>
+	<string name="community_comment_edited">(өңделген)</string>
+	<string name="community_comment_deleted">Пікір жойылды</string>
+	<string name="community_comment_delete_confirm">Бұл пікірді жою керек пе?</string>
+	<string name="community_comment_translate">Аудару</string>
+	<string name="community_comment_show_original">Түпнұсқа</string>
+	<string name="community_spoiler_warning">Спойлер — Көру үшін түртіңіз</string>
+	<string name="community_spoiler_hide">Спойлерді жасыру</string>
+	<string name="community_sign_in_to_comment">Пікір қалдыру немесе реакция білдіру үшін кіріңіз</string>
+	<string name="community_sign_in_to_rate">%1$s сайтында бағалау үшін кіріңіз</string>
+	<string name="community_widget_ssl_error">Бұл пікір виджеті үшін қауіпсіз қосылым сәтсіз аяқталды. Оның орнына бетті шолғышта ашуға болады.</string>
+	<string name="community_widget_load_error">Пікір виджетін жүктеу мүмкін болмады. Қосылымды тексеріңіз немесе оны шолғышта ашыңыз.</string>
+	<string name="community_widget_unavailable">Бұл құрылғыда WebView қолжетімсіз. Пікірлерді шолғышта ашыңыз.</string>
+	<string name="community_more_options">Қосымша опциялар</string>
+</resources>

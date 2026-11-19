@@ -3,6 +3,7 @@ package org.koitharu.kotatsu.reader.domain.upscale
 import org.koitharu.kotatsu.reader.domain.upscale.model.StripPlan
 import org.koitharu.kotatsu.reader.domain.upscale.model.StripSizeResult
 import org.koitharu.kotatsu.reader.domain.upscale.model.TilePlan
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleMode
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -10,9 +11,21 @@ object StripPlanner {
 
 	const val STRIP_HEIGHT = 1024
 	const val STRIP_OVERLAP = 16
+	const val AI_STRIP_HEIGHT = 480
+	const val AI_STRIP_OVERLAP = 8
+	const val AI_MAX_INPUT_WIDTH = 512
 	const val AI_TILE_SIZE = 256
 	const val AI_TILE_OVERLAP = 12
 	const val DEFAULT_MAX_TEX_SIZE = 4096
+
+	fun planStripsForMode(
+		height: Int,
+		mode: UpscaleMode,
+	): List<StripPlan> = if (mode == UpscaleMode.AI) {
+		planStrips(height = height, stripHeight = AI_STRIP_HEIGHT, overlap = AI_STRIP_OVERLAP)
+	} else {
+		planStrips(height = height, stripHeight = STRIP_HEIGHT, overlap = STRIP_OVERLAP)
+	}
 
 	/**
 	 * Uzun dikey webtoon ve manga sayfalarını OOM veya GPU doku sınırına takılmaması için
@@ -107,11 +120,12 @@ object StripPlanner {
 		srcW: Int,
 		validH: Int,
 		maxTexSize: Int = DEFAULT_MAX_TEX_SIZE,
+		maxInputWidthOverride: Int = (maxTexSize.coerceAtLeast(256) / 2).coerceAtLeast(1),
 	): StripSizeResult {
 		val safeSrcW = srcW.coerceAtLeast(1)
 		val safeValidH = validH.coerceAtLeast(1)
 		val safeMaxTex = maxTexSize.coerceAtLeast(256)
-		val maxInputW = (safeMaxTex / 2).coerceAtLeast(1)
+		val maxInputW = min((safeMaxTex / 2).coerceAtLeast(1), maxInputWidthOverride.coerceAtLeast(64))
 
 		val inputWidth = min(safeSrcW, maxInputW)
 		val inputScale = inputWidth.toFloat() / safeSrcW.toFloat()

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="translation_settings">𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃 𐌻𐌰𐌲𐌴𐌹𐌽𐍉𐍃</string>
+    <string name="translation_toggle">𐍄𐍉𐌲𐌲𐌻𐌴 𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃</string>
+    <string name="translation_enable">𐌲𐌰𐌼𐌰𐌷𐍄𐌾𐌰𐌽 𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃</string>
+    <string name="translation_disable">𐌿𐌽𐌼𐌰𐌷𐍄𐌾𐌰𐌽 𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃</string>
+    <string name="translation_active">𐌰𐌺𐍄𐌹𐍅𐌴</string>
+    <string name="translation_off">𐌰𐍆</string>
+    <string name="translation_provider">𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃 𐍀𐍂𐍉𐍅𐌹𐌳𐌴𐍂</string>
+    <string name="translation_provider_gemini">𐌲𐌴𐌼𐌹𐌽𐌹</string>
+    <string name="translation_provider_deepl">𐌳𐌴𐍀𐌻</string>
+    <string name="translation_provider_google">𐌲𐍉𐌲𐌻𐌴 𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌾𐌰𐌽</string>
+    <string name="translation_gemini_thinking_level">𐌸𐌹𐌽𐌺𐌹𐌲𐌲 𐌻𐌴𐍅𐌴𐌻</string>
+    <string name="translation_thinking_minimal">𐌼𐌹𐌽𐌹𐌼𐌰𐌻</string>
+    <string name="translation_thinking_low">𐌻𐍉𐍅</string>
+    <string name="translation_thinking_medium">𐌼𐌴𐌳𐌹𐌿𐌼</string>
+    <string name="translation_thinking_high">𐌷𐌹𐌲𐌷</string>
+    <string name="translation_source_lang">𐌱𐍂𐌿𐌽𐌽𐌰 𐍂𐌰𐌶𐌳𐌰 (𐍉𐌺𐍂)</string>
+    <string name="translation_target_lang">𐍄𐌰𐍂𐌲𐌴𐍄 𐍂𐌰𐌶𐌳𐌰</string>
+    <string name="translation_api_keys">𐌲𐌴𐌼𐌹𐌽𐌹 𐌰𐍀𐌹 𐌺𐌴𐌾𐍃</string>
+    <string name="translation_deepl_api_keys">𐌳𐌴𐍀𐌻 𐌰𐍀𐌹 𐌺𐌴𐌾𐍃</string>
+    <string name="translation_api_keys_hint">𐍃𐌴𐍀𐌰𐍂𐌰𐍄𐌴 𐌼𐌿𐌻𐍄𐌹𐍀𐌻𐌴 𐌺𐌴𐌾𐍃 𐌼𐌹𐌸 𐌺𐍉𐌼𐌼𐌰𐍃 𐌰𐌹𐌸𐌸𐌰𐌿 𐌽𐌹𐌿𐌾𐌹𐍃 𐌻𐌹𐌽𐌴𐍃</string>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d 𐌰𐌺𐍄𐌹𐍅𐌴 𐌺𐌴𐌾 𐌺𐍉𐌽𐍆𐌹𐌲𐌿𐍂𐌴𐌳</item>
+        <item quantity="other">%1$d 𐌰𐌺𐍄𐌹𐍅𐌴 𐌺𐌴𐌾𐍃 𐌺𐍉𐌽𐍆𐌹𐌲𐌿𐍂𐌴𐌳</item>
+    </plurals>
+    <string name="translation_api_keys_empty">𐌽𐌴 𐌰𐍀𐌹 𐌺𐌴𐌾 𐌺𐍉𐌽𐍆𐌹𐌲𐌿𐍂𐌴𐌳</string>
+    <string name="translation_api_key_required">𐌱𐌹𐌰𐌿𐌺𐌰𐌽 𐌰𐌹𐌽𐍃 𐌲𐌴𐌼𐌹𐌽𐌹 𐌰𐍀𐌹 𐌺𐌴𐌾 𐌰𐌹𐌸𐌸𐌰𐌿 𐍃𐍅𐌹𐍄𐍄𐍃𐌷 𐍀𐍂𐍉𐍅𐌹𐌳𐌴𐍂𐍃</string>
+    <string name="translation_deepl_api_key_required">𐌱𐌹𐌰𐌿𐌺𐌰𐌽 𐌰𐌹𐌽𐍃 𐌳𐌴𐍀𐌻 𐌰𐍀𐌹 𐌺𐌴𐌾 𐌰𐌹𐌸𐌸𐌰𐌿 𐍃𐍅𐌹𐍄𐍄𐍃𐌷 𐍀𐍂𐍉𐍅𐌹𐌳𐌴𐍂𐍃</string>
+    <string name="translation_auto_translate">𐍃𐌹𐌻𐌱𐌰-𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌾𐌰𐌽 𐌻𐌰𐌿𐌱𐍉𐍃</string>
+    <string name="translation_skip_sfx">𐌿𐍆𐌰𐍂𐌷𐌻𐌰𐌿𐍀𐌰𐌽 𐍃𐍉𐌿𐌽𐌳 𐌴𐍆𐍆𐌴𐌺𐍄𐍃</string>
+    <string name="translation_filter_promo">𐌿𐍆𐌰𐍂𐌷𐌻𐌰𐌿𐍀𐌰𐌽 𐍀𐍂𐍉𐌼𐍉 &amp; 𐌺𐍂𐌴𐌳𐌹𐍄𐍃 𐌻𐌰𐌿𐌱𐍉𐍃</string>
+    <string name="translation_ocr_ready">𐍉𐌺𐍂 𐌼𐍉𐌳𐌴𐌻 𐍂𐌴𐌰𐌳𐌾</string>
+    <string name="translation_ocr_auto_ready">𐍃𐌹𐌻𐌱𐌰-𐌳𐌴𐍄𐌴𐌺𐍄 𐍉𐌺𐍂 𐍂𐌴𐌰𐌳𐌾</string>
+    <string name="translation_ocr_not_downloaded">𐍉𐌺𐍂 𐌼𐍉𐌳𐌴𐌻 𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌴𐌹𐌽𐍉𐍃 𐌰𐌽𐌰 𐍆𐌹𐍂𐍃𐍄 𐌿𐍃𐌴</string>
+    <string name="translation_ocr_download">𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌰𐌽 𐌼𐍉𐌳𐌴𐌻</string>
+    <string name="translation_ocr_downloading">𐌳𐌰𐌻𐌰𐌸𐌰𐌷𐌻𐌰𐌸𐌰𐌽𐌳𐍃 𐍉𐌺𐍂 𐌼𐍉𐌳𐌴𐌻… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">𐍂𐌴𐌺𐍉𐌲𐌽𐌹𐌶𐌹𐌲𐌲 𐌱𐍉𐌺𐌰𐍅𐌰𐌿𐍂𐌳…</string>
+    <string name="translation_translating_text">𐍄𐍂𐌰𐌽𐍃𐌻𐌰𐍄𐌹𐌲𐌲…</string>
+    <string name="translation_rendering_page">𐍂𐌴𐌽𐌳𐌴𐍂𐌹𐌲𐌲 𐌻𐌰𐌿𐍆𐍃…</string>
+    <string name="translation_clear_cache">𐌷𐍂𐌰𐌹𐌽𐌾𐌰𐌽 𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃 𐌺𐌰𐍄𐍃𐌷𐌴</string>
+    <string name="translation_cache_cleared">𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃 𐌺𐌰𐍄𐍃𐌷𐌴 𐌺𐌻𐌴𐌰𐍂𐌴𐌳</string>
+    <string name="translation_cache_cleared_size">𐌺𐌻𐌴𐌰𐍂𐌴𐌳 %1$s 𐌰𐍆 𐌺𐌰𐍄𐍃𐌷𐌴𐌳 𐍄𐍂𐌰𐌽𐍃𐌻𐌰𐍄𐌹𐍉𐌽𐍃</string>
+    <string name="translation_error_generic">𐌲𐌰𐍃𐌺𐌴𐌹𐍂𐌴𐌹𐌽𐍃 𐌳𐍂𐌰𐌿𐍃: %1$s</string>
+</resources>

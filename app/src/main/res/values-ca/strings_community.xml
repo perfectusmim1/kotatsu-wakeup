@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="community_rate">Valora</string>
+	<string name="community_rating_title">Valoració de la comunitat</string>
+	<string name="community_your_rating">La teva valoració: %1$d / %2$d</string>
+	<string name="community_your_rating_short">★%1$d</string>
+	<string name="community_submit_rating">Envia</string>
+	<string name="community_rating_saved">Valoració desada</string>
+	<string name="community_rating_count">%1$s valoracions</string>
+	<string name="community_views_count">%1$s visualitzacions</string>
+	<string name="community_follows_count">%1$s seguidors</string>
+	<string name="community_comments_count">%1$s comentaris</string>
+	<string name="community_comments_sort_old">Antics</string>
+	<string name="community_web_comments">Web</string>
+	<string name="community_show_replies">Mostra les respostes (%1$d)</string>
+	<string name="community_hide_replies">Amaga les respostes</string>
+	<string name="community_load_more">Carrega\'n més</string>
+	<string name="community_load_more_replies">Carrega més respostes</string>
+	<string name="community_replying_to">En resposta a %1$s</string>
+	<string name="community_editing_comment">Editant el comentari</string>
+	<string name="community_comment_edited">(editat)</string>
+	<string name="community_comment_deleted">Comentari suprimit</string>
+	<string name="community_comment_delete_confirm">Vols suprimir aquest comentari?</string>
+	<string name="community_comment_translate">Tradueix</string>
+	<string name="community_comment_show_original">Original</string>
+	<string name="community_spoiler_warning">Espòiler — Toca per mostrar</string>
+	<string name="community_spoiler_hide">Amaga l\'espòiler</string>
+	<string name="community_sign_in_to_comment">Inicia sessió per publicar comentaris o reaccions</string>
+	<string name="community_sign_in_to_rate">Inicia sessió per valorar a %1$s</string>
+	<string name="community_widget_ssl_error">Ha fallat la connexió segura per a aquest giny de comentaris. Pots obrir la pàgina al navegador.</string>
+	<string name="community_widget_load_error">No s\'ha pogut carregar el giny de comentaris. Comprova la connexió o obre\'l al navegador.</string>
+	<string name="community_widget_unavailable">WebView no està disponible en aquest dispositiu. Obre els comentaris al navegador.</string>
+	<string name="community_more_options">Més opcions</string>
+</resources>

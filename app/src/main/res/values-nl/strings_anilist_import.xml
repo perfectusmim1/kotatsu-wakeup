@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="import_from_anilist">Importeren van AniList</string>
+	<string name="anilist_import_mode_label">Importbestemming</string>
+	<string name="anilist_import_by_status">Op status</string>
+	<string name="anilist_import_single_category">Eén categorie</string>
+	<string name="anilist_import_new_category">Nieuwe categorie</string>
+	<string name="anilist_import_new_category_hint">Categorienaam</string>
+	<string name="anilist_import_new_category_default">AniList</string>
+	<string name="anilist_import_fetching">Je AniList-bibliotheek laden…</string>
+	<string name="anilist_import_progress_status">%1$d/%2$d · %3$s</string>
+	<string name="anilist_import_completed_status">Voltooid (%1$d/%2$d)</string>
+	<string name="anilist_import_counts">Geïmporteerd: %1$d · Bestaand: %2$d · Niet gevonden: %3$d</string>
+	<string name="anilist_import_empty">Je AniList-mangalijst is leeg.</string>
+	<string name="anilist_import_unmatched_title">Niet-gevonden titels</string>
+	<string name="anilist_import_start">Import starten</string>
+	<string name="anilist_import_retry">Opnieuw importeren</string>
+	<string name="anilist_import_error_no_sources">Schakel minstens één mangabron in voordat je importeert.</string>
+</resources>

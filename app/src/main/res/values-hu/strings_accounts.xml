@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="source_accounts">Forrásfiókok</string>
+    <string name="source_accounts_summary">%1$d bejelentkezve · %2$d támogatott</string>
+    <string name="source_accounts_summary_none">Nincs aktív munkamenet · %1$d támogatott</string>
+    <string name="source_accounts_empty">Nem található fióktámogatással rendelkező forrás</string>
+    <string name="source_account_signed_in">Bejelentkezve</string>
+    <string name="source_account_not_signed_in">Nincs bejelentkezve</string>
+    <string name="source_account_switch">Fiókváltás</string>
+    <string name="source_signed_out">Kijelentkezve</string>
+    <string name="sign_up">Regisztráció</string>
+    <string name="auth_verify">Ellenőrzés</string>
+    <string name="auth_refresh">Frissítés</string>
+    <string name="auth_not_verified_yet">A munkamenet még nincs ellenőrizve. Fejezd be a bejelentkezést, majd próbáld újra.</string>
+</resources>

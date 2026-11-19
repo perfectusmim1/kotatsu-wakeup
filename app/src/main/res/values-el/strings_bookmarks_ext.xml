@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bookmark_added_many">Οι σελιδοδείκτες προστέθηκαν</string>
+    <string name="bookmarks_sort_newest">Πιο πρόσφατοι</string>
+    <string name="bookmarks_sort_oldest">Παλαιότεροι</string>
+    <string name="bookmarks_sort_chapter">Σειρά κεφαλαίων</string>
+    <string name="search_bookmarks_hint">Αναζήτηση σειράς ή κεφαλαίου</string>
+    <string name="search_bookmarked_chapters_hint">Αναζήτηση σελιδοδεικτών κεφαλαίων</string>
+    <string name="no_bookmarks_matching_query">Δεν υπάρχουν αντίστοιχοι σελιδοδείκτες</string>
+    <string name="no_bookmarks_matching_summary">Κανένας σελιδοδείκτης δεν ταιριάζει με το τρέχον φίλτρο</string>
+    <string name="download_bookmarked_chapters">Λήψη κεφαλαίων με σελιδοδείκτη</string>
+    <string name="download_bookmarked_only">Μόνο κεφάλαια με σελιδοδείκτη</string>
+    <string name="download_bookmarked_next_2">Με σελιδοδείκτη + επόμενα 2 κεφάλαια</string>
+    <string name="download_bookmarked_next_3">Με σελιδοδείκτη + επόμενα 3 κεφάλαια</string>
+    <string name="no_bookmarked_chapters_to_download">Δεν υπάρχουν κεφάλαια με σελιδοδείκτη για λήψη</string>
+    <string name="migrate_bookmarks">Μετεγκατάσταση σελιδοδεικτών σε άλλη πηγή</string>
+    <string name="bookmark_migration_choose_series">Επιλογή σειράς για μετεγκατάσταση</string>
+    <string name="bookmark_migration_searching">Αναζήτηση ενεργών πηγών…</string>
+    <string name="bookmark_migration_progress">%1$d/%2$d πηγές · %3$d αντιστοιχίσεις</string>
+    <string name="bookmark_migration_chapters_matched">%1$d/%2$d κεφάλαια αντιστοιχίστηκαν</string>
+    <string name="bookmark_migration_total_chapters">%1$d κεφάλαια</string>
+    <string name="bookmark_migration_no_candidates">Δεν βρέθηκαν συμβατές πηγές</string>
+    <string name="bookmark_migration_no_candidates_summary">Καμία ενεργοποιημένη πηγή δεν αντιστοίχισε αυτή τη σειρά και τα κεφάλαια με σελιδοδείκτη</string>
+    <string name="bookmark_migration_confirm">Μετεγκατάσταση %1$d σελιδοδεικτών από \"%2$s\" (%3$s) σε \"%4$s\" (%5$s);\n%6$d από %7$d κεφάλαια με σελιδοδείκτη αντιστοιχίστηκαν.</string>
+    <string name="bookmark_migration_confirm_no_overlap">Μετεγκατάσταση %1$d σελιδοδεικτών από \"%2$s\" (%3$s) σε \"%4$s\" (%5$s);\nΤα κεφάλαια θα υπολογιστούν κατά προσέγγιση με βάση την πρόοδο ανάγνωσης.</string>
+    <string name="bookmark_migration_success">Οι σελιδοδείκτες μετεγκαταστάθηκαν στο %1$s</string>
+    <string name="bookmark_migration_no_bookmarks">Δεν βρέθηκαν σελιδοδείκτες για αυτή τη σειρά</string>
+    <string name="bookmark_migration_rescan">Επανασάρωση</string>
+    <string name="bookmark_migration_unavailable_no_chapters">Χωρίς κεφάλαια</string>
+    <string name="bookmarks_count_badge">%1$d σελιδοδείκτες</string>
+</resources>

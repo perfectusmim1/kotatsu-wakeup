@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="translation_api_keys_count">
+        <item quantity="one">%1$d cllâf activa configurâ</item>
+        <item quantity="other">%1$d cllâfs actives configurâs</item>
+    </plurals>
+    <string name="translation_settings">Paramètros de traduccion</string>
+    <string name="translation_toggle">Activar/desactivar la traduccion</string>
+    <string name="translation_enable">Activâr la traduccion</string>
+    <string name="translation_disable">Desactivâr la traduccion</string>
+    <string name="translation_active">Activa</string>
+    <string name="translation_off">Desactivâ</string>
+    <string name="translation_provider">Fornissor de traduccion</string>
+    <string name="translation_provider_gemini">Gemini</string>
+    <string name="translation_provider_deepl">DeepL</string>
+    <string name="translation_provider_google">Google Traduccion</string>
+    <string name="translation_gemini_thinking_level">Nivél de rèflèxion</string>
+    <string name="translation_thinking_minimal">Minimâl</string>
+    <string name="translation_thinking_low">Bâs</string>
+    <string name="translation_thinking_medium">Moyen</string>
+    <string name="translation_thinking_high">Hiôt</string>
+    <string name="translation_source_lang">Lenga sôrsa (OCR)</string>
+    <string name="translation_target_lang">Lenga cîbla</string>
+    <string name="translation_api_keys">Cllâfs API Gemini</string>
+    <string name="translation_deepl_api_keys">Cllâfs API DeepL</string>
+    <string name="translation_api_keys_hint">Sèparâd les cllâfs avoue des virgules ou des sôts de legne</string>
+    <string name="translation_api_keys_empty">Niona cllâf API configurâ</string>
+    <string name="translation_api_key_required">Apondéd ona cllâf API Gemini ou changiéd de fornissor</string>
+    <string name="translation_deepl_api_key_required">Apondéd ona cllâf API DeepL ou changiéd de fornissor</string>
+    <string name="translation_auto_translate">Tradure otomaticament les pâges</string>
+    <string name="translation_skip_sfx">Passâr los èfèts sonoros</string>
+    <string name="translation_filter_promo">Passâr les pâges de promo et de crèdits</string>
+    <string name="translation_ocr_ready">Modèlo OCR prèst</string>
+    <string name="translation_ocr_auto_ready">Dètèccion otomatica OCR prèsta</string>
+    <string name="translation_ocr_not_downloaded">Lo modèlo OCR se telecharge u premiér usâjo</string>
+    <string name="translation_ocr_download">Telechargiér lo modèlo</string>
+    <string name="translation_ocr_downloading">Telechargement du modèlo OCR… %1$d%%%%%%</string>
+    <string name="translation_ocr_running">Rèconèssence du tèxto…</string>
+    <string name="translation_translating_text">Traduccion en cors…</string>
+    <string name="translation_rendering_page">Rendu de la pâge…</string>
+    <string name="translation_clear_cache">Vouidiér lo cacho de traduccion</string>
+    <string name="translation_cache_cleared">Cacho de traduccion vouidiâ</string>
+    <string name="translation_cache_cleared_size">%1$s de traduccions en cacho suprimâs</string>
+    <string name="translation_error_generic">La traduccion at falyi : %1$s</string>
+</resources>

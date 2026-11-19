@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="translation_settings">Налады перакладу</string>
+	<string name="translation_toggle">Пераключыць пераклад</string>
+	<string name="translation_enable">Уключыць пераклад</string>
+	<string name="translation_disable">Адключыць пераклад</string>
+	<string name="translation_active">Уключана</string>
+	<string name="translation_off">Выключана</string>
+	<string name="translation_provider">Правайдар перакладу</string>
+	<string name="translation_provider_gemini">Gemini</string>
+	<string name="translation_provider_deepl">DeepL</string>
+	<string name="translation_provider_google">Google Перакладчык</string>
+	<string name="translation_gemini_thinking_level">Узровень мыслення</string>
+	<string name="translation_thinking_minimal">Мінімальны</string>
+	<string name="translation_thinking_low">Нізкі</string>
+	<string name="translation_thinking_medium">Сярэдні</string>
+	<string name="translation_thinking_high">Высокі</string>
+	<string name="translation_source_lang">Зыходная мова (OCR)</string>
+	<string name="translation_target_lang">Мэтавая мова</string>
+	<string name="translation_api_keys">API-ключы Gemini</string>
+	<string name="translation_deepl_api_keys">API-ключы DeepL</string>
+	<string name="translation_api_keys_hint">Падзяляйце некалькі ключоў коскамі або новымі радкамі</string>
+	<plurals name="translation_api_keys_count">
+		<item quantity="one">Наладжаны %1$d актыўны ключ</item>
+		<item quantity="few">Наладжана %1$d актыўныя ключы</item>
+		<item quantity="many">Наладжана %1$d актыўных ключоў</item>
+		<item quantity="other">Наладжана %1$d актыўных ключоў</item>
+	</plurals>
+	<string name="translation_api_keys_empty">API-ключ не наладжаны</string>
+	<string name="translation_api_key_required">Дадайце API-ключ Gemini або змяніце правайдара</string>
+	<string name="translation_deepl_api_key_required">Дадайце API-ключ DeepL або змяніце правайдара</string>
+	<string name="translation_auto_translate">Аўтапераклад старонак</string>
+	<string name="translation_skip_sfx">Прапускаць гукавыя эфекты</string>
+	<string name="translation_filter_promo">Прапускаць прома-старонкі і тытры</string>
+	<string name="translation_ocr_ready">Мадэль OCR гатовая</string>
+	<string name="translation_ocr_auto_ready">Аўтавызначэнне OCR гатовае</string>
+	<string name="translation_ocr_not_downloaded">Мадэль OCR спампуецца пры першым выкарыстанні</string>
+	<string name="translation_ocr_download">Спампаваць мадэль</string>
+	<string name="translation_ocr_downloading">Спампоўка мадэлі OCR… %1$d%%%%%%</string>
+	<string name="translation_ocr_running">Распазнаванне тэксту…</string>
+	<string name="translation_translating_text">Пераклад…</string>
+	<string name="translation_rendering_page">Адмалёўка старонкі…</string>
+	<string name="translation_clear_cache">Ачысціць кэш перакладу</string>
+	<string name="translation_cache_cleared">Кэш перакладу ачышчаны</string>
+	<string name="translation_cache_cleared_size">Ачышчана %1$s кэшаваных перакладаў</string>
+	<string name="translation_error_generic">Памылка перакладу: %1$s</string>
+</resources>

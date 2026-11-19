@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="cf_banner_required">%1$s لئی تصدیق دی لوڑ اے</string>
+	<string name="cf_banner_multiple_required">%1$s لئی تصدیق دی لوڑ اے (+%2$d ہور)</string>
+	<string name="cf_banner_solve">حل کرو</string>
+	<string name="cf_banner_dismiss">برخاست کرو</string>
+</resources>

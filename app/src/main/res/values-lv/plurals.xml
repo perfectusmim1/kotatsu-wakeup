@@ -1,2 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+	<plurals name="search_results_count">
+		<item quantity="one">%1$d rezultāts</item>
+		<item quantity="other">%1$d rezultāti</item>
+	</plurals>
+	<plurals name="items">
+		<item quantity="one">%1$d prece</item>
+		<item quantity="other">%1$d preces</item>
+	</plurals>
+	<plurals name="new_chapters">
+		<item quantity="one">%1$d jauna nodaļa</item>
+		<item quantity="other">%1$d jaunas nodaļas</item>
+	</plurals>
+	<plurals name="chapters">
+		<item quantity="one">%1$d nodaļa</item>
+		<item quantity="other">%1$d nodaļas</item>
+	</plurals>
+	<plurals name="pages">
+		<item quantity="one">%1$d lpp</item>
+		<item quantity="other">%1$d lpp</item>
+	</plurals>
+	<plurals name="minutes_ago">
+		<item quantity="one">pirms %1$d minūtes</item>
+		<item quantity="other">pirms %1$d minūtēm</item>
+	</plurals>
+	<plurals name="hours_ago">
+		<item quantity="one">%1$d pirms stundas</item>
+		<item quantity="other">pirms %1$d stundām</item>
+	</plurals>
+	<plurals name="days_ago">
+		<item quantity="one">pirms %1$d dienas</item>
+		<item quantity="other">pirms %1$d dienām</item>
+	</plurals>
+	<plurals name="months_ago">
+		<item quantity="one">%1$d pirms mēneša</item>
+		<item quantity="other">pirms %1$d mēnešiem</item>
+	</plurals>
+	<plurals name="hours">
+		<item quantity="one">%1$d stunda</item>
+		<item quantity="other">%1$d stundas</item>
+	</plurals>
+	<plurals name="minutes">
+		<item quantity="one">%1$d minūte</item>
+		<item quantity="other">%1$d minūtes</item>
+	</plurals>
+	<plurals name="sources_count">
+		<item quantity="one">%1$d avots</item>
+		<item quantity="other">%1$d avoti</item>
+	</plurals>
+</resources>

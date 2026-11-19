@@ -19,9 +19,6 @@ class RecyclerViewLifecycleDispatcher : RecyclerView.OnScrollListener() {
 		val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
 		val first = lm.findFirstVisibleItemPosition()
 		val last = lm.findLastVisibleItemPosition()
-		if (first == prevFirst && last == prevLast) {
-			return
-		}
 		prevFirst = first
 		prevLast = last
 		if (first == NO_POSITION || last == NO_POSITION) {

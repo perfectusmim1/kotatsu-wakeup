@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">ஐகான்</string>
+	<string name="fav_icon_default">இதயம்</string>
+	<string name="fav_icon_star">நட்சத்திரம்</string>
+	<string name="fav_icon_fire">நெருப்பு</string>
+	<string name="fav_icon_crown">கிரீடம்</string>
+	<string name="fav_icon_book">புத்தகம்</string>
+	<string name="fav_icon_bookmark">புக்மார்க்</string>
+	<string name="fav_icon_eye">கண்</string>
+	<string name="fav_icon_bolt">போல்ட்</string>
+	<string name="fav_icon_clock">கடிகாரம்</string>
+	<string name="fav_icon_folder">கோப்புறை</string>
+	<string name="fav_icon_check">சரிபார்க்கவும்</string>
+	<string name="fav_icon_sparkles">மின்னுகிறது</string>
+</resources>

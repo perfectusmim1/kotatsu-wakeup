@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">เพิ่มบุ๊กมาร์กแล้ว</string>
+	<string name="bookmarks_sort_newest">ใหม่ล่าสุดที่เพิ่มเข้ามา</string>
+	<string name="bookmarks_sort_oldest">เพิ่มเก่าที่สุดแล้ว</string>
+	<string name="bookmarks_sort_chapter">ลำดับบท</string>
+	<string name="search_bookmarks_hint">ค้นหาซีรี่ส์หรือบท</string>
+	<string name="search_bookmarked_chapters_hint">ค้นหาบทที่บุ๊กมาร์กไว้</string>
+	<string name="no_bookmarks_matching_query">ไม่มีบุ๊กมาร์กที่ตรงกัน</string>
+	<string name="no_bookmarks_matching_summary">ไม่มีบุ๊กมาร์กที่ตรงกับตัวกรองปัจจุบันของคุณ</string>
+	<string name="download_bookmarked_chapters">ดาวน์โหลดบทที่คั่นไว้</string>
+	<string name="download_bookmarked_only">บทที่คั่นไว้เท่านั้น</string>
+	<string name="download_bookmarked_next_2">บุ๊คมาร์ค + 2 บทถัดไป</string>
+	<string name="download_bookmarked_next_3">บุ๊คมาร์ค + ถัดไป 3 บท</string>
+	<string name="no_bookmarked_chapters_to_download">ไม่มีบุ๊กมาร์กบทให้ดาวน์โหลด</string>
+	<string name="migrate_bookmarks">ย้ายบุ๊กมาร์กไปยังแหล่งอื่น</string>
+	<string name="bookmark_migration_choose_series">เลือกซีรีส์ที่จะย้าย</string>
+	<string name="bookmark_migration_searching">กำลังค้นหาแหล่งที่มาที่ใช้งานอยู่...</string>
+	<string name="bookmark_migration_progress">แหล่งที่มา %1$d/%2$d · ตรงกัน %3$d</string>
+	<string name="bookmark_migration_chapters_matched">ตรงกัน %1$d/%2$d บท</string>
+	<string name="bookmark_migration_total_chapters">%1$d บท</string>
+	<string name="bookmark_migration_no_candidates">ไม่พบแหล่งที่เข้ากันได้</string>
+	<string name="bookmark_migration_no_candidates_summary">ไม่มีแหล่งที่มาที่เปิดใช้งานที่ตรงกับซีรีส์นี้และบทที่บุ๊กมาร์กไว้</string>
+	<string name="bookmark_migration_confirm">ย้ายบุ๊กมาร์ก %1$d จาก \"%2$s\" (%3$s) เป็น \"%4$s\" (%5$s)?\n%6$d จาก %7$d บทที่บุ๊กมาร์กตรงกัน</string>
+	<string name="bookmark_migration_confirm_no_overlap">ย้ายบุ๊กมาร์ก %1$d จาก \"%2$s\" (%3$s) เป็น \"%4$s\" (%5$s)?\nบทต่างๆ จะถูกประมาณตามความคืบหน้าในการอ่าน</string>
+	<string name="bookmark_migration_success">บุ๊กมาร์กถูกย้ายไปยัง %1$s</string>
+	<string name="bookmark_migration_no_bookmarks">ไม่พบบุ๊กมาร์กสำหรับซีรีส์นี้</string>
+	<string name="bookmark_migration_rescan">สแกนอีกครั้ง</string>
+	<string name="bookmark_migration_unavailable_no_chapters">ไม่มีบท</string>
+	<string name="bookmarks_count_badge">%1$d บุ๊กมาร์ก</string>
+</resources>

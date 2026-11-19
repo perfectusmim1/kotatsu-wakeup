@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">آئیکن</string>
+	<string name="fav_icon_default">دل</string>
+	<string name="fav_icon_star">تارا</string>
+	<string name="fav_icon_fire">اگ</string>
+	<string name="fav_icon_crown">تاج</string>
+	<string name="fav_icon_book">کتاب</string>
+	<string name="fav_icon_bookmark">بک مارک</string>
+	<string name="fav_icon_eye">اکھ</string>
+	<string name="fav_icon_bolt">بجلی</string>
+	<string name="fav_icon_clock">گھڑی</string>
+	<string name="fav_icon_folder">فولڈر</string>
+	<string name="fav_icon_check">نشان</string>
+	<string name="fav_icon_sparkles">چمکارے</string>
+</resources>

@@ -45,4 +45,19 @@
         <item quantity="few">%1$d minute</item>
         <item quantity="other">%1$d minuta</item>
     </plurals>
+    <plurals name="search_results_count">
+        <item quantity="one">%1$d rezultat</item>
+        <item quantity="few">%1$d rezultata</item>
+        <item quantity="other">%1$d rezultata</item>
+    </plurals>
+    <plurals name="pages">
+        <item quantity="one">%1$d stranica</item>
+        <item quantity="few">%1$d stranice</item>
+        <item quantity="other">%1$d stranica</item>
+    </plurals>
+    <plurals name="sources_count">
+        <item quantity="one">%1$d izvor</item>
+        <item quantity="few">%1$d izvora</item>
+        <item quantity="other">%1$d izvora</item>
+    </plurals>
 </resources>

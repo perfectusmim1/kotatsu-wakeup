@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+	<string name="category_icon">Ikon</string>
+	<string name="fav_icon_default">Hjerte</string>
+	<string name="fav_icon_star">Stjerne</string>
+	<string name="fav_icon_fire">Ild</string>
+	<string name="fav_icon_crown">Krone</string>
+	<string name="fav_icon_book">Bok</string>
+	<string name="fav_icon_bookmark">Bokmerke</string>
+	<string name="fav_icon_eye">Øye</string>
+	<string name="fav_icon_bolt">Lyn</string>
+	<string name="fav_icon_clock">Klokke</string>
+	<string name="fav_icon_folder">Mappe</string>
+	<string name="fav_icon_check">Hake</string>
+	<string name="fav_icon_sparkles">Gnister</string>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="bookmark_added_many">புக்மார்க்குகள் சேர்க்கப்பட்டன</string>
+	<string name="bookmarks_sort_newest">புதிதாக சேர்க்கப்பட்டது</string>
+	<string name="bookmarks_sort_oldest">பழமையானது சேர்க்கப்பட்டது</string>
+	<string name="bookmarks_sort_chapter">அத்தியாயம் வரிசை</string>
+	<string name="search_bookmarks_hint">தேடல் தொடர் அல்லது அத்தியாயம்</string>
+	<string name="search_bookmarked_chapters_hint">புக்மார்க் செய்யப்பட்ட அத்தியாயங்களைத் தேடுங்கள்</string>
+	<string name="no_bookmarks_matching_query">பொருந்தக்கூடிய புக்மார்க்குகள் இல்லை</string>
+	<string name="no_bookmarks_matching_summary">உங்கள் தற்போதைய வடிப்பானுடன் எந்த புக்மார்க்குகளும் பொருந்தவில்லை</string>
+	<string name="download_bookmarked_chapters">புக்மார்க் செய்யப்பட்ட அத்தியாயங்களைப் பதிவிறக்கவும்</string>
+	<string name="download_bookmarked_only">புத்தகக்குறியிடப்பட்ட அத்தியாயங்கள் மட்டுமே</string>
+	<string name="download_bookmarked_next_2">புக்மார்க் செய்யப்பட்ட + அடுத்த 2 அத்தியாயங்கள்</string>
+	<string name="download_bookmarked_next_3">புக்மார்க் செய்யப்பட்ட + அடுத்த 3 அத்தியாயங்கள்</string>
+	<string name="no_bookmarked_chapters_to_download">பதிவிறக்க புக்மார்க் செய்யப்பட்ட அத்தியாயங்கள் இல்லை</string>
+	<string name="migrate_bookmarks">புக்மார்க்குகளை வேறொரு மூலத்திற்கு மாற்றவும்</string>
+	<string name="bookmark_migration_choose_series">நகர்த்துவதற்கு தொடரைத் தேர்ந்தெடுக்கவும்</string>
+	<string name="bookmark_migration_searching">செயலில் உள்ள ஆதாரங்களைத் தேடுகிறது…</string>
+	<string name="bookmark_migration_progress">%1$d/%2$d ஆதாரங்கள் · %3$d பொருத்தங்கள்</string>
+	<string name="bookmark_migration_chapters_matched">%1$d/%2$d அத்தியாயங்கள் பொருந்தும்</string>
+	<string name="bookmark_migration_total_chapters">%1$d அத்தியாயங்கள்</string>
+	<string name="bookmark_migration_no_candidates">இணக்கமான ஆதாரங்கள் எதுவும் கிடைக்கவில்லை</string>
+	<string name="bookmark_migration_no_candidates_summary">இந்தத் தொடருக்கும் அதன் புக்மார்க் செய்யப்பட்ட அத்தியாயங்களுக்கும் எந்த இயக்கப்பட்ட மூலமும் பொருந்தவில்லை</string>
+	<string name="bookmark_migration_confirm">%1$d புக்மார்க்(களை) \"%2$s\" (%3$s) இலிருந்து \"%4$s\" (%5$s)?\n%6$d of %7$d புக்மார்க் செய்யப்பட்ட அத்தியாயங்கள் பொருந்தின.</string>
+	<string name="bookmark_migration_confirm_no_overlap">%1$d புக்மார்க்(களை) \"%2$s\" (%3$s) இலிருந்து \"%4$s\" (%5$s)?\nஅத்தியாயங்கள் முன்னேற்றத்தைப் படிப்பதன் மூலம் தோராயமாக மதிப்பிடப்படும்.</string>
+	<string name="bookmark_migration_success">புக்மார்க்குகள் %1$sக்கு இடம்பெயர்ந்தன</string>
+	<string name="bookmark_migration_no_bookmarks">இந்தத் தொடருக்கான புக்மார்க்குகள் எதுவும் இல்லை</string>
+	<string name="bookmark_migration_rescan">மீண்டும் ஸ்கேன் செய்யவும்</string>
+	<string name="bookmark_migration_unavailable_no_chapters">அத்தியாயங்கள் இல்லை</string>
+	<string name="bookmarks_count_badge">%1$d புக்மார்க்குகள்</string>
+</resources>

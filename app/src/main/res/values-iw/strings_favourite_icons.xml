@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="category_icon">סמל</string>
+	<string name="fav_icon_default">לב</string>
+	<string name="fav_icon_star">כוכב</string>
+	<string name="fav_icon_fire">אש</string>
+	<string name="fav_icon_crown">כתר</string>
+	<string name="fav_icon_book">ספר</string>
+	<string name="fav_icon_bookmark">סימנייה</string>
+	<string name="fav_icon_eye">עין</string>
+	<string name="fav_icon_bolt">ברק</string>
+	<string name="fav_icon_clock">שעון</string>
+	<string name="fav_icon_folder">תיקייה</string>
+	<string name="fav_icon_check">סימון וי</string>
+	<string name="fav_icon_sparkles">ניצוצות</string>
+</resources>
