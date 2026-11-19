@@ -163,59 +163,65 @@ class Anime4kUpscaleEngine @Inject constructor() {
 				val gProg = checkNotNull(gradProg)
 				val fProg = checkNotNull(finalProg)
 
-				// 2. Parlaklık haritası (workTexA -> workTexB)
-				GLES20.glUseProgram(lProg.program)
-				GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexA)
-				GLES20.glUniform1i(lProg.uniforms.getValue("u_tex"), 0)
-				drawQuadToFboLocked(lProg, workTexB, internalW, internalH)
+				repeat(2) {
+					// 2. Parlaklık haritası (workTexA -> workTexB)
+					GLES20.glUseProgram(lProg.program)
+					GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexA)
+					GLES20.glUniform1i(lProg.uniforms.getValue("u_tex"), 0)
+					drawQuadToFboLocked(lProg, workTexB, internalW, internalH)
 
-				// 3. Kenar itme ve çizgi inceltme (workTexA + workTexB -> workTexC)
-				GLES20.glUseProgram(pProg.program)
-				GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexA)
-				GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexB)
-				GLES20.glUniform1i(pProg.uniforms.getValue("u_tex"), 0)
-				GLES20.glUniform1i(pProg.uniforms.getValue("u_lumTex"), 1)
-				GLES20.glUniform2f(pProg.uniforms.getValue("u_pt"), ptX, ptY)
-				GLES20.glUniform1f(pProg.uniforms.getValue("u_strength"), PUSH_STRENGTH)
-				drawQuadToFboLocked(pProg, workTexC, internalW, internalH)
+					// 3. Kenar itme ve çizgi inceltme (workTexA + workTexB -> workTexC)
+					GLES20.glUseProgram(pProg.program)
+					GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexA)
+					GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexB)
+					GLES20.glUniform1i(pProg.uniforms.getValue("u_tex"), 0)
+					GLES20.glUniform1i(pProg.uniforms.getValue("u_lumTex"), 1)
+					GLES20.glUniform2f(pProg.uniforms.getValue("u_pt"), ptX, ptY)
+					GLES20.glUniform1f(pProg.uniforms.getValue("u_strength"), PUSH_STRENGTH)
+					drawQuadToFboLocked(pProg, workTexC, internalW, internalH)
 
-				// 4. Güncellenmiş parlaklık (workTexC -> workTexB)
-				GLES20.glUseProgram(lProg.program)
-				GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexC)
-				GLES20.glUniform1i(lProg.uniforms.getValue("u_tex"), 0)
-				drawQuadToFboLocked(lProg, workTexB, internalW, internalH)
+					// 4. Güncellenmiş parlaklık (workTexC -> workTexB)
+					GLES20.glUseProgram(lProg.program)
+					GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexC)
+					GLES20.glUniform1i(lProg.uniforms.getValue("u_tex"), 0)
+					drawQuadToFboLocked(lProg, workTexB, internalW, internalH)
 
-				// 5. Sobel gradyan hesabı (workTexB -> workTexA)
-				GLES20.glUseProgram(gProg.program)
-				GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexB)
-				GLES20.glUniform1i(gProg.uniforms.getValue("u_lumTex"), 0)
-				GLES20.glUniform2f(gProg.uniforms.getValue("u_pt"), ptX, ptY)
-				drawQuadToFboLocked(gProg, workTexA, internalW, internalH)
+					// 5. Sobel gradyan hesabı (workTexB -> workTexA)
+					GLES20.glUseProgram(gProg.program)
+					GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexB)
+					GLES20.glUniform1i(gProg.uniforms.getValue("u_lumTex"), 0)
+					GLES20.glUniform2f(gProg.uniforms.getValue("u_pt"), ptX, ptY)
+					drawQuadToFboLocked(gProg, workTexA, internalW, internalH)
 
-				// 6. Gradyan yönlü keskinleştirme (workTexC + workTexA -> workTexB)
-				GLES20.glUseProgram(fProg.program)
-				GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexC)
-				GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexA)
-				GLES20.glUniform1i(fProg.uniforms.getValue("u_tex"), 0)
-				GLES20.glUniform1i(fProg.uniforms.getValue("u_gradTex"), 1)
-				GLES20.glUniform2f(fProg.uniforms.getValue("u_pt"), ptX, ptY)
-				GLES20.glUniform1f(fProg.uniforms.getValue("u_strength"), REFINE_STRENGTH)
-				drawQuadToFboLocked(fProg, workTexB, internalW, internalH)
+					// 6. Gradyan yönlü keskinleştirme (workTexC + workTexA -> workTexB, ardından workTexA ile takas)
+					GLES20.glUseProgram(fProg.program)
+					GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexC)
+					GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+					GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexA)
+					GLES20.glUniform1i(fProg.uniforms.getValue("u_tex"), 0)
+					GLES20.glUniform1i(fProg.uniforms.getValue("u_gradTex"), 1)
+					GLES20.glUniform2f(fProg.uniforms.getValue("u_pt"), ptX, ptY)
+					GLES20.glUniform1f(fProg.uniforms.getValue("u_strength"), REFINE_STRENGTH)
+					drawQuadToFboLocked(fProg, workTexB, internalW, internalH)
 
-				// 7. Bindirme kırpma ve hedef boyuta çıkış (workTexB -> outTexId)
+					val tmp = workTexA
+					workTexA = workTexB
+					workTexB = tmp
+				}
+
+				// 7. Bindirme kırpma ve hedef boyuta çıkış (workTexA -> outTexId)
 				val vMin = (cropTop.toFloat() / srcH.toFloat()).coerceIn(0f, 1f)
 				val vMax = (1f - cropBottom.toFloat() / srcH.toFloat()).coerceIn(vMin, 1f)
 				val dProg = checkNotNull(drawProg)
 				GLES20.glUseProgram(dProg.program)
 				GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexB)
+				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, workTexA)
 				GLES20.glUniform1i(dProg.uniforms.getValue("u_tex"), 0)
 				GLES20.glUniform2f(dProg.uniforms.getValue("u_vRange"), vMin, vMax)
 				drawQuadToFboLocked(dProg, outTexId, outWidth, outHeight)
@@ -644,13 +650,37 @@ class Anime4kUpscaleEngine @Inject constructor() {
 				vec2 coord = uv * u_srcSize - 0.5;
 				vec2 i = floor(coord);
 				vec2 f = coord - i;
-				vec2 tl = (i + 0.5) * px;
-				vec2 tr = tl + vec2(px.x, 0.0);
-				vec2 bl = tl + vec2(0.0, px.y);
-				vec2 br = tl + px;
-				vec4 c0 = mix(texture2D(u_tex, tl), texture2D(u_tex, tr), f.x);
-				vec4 c1 = mix(texture2D(u_tex, bl), texture2D(u_tex, br), f.x);
-				return mix(c0, c1, f.y);
+				vec2 f2 = f * f;
+				vec2 f3 = f2 * f;
+
+				vec2 w0 = -0.5 * f3 + f2 - 0.5 * f;
+				vec2 w1 = 1.5 * f3 - 2.5 * f2 + 1.0;
+				vec2 w2 = -1.5 * f3 + 2.0 * f2 + 0.5 * f;
+				vec2 w3 = 0.5 * f3 - 0.5 * f2;
+
+				vec2 p0 = (i - 0.5) * px;
+				vec2 p1 = (i + 0.5) * px;
+				vec2 p2 = (i + 1.5) * px;
+				vec2 p3 = (i + 2.5) * px;
+
+				vec4 r0 = texture2D(u_tex, vec2(p0.x, p0.y)) * w0.x +
+					texture2D(u_tex, vec2(p1.x, p0.y)) * w1.x +
+					texture2D(u_tex, vec2(p2.x, p0.y)) * w2.x +
+					texture2D(u_tex, vec2(p3.x, p0.y)) * w3.x;
+				vec4 r1 = texture2D(u_tex, vec2(p0.x, p1.y)) * w0.x +
+					texture2D(u_tex, vec2(p1.x, p1.y)) * w1.x +
+					texture2D(u_tex, vec2(p2.x, p1.y)) * w2.x +
+					texture2D(u_tex, vec2(p3.x, p1.y)) * w3.x;
+				vec4 r2 = texture2D(u_tex, vec2(p0.x, p2.y)) * w0.x +
+					texture2D(u_tex, vec2(p1.x, p2.y)) * w1.x +
+					texture2D(u_tex, vec2(p2.x, p2.y)) * w2.x +
+					texture2D(u_tex, vec2(p3.x, p2.y)) * w3.x;
+				vec4 r3 = texture2D(u_tex, vec2(p0.x, p3.y)) * w0.x +
+					texture2D(u_tex, vec2(p1.x, p3.y)) * w1.x +
+					texture2D(u_tex, vec2(p2.x, p3.y)) * w2.x +
+					texture2D(u_tex, vec2(p3.x, p3.y)) * w3.x;
+
+				return clamp(r0 * w0.y + r1 * w1.y + r2 * w2.y + r3 * w3.y, 0.0, 1.0);
 			}
 
 			void main() {

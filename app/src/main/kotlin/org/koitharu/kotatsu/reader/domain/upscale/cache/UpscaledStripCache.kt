@@ -171,9 +171,9 @@ class UpscaledStripCache @Inject constructor(
 	}
 
 	private companion object {
-		const val CACHE_DIR_NAME = "upscaled_strips"
-		const val CACHE_VERSION = 1
-		const val WEBP_QUALITY = 94
+		const val CACHE_DIR_NAME = "upscaled_strips_v2"
+		const val CACHE_VERSION = 2
+		const val WEBP_QUALITY = 97
 		const val MAX_CACHE_BYTES = 192L * 1024L * 1024L
 		const val TRIM_TARGET_BYTES = 152L * 1024L * 1024L
 		const val STALE_TMP_AGE_MS = 5L * 60L * 1000L

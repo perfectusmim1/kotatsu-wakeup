@@ -107,7 +107,7 @@ import java.time.Instant
 import javax.inject.Inject
 
 private const val BOUNDS_PAGE_OFFSET = 2
-private const val PREFETCH_LIMIT = 10
+private const val PREFETCH_LIMIT = 16
 private const val MAX_DETAILS_VERIFICATION_RETRIES = 1L
 private const val NEIGHBOUR_WAIT_MS = 1500L
 

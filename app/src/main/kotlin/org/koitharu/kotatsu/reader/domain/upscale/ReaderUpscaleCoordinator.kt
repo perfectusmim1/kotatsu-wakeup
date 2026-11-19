@@ -293,11 +293,9 @@ class ReaderUpscaleCoordinator private constructor(
 		srcWidth: Int,
 	): Bitmap? {
 		if (!mode.isEnabled || srcWidth <= 0) return null
-		val maxInW = if (mode == UpscaleMode.AI) StripPlanner.AI_MAX_INPUT_WIDTH else StripPlanner.DEFAULT_MAX_TEX_SIZE / 2
 		val sizeSpec = StripPlanner.computeStripOutputSize(
 			srcW = srcWidth,
 			validH = strip.validHeight,
-			maxInputWidthOverride = maxInW,
 		)
 		val cacheKey = stripCache.buildStripKey(
 			pageIdentity = pageIdentity,
@@ -307,67 +305,6 @@ class ReaderUpscaleCoordinator private constructor(
 			outHeight = sizeSpec.outHeight,
 		)
 		return stripCache.getCachedBitmap(cacheKey)
-	}
-
-	/**
-	 * Yapay Zekâ (AI) modunda şerit kuyrukta/çıkarımda beklerken kullanıcının bulanık sayfa görmemesi için
-	 * ~25ms içinde hızlı Anime4K önizleme şeridi üretir (priorityGate kilidine takılmaz).
-	 */
-	suspend fun renderFastPreviewStrip(
-		pageIdentity: String,
-		strip: StripPlan,
-		srcWidth: Int,
-		decodeSourceStrip: suspend () -> Bitmap?,
-	): Bitmap? {
-		if (srcWidth <= 0) return null
-		val sizeSpec = StripPlanner.computeStripOutputSize(
-			srcW = srcWidth,
-			validH = strip.validHeight,
-			maxInputWidthOverride = StripPlanner.AI_MAX_INPUT_WIDTH,
-		)
-		val previewCacheKey = stripCache.buildStripKey(
-			pageIdentity = pageIdentity,
-			stripIndex = strip.index,
-			mode = UpscaleMode.FAST,
-			outWidth = sizeSpec.outWidth,
-			outHeight = sizeSpec.outHeight,
-		)
-		stripCache.getCachedBitmap(previewCacheKey)?.let { return it }
-
-		val rawStripBitmap = decodeSourceStrip() ?: return null
-		val scaledInputBitmap = if (sizeSpec.inputWidth < rawStripBitmap.width) {
-			val targetInH = (rawStripBitmap.height * sizeSpec.inputScale).toInt().coerceAtLeast(1)
-			Bitmap.createScaledBitmap(rawStripBitmap, sizeSpec.inputWidth, targetInH, true).also {
-				if (it !== rawStripBitmap) {
-					rawStripBitmap.recycle()
-				}
-			}
-		} else {
-			rawStripBitmap
-		}
-		val scaledCropTop = (strip.cropTop * sizeSpec.inputScale).toInt().coerceAtLeast(0)
-		val scaledCropBottom = (strip.cropBottom * sizeSpec.inputScale).toInt().coerceAtLeast(0)
-		return try {
-			anime4kEngine.upscale(
-				source = scaledInputBitmap,
-				outWidth = sizeSpec.outWidth,
-				outHeight = sizeSpec.outHeight,
-				cropTop = scaledCropTop,
-				cropBottom = scaledCropBottom,
-			).also { bmp ->
-				if (!bmp.isRecycled) {
-					stripCache.putCachedBitmap(previewCacheKey, bmp)
-				}
-			}
-		} catch (ce: CancellationException) {
-			throw ce
-		} catch (_: Throwable) {
-			null
-		} finally {
-			if (!scaledInputBitmap.isRecycled) {
-				scaledInputBitmap.recycle()
-			}
-		}
 	}
 
 	suspend fun upscaleStrip(
@@ -380,11 +317,9 @@ class ReaderUpscaleCoordinator private constructor(
 	): Bitmap? {
 		if (!mode.isEnabled || srcWidth <= 0) return null
 		val generation = generationCounter.get()
-		val maxInW = if (mode == UpscaleMode.AI) StripPlanner.AI_MAX_INPUT_WIDTH else StripPlanner.DEFAULT_MAX_TEX_SIZE / 2
 		val sizeSpec = StripPlanner.computeStripOutputSize(
 			srcW = srcWidth,
 			validH = strip.validHeight,
-			maxInputWidthOverride = maxInW,
 		)
 		val cacheKey = stripCache.buildStripKey(
 			pageIdentity = pageIdentity,

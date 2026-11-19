@@ -123,12 +123,25 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 		}
 	}
 
+	fun setOrder(key: Long, orderSeq: Long) {
+		synchronized(lock) {
+			val matching = waiters.filter { it.key == key && !it.cancelled }
+			if (matching.isEmpty()) return
+			for (waiter in matching) {
+				waiters.remove(waiter)
+				waiter.seq = orderSeq
+				waiters.add(waiter)
+			}
+		}
+	}
+
 	suspend fun <T> withPermit(
 		key: Long,
 		highPriority: Boolean,
+		orderSeq: Long = 0L,
 		block: suspend () -> T,
 	): T {
-		acquire(key = key, highPriority = highPriority)
+		acquire(key = key, highPriority = highPriority, orderSeq = orderSeq)
 		try {
 			return block()
 		} finally {
@@ -139,21 +152,28 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 	fun asPipelinePermit(
 		key: Long,
 		isHighPriority: () -> Boolean,
+		orderSeqProducer: () -> Long = { 0L },
 	): PipelinePermit = object : PipelinePermit {
 		override suspend fun <T> withPermit(block: suspend () -> T): T =
-			this@PrioritySemaphore.withPermit(key = key, highPriority = isHighPriority(), block = block)
+			this@PrioritySemaphore.withPermit(
+				key = key,
+				highPriority = isHighPriority(),
+				orderSeq = orderSeqProducer(),
+				block = block,
+			)
 	}
 
-	private suspend fun acquire(key: Long, highPriority: Boolean) {
+	private suspend fun acquire(key: Long, highPriority: Boolean, orderSeq: Long = 0L) {
 		currentCoroutineContext().ensureActive()
 		val waiter: Waiter? = synchronized(lock) {
 			if (availablePermits > 0) {
 				availablePermits--
 				null
 			} else {
+				val effectiveSeq = if (orderSeq > 0L) orderSeq else seqCounter.incrementAndGet()
 				Waiter(
 					key = key,
-					seq = seqCounter.incrementAndGet(),
+					seq = effectiveSeq,
 					highPriority = highPriority,
 				).also { waiters.add(it) }
 			}
@@ -250,6 +270,7 @@ class ReaderTranslationCoordinator private constructor(
 		val pageId: Long,
 		@Volatile var isPrefetch: Boolean,
 		@Volatile var isFromPreload: Boolean,
+		@Volatile var orderSeq: Long,
 		@Volatile var waitingOnPrefetchGate: Boolean = false,
 		@Volatile var ocrCompleted: Boolean = false,
 	) {
@@ -258,6 +279,7 @@ class ReaderTranslationCoordinator private constructor(
 
 	private val scope = lifecycle.lifecycleScope + Dispatchers.Default
 	private val generationCounter = AtomicLong(0L)
+	private val orderSeqCounter = AtomicLong(1000L)
 	private val settingsSheetDepth = AtomicInteger(0)
 	private val jobsLock = Any()
 	private val inFlightJobs = HashMap<Long, InFlightEntry>()
@@ -426,6 +448,12 @@ class ReaderTranslationCoordinator private constructor(
 
 	internal fun isActivePage(pageId: Long): Boolean = synchronized(windowLock) {
 		pageId in activePageIds
+	}
+
+	internal fun isInTranslationWindow(pageId: Long): Boolean = synchronized(windowLock) {
+		pageId in activePageIds ||
+			prefetchPagesWindow.any { it.id == pageId } ||
+			preloadedPages.any { it.id == pageId }
 	}
 
 	internal fun pendingOcrWaitersCount(): Int = ocrGate.pendingWaitersCount()
@@ -736,8 +764,10 @@ class ReaderTranslationCoordinator private constructor(
 					return
 				}
 			}
+			val assignedOrderSeq = orderSeqCounter.incrementAndGet()
 			val existingEntry = inFlightJobs[page.id]
 			if (existingEntry != null && existingEntry.job.isActive) {
+				existingEntry.orderSeq = assignedOrderSeq
 				if (!isPrefetch && existingEntry.isPrefetch) {
 					if (existingEntry.waitingOnPrefetchGate) {
 						// Has not entered OCR or emitted progress yet: replace immediately without blocking on prefetchGate
@@ -758,6 +788,10 @@ class ReaderTranslationCoordinator private constructor(
 					if (!isPrefetch) {
 						ocrGate.promote(page.id, bumpToFront = true)
 						translateGate.promote(page.id, bumpToFront = true)
+					} else {
+						prefetchGate.setOrder(page.id, assignedOrderSeq)
+						ocrGate.setOrder(page.id, assignedOrderSeq)
+						translateGate.setOrder(page.id, assignedOrderSeq)
 					}
 					return
 				}
@@ -767,6 +801,7 @@ class ReaderTranslationCoordinator private constructor(
 				pageId = page.id,
 				isPrefetch = isPrefetch,
 				isFromPreload = isFromPreload,
+				orderSeq = assignedOrderSeq,
 			)
 			val job = scope.launch(start = CoroutineStart.LAZY) {
 				try {
@@ -778,14 +813,18 @@ class ReaderTranslationCoordinator private constructor(
 							return@launch
 						}
 						entry.waitingOnPrefetchGate = true
-						_hasPendingActiveOcr.first {
-							!it || !entry.isPrefetch || !_isEnabled.value || generation != generationCounter.get()
-						}
-						if (!_isEnabled.value || generation != generationCounter.get()) {
-							return@launch
-						}
-						prefetchGate.withPermit(key = page.id, highPriority = false) {
+						prefetchGate.withPermit(
+							key = page.id,
+							highPriority = false,
+							orderSeq = entry.orderSeq,
+						) {
+							_hasPendingActiveOcr.first {
+								!it || !entry.isPrefetch || !_isEnabled.value || generation != generationCounter.get()
+							}
 							entry.waitingOnPrefetchGate = false
+							if (!_isEnabled.value || generation != generationCounter.get()) {
+								return@withPermit
+							}
 							executePageJobWithTransientRetry(entry, page, snapshot, generation)
 						}
 					} else {
@@ -920,14 +959,14 @@ class ReaderTranslationCoordinator private constructor(
 				// Only treat as real cancellation if OUR coroutine was cancelled;
 				// an external cancelled Deferred (e.g. evicted PageLoader prefetch download) must recover.
 				currentCoroutineContext().ensureActive()
-				val stillActiveTarget = (!entry.isPrefetch || isActivePage(page.id)) &&
+				val stillWantedTarget = (!entry.isPrefetch || isInTranslationWindow(page.id)) &&
 					_isEnabled.value &&
 					generation == generationCounter.get()
-				if (stillActiveTarget && attempt < MAX_TRANSIENT_RETRIES) {
+				if (stillWantedTarget && attempt < MAX_TRANSIENT_RETRIES) {
 					attempt++
 					TranslatePipelineLog.w(
 						LOG_TAG,
-						"External cancellation on active page=${page.id}; retrying ($attempt/$MAX_TRANSIENT_RETRIES)",
+						"External cancellation on page=${page.id} (prefetch=${entry.isPrefetch}); retrying ($attempt/$MAX_TRANSIENT_RETRIES)",
 					)
 					delay(TRANSIENT_RETRY_DELAY_MS)
 					continue
@@ -935,10 +974,10 @@ class ReaderTranslationCoordinator private constructor(
 				throw ce
 			} catch (t: Throwable) {
 				val isTransient = t is IOException || (t is TranslationServiceException && t.isTransient)
-				val stillActiveTarget = (!entry.isPrefetch || isActivePage(page.id)) &&
+				val stillWantedTarget = (!entry.isPrefetch || isInTranslationWindow(page.id)) &&
 					_isEnabled.value &&
 					generation == generationCounter.get()
-				if (isTransient && stillActiveTarget && attempt < MAX_TRANSIENT_RETRIES) {
+				if (isTransient && stillWantedTarget && attempt < MAX_TRANSIENT_RETRIES) {
 					attempt++
 					TranslatePipelineLog.w(
 						LOG_TAG,
@@ -961,8 +1000,8 @@ class ReaderTranslationCoordinator private constructor(
 		if (!_isEnabled.value || generation != generationCounter.get()) {
 			return
 		}
-		val ocrPermit = ocrGate.asPipelinePermit(page.id) { !entry.isPrefetch }
-		val translatePermit = translateGate.asPipelinePermit(page.id) { !entry.isPrefetch }
+		val ocrPermit = ocrGate.asPipelinePermit(page.id, { !entry.isPrefetch }, { entry.orderSeq })
+		val translatePermit = translateGate.asPipelinePermit(page.id, { !entry.isPrefetch }, { entry.orderSeq })
 		val onProgress: suspend (TranslationStage, Int) -> Unit = { stage, percent ->
 			if (stage != TranslationStage.DOWNLOADING_MODELS && stage != TranslationStage.RUNNING_OCR) {
 				entry.ocrCompleted = true
@@ -1154,9 +1193,9 @@ class ReaderTranslationCoordinator private constructor(
 		private const val LOG_TAG = "KotatsuTranslate"
 		private const val OCR_CONCURRENCY = 1
 		private const val TRANSLATE_CONCURRENCY = 4
-		private const val MAX_CONCURRENT_JOBS = 4
-		const val PREFETCH_PAGE_COUNT = 6
-		private const val MAX_PRELOADED_TRACKED = 10
+		private const val MAX_CONCURRENT_JOBS = 6
+		const val PREFETCH_PAGE_COUNT = 24
+		private const val MAX_PRELOADED_TRACKED = 28
 		private const val ERROR_DEBOUNCE_MS = 4_000L
 		private const val ERROR_RETRY_COOLDOWN_MS = 3_000L
 		private const val TRANSIENT_RETRY_DELAY_MS = 1_200L

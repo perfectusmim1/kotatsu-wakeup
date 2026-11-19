@@ -61,6 +61,14 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 		if (state == SCROLL_STATE_IDLE) {
 			scrollDirection = 0
 		}
+		notifyScrollChanged(0)
+	}
+
+	override fun onScrolled(dx: Int, dy: Int) {
+		super.onScrolled(dx, dy)
+		if (dy != 0) {
+			notifyScrollChanged(dy)
+		}
 	}
 
 	override fun onChildDetachedFromWindow(child: View) {
@@ -183,6 +191,7 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 		super.onLayout(changed, l, t, r, b)
 		// Re-measuring moves pages and resizes them - a decoded image, zoom, rotation - without scrolling
 		updateChildrenScroll()
+		notifyScrollChanged(0)
 	}
 
 	/**

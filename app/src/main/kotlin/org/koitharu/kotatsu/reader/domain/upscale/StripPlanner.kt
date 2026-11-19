@@ -11,10 +11,9 @@ object StripPlanner {
 
 	const val STRIP_HEIGHT = 1024
 	const val STRIP_OVERLAP = 16
-	const val AI_STRIP_HEIGHT = 480
-	const val AI_STRIP_OVERLAP = 8
-	const val AI_MAX_INPUT_WIDTH = 512
-	const val AI_TILE_SIZE = 256
+	const val AI_STRIP_HEIGHT = 768
+	const val AI_STRIP_OVERLAP = 12
+	const val AI_TILE_SIZE = 384
 	const val AI_TILE_OVERLAP = 12
 	const val DEFAULT_MAX_TEX_SIZE = 4096
 
@@ -120,12 +119,11 @@ object StripPlanner {
 		srcW: Int,
 		validH: Int,
 		maxTexSize: Int = DEFAULT_MAX_TEX_SIZE,
-		maxInputWidthOverride: Int = (maxTexSize.coerceAtLeast(256) / 2).coerceAtLeast(1),
 	): StripSizeResult {
 		val safeSrcW = srcW.coerceAtLeast(1)
 		val safeValidH = validH.coerceAtLeast(1)
 		val safeMaxTex = maxTexSize.coerceAtLeast(256)
-		val maxInputW = min((safeMaxTex / 2).coerceAtLeast(1), maxInputWidthOverride.coerceAtLeast(64))
+		val maxInputW = (safeMaxTex / 2).coerceAtLeast(1)
 
 		val inputWidth = min(safeSrcW, maxInputW)
 		val inputScale = inputWidth.toFloat() / safeSrcW.toFloat()

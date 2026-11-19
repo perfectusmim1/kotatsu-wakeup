@@ -124,28 +124,27 @@ class RealEsrganOnnxEngine @Inject constructor(
 				val tiles = StripPlanner.planTiles(srcW, srcH, tileSize, tileOverlap)
 				val margin = tileOverlap * 2
 
-				val fixedInW = tileSize + tileOverlap * 2
-				val fixedInH = tileSize + tileOverlap * 2
-				val planeSize = fixedInW * fixedInH
-				val requiredFloatLen = 3 * planeSize
+				val maxInW = tileSize + tileOverlap * 2
+				val maxInH = tileSize + tileOverlap * 2
+				val maxPlaneSize = maxInW * maxInH
+				val maxRequiredFloatLen = 3 * maxPlaneSize
 
 				var inputFloat = reusedInputFloatArray
 				var inputDirectBuf = reusedInputDirectBuf
-				if (inputFloat == null || inputFloat.size < requiredFloatLen || inputDirectBuf == null) {
-					inputFloat = FloatArray(requiredFloatLen)
-					inputDirectBuf = ByteBuffer.allocateDirect(requiredFloatLen * 4)
+				if (inputFloat == null || inputFloat.size < maxRequiredFloatLen || inputDirectBuf == null || inputDirectBuf.capacity() < maxRequiredFloatLen) {
+					inputFloat = FloatArray(maxRequiredFloatLen)
+					inputDirectBuf = ByteBuffer.allocateDirect(maxRequiredFloatLen * 4)
 						.order(ByteOrder.nativeOrder())
 						.asFloatBuffer()
 					reusedInputFloatArray = inputFloat
 					reusedInputDirectBuf = inputDirectBuf
 				}
 
-				val expectedOutFloatLen = 3 * (fixedInW * 2) * (fixedInH * 2)
+				val expectedOutFloatLen = 3 * (maxInW * 2) * (maxInH * 2)
 				var outFloat: FloatArray = reusedOutputFloatArray?.takeIf { it.size >= expectedOutFloatLen }
 					?: FloatArray(expectedOutFloatLen).also { reusedOutputFloatArray = it }
 
 				val inputName = ortSession.inputNames.firstOrNull() ?: "input"
-				val inputShape = longArrayOf(1L, 3L, fixedInH.toLong(), fixedInW.toLong())
 				val inv255 = 1f / 255f
 
 				for (tIdx in tiles.indices) {
@@ -161,14 +160,18 @@ class RealEsrganOnnxEngine @Inject constructor(
 					val tile = tiles[tIdx]
 					val coreW = tile.coreWidth
 					val coreH = tile.coreHeight
+					val inW = coreW + tile.pad * 2
+					val inH = coreH + tile.pad * 2
+					val planeSize = inW * inH
+					val requiredFloatLen = 3 * planeSize
 					val inX0 = tile.tx0 - tile.pad
 					val inY0 = tile.ty0 - tile.pad
 
-					for (py in 0 until fixedInH) {
+					for (py in 0 until inH) {
 						val sy = (inY0 + py).coerceIn(0, srcH - 1)
 						val srcRowOffset = sy * srcW
-						val dstRowOffset = py * fixedInW
-						for (px in 0 until fixedInW) {
+						val dstRowOffset = py * inW
+						for (px in 0 until inW) {
 							val sx = (inX0 + px).coerceIn(0, srcW - 1)
 							val c = srcPixels[srcRowOffset + sx]
 							val dIdx = dstRowOffset + px
@@ -183,13 +186,14 @@ class RealEsrganOnnxEngine @Inject constructor(
 					inputDirectBuf.rewind()
 					inputDirectBuf.limit(requiredFloatLen)
 
+					val inputShape = longArrayOf(1L, 3L, inH.toLong(), inW.toLong())
 					OnnxTensor.createTensor(env, inputDirectBuf, inputShape).use { inTensor ->
 						ortSession.run(Collections.singletonMap(inputName, inTensor)).use { result ->
 							currentCoroutineContext().ensureActive()
 							val outTensor = result[0] as OnnxTensor
 							val shape = (outTensor.info as TensorInfo).shape
-							val outTileH = if (shape.size >= 4) shape[2].toInt() else fixedInH * 2
-							val outTileW = if (shape.size >= 4) shape[3].toInt() else fixedInW * 2
+							val outTileH = if (shape.size >= 4) shape[2].toInt() else inH * 2
+							val outTileW = if (shape.size >= 4) shape[3].toInt() else inW * 2
 							val outPlane = outTileW * outTileH
 							val totalOutFloats = 3 * outPlane
 

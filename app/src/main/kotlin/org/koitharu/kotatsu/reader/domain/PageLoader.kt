@@ -171,7 +171,9 @@ class PageLoader @Inject constructor(
 				boundPages[pageId] = count
 			} else {
 				boundPages.remove(pageId)
-				cancelIfUnfinished(pageId)
+				if (!translationCoordinator.isInTranslationWindow(pageId)) {
+					cancelIfUnfinished(pageId)
+				}
 			}
 		}
 	}
@@ -199,7 +201,7 @@ class PageLoader @Inject constructor(
 					val task = tasks[id]
 					if (task == null || task.isCompleted) {
 						iterator.remove()
-					} else if (id !in wanted && boundPages[id] == null) {
+					} else if (id !in wanted && boundPages[id] == null && !translationCoordinator.isInTranslationWindow(id)) {
 						iterator.remove()
 						cancelIfUnfinished(id)
 					}
@@ -325,7 +327,9 @@ class PageLoader @Inject constructor(
 				if (promotedToActive) {
 					return loadPage(page, force = false)
 				}
-				if (!allowRetry || page.id !in latestPrefetchWantedIds) {
+				val stillWantedForTranslation = translationCoordinator.isInTranslationWindow(page.id) ||
+					page.id in latestPrefetchWantedIds
+				if (!allowRetry || !stillWantedForTranslation) {
 					throw e
 				}
 				allowRetry = false
@@ -528,7 +532,7 @@ class PageLoader @Inject constructor(
 
 			uri.isFileUri() -> uri
 			else -> {
-				if (isPrefetch) {
+				if (isPrefetch && !translationCoordinator.isInTranslationWindow(page.id)) {
 					downloadSlowdownDispatcher.delay(page.source)
 				}
 				val baseRequest = createPageRequest(pageUrl, page.source)
@@ -588,7 +592,7 @@ class PageLoader @Inject constructor(
 	companion object {
 
 		private const val PROGRESS_UNDEFINED = -1f
-		private const val PREFETCH_LIMIT_DEFAULT = 6
+		private const val PREFETCH_LIMIT_DEFAULT = 12
 		private const val ONISAGA_PREFETCH_LIMIT = 5
 		private const val PREFETCH_MIN_RAM_MB = 80L
 

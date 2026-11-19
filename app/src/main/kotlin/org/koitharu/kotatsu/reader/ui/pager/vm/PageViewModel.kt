@@ -90,6 +90,12 @@ class PageViewModel(
 
 	val state = MutableStateFlow<PageState>(PageState.Empty)
 
+	init {
+		loader.translationCoordinator.activeTranslatedPages
+			.onEach(::onTranslationMapUpdated)
+			.launchIn(scope)
+	}
+
 	fun isLoading() = job?.isActive == true
 
 	fun consumePreserveViewState(): Boolean {

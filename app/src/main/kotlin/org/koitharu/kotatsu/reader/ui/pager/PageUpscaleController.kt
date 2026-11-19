@@ -517,44 +517,20 @@ class PageUpscaleController(
 		}
 
 		val job = scope.launch {
-			var previewJob: Job? = null
 			try {
-				if (key.mode == UpscaleMode.AI) {
-					val cachedAi = coordinator.getCachedStripIfPresent(
-						pageIdentity = pageIdentity,
-						strip = strip,
-						mode = UpscaleMode.AI,
-						srcWidth = key.sWidth,
-					)
-					if (cachedAi != null && !cachedAi.isRecycled) {
-						if (activeSessionKey == key) {
-							activeStripBitmaps[strip.index] = cachedAi
-							finalStripIndices.add(strip.index)
-							ssiv.invalidate()
-						}
-						return@launch
+				val cached = coordinator.getCachedStripIfPresent(
+					pageIdentity = pageIdentity,
+					strip = strip,
+					mode = key.mode,
+					srcWidth = key.sWidth,
+				)
+				if (cached != null && !cached.isRecycled) {
+					if (activeSessionKey == key) {
+						activeStripBitmaps[strip.index] = cached
+						finalStripIndices.add(strip.index)
+						ssiv.invalidate()
 					}
-
-					// Ekranda görünen şerit için AI çıkarımı beklenirken ~25ms içinde anında Anime4K keskin önizleme göster
-					if (isInitiallyOnScreen && !activeStripBitmaps.containsKey(strip.index)) {
-						previewJob = launch {
-							val previewBmp = coordinator.renderFastPreviewStrip(
-								pageIdentity = pageIdentity,
-								strip = strip,
-								srcWidth = key.sWidth,
-								decodeSourceStrip = { decodeStripRegion(key, strip) },
-							)
-							if (
-								activeSessionKey == key &&
-								previewBmp != null &&
-								!previewBmp.isRecycled &&
-								!finalStripIndices.contains(strip.index)
-							) {
-								activeStripBitmaps[strip.index] = previewBmp
-								ssiv.invalidate()
-							}
-						}
-					}
+					return@launch
 				}
 
 				val bitmap = coordinator.upscaleStrip(
@@ -565,17 +541,14 @@ class PageUpscaleController(
 					priorityProducer = { computeStripScreenPriority(key, strip) },
 					decodeSourceStrip = { decodeStripRegion(key, strip) },
 				)
-				previewJob?.cancel()
 				if (activeSessionKey == key && bitmap != null && !bitmap.isRecycled) {
 					activeStripBitmaps[strip.index] = bitmap
 					finalStripIndices.add(strip.index)
 					ssiv.invalidate()
 				}
 			} catch (ce: CancellationException) {
-				previewJob?.cancel()
 				throw ce
 			} finally {
-				previewJob?.cancel()
 				if (activeSessionKey == key) {
 					inFlightJobs.remove(strip.index)
 					if (key.mode == UpscaleMode.AI && finalStripIndices.contains(strip.index)) {

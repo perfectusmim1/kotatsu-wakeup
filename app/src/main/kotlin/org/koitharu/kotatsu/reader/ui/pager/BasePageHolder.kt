@@ -203,7 +203,11 @@ abstract class BasePageHolder<B : ViewBinding>(
 		boundData = data
 		animationPlayer?.reset()
 		upscaleController.reset()
-		viewModel.onBind(data.toMangaPage())
+		val mangaPage = data.toMangaPage()
+		viewModel.onBind(mangaPage)
+		if (pageLoader.translationCoordinator.isPrefetchTranslationEligible()) {
+			pageLoader.translationCoordinator.onPagePreloaded(mangaPage)
+		}
 		onBind(data)
 	}
 
