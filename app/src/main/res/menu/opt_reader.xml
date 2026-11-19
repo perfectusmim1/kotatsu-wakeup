@@ -11,6 +11,13 @@
 		app:showAsAction="always" />
 
 	<item
+		android:id="@+id/action_upscale"
+		android:checkable="true"
+		android:icon="@drawable/ic_fav_badge_sparkles"
+		android:title="@string/upscale_title"
+		app:showAsAction="ifRoom" />
+
+	<item
 		android:id="@+id/action_translate"
 		android:checkable="true"
 		android:icon="@drawable/ic_translate"

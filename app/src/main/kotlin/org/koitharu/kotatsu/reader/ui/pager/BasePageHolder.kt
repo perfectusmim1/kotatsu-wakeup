@@ -81,6 +81,10 @@ abstract class BasePageHolder<B : ViewBinding>(
 		}
 	}
 
+	private val upscaleController: PageUpscaleController by lazy(LazyThreadSafetyMode.NONE) {
+		PageUpscaleController(ssiv, itemView, pageLoader.upscaleCoordinator, lifecycleScope)
+	}
+
 	protected val settings: ReaderSettings
 		get() = viewModel.settingsProducer.value
 
@@ -137,6 +141,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 								ssiv.setScaleAndCenter(scale, center)
 							}
 						}
+						upscaleController.onViewReady()
 					}
 
 					override fun onImageLoaded() {
@@ -197,6 +202,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 		pendingSwapCenter = null
 		boundData = data
 		animationPlayer?.reset()
+		upscaleController.reset()
 		viewModel.onBind(data.toMangaPage())
 		onBind(data)
 	}
@@ -231,6 +237,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 		setPageOnScreen(boundData?.id)
 		ssiv.applyDownSampling(isForeground = true)
 		updateAnimation()
+		updateUpscale()
 		if (viewModel.state.value is PageState.Error && !viewModel.isLoading()) {
 			boundData?.let { viewModel.retry(it.toMangaPage(), isFromUser = false) }
 		}
@@ -241,6 +248,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 		setPageOnScreen(null)
 		ssiv.applyDownSampling(isForeground = false)
 		updateAnimation()
+		updateUpscale()
 	}
 
 	override fun onDestroy() {
@@ -263,6 +271,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 		boundData?.let { pageLoader.onPageUnbound(it.id) }
 		boundData = null
 		animationPlayer?.reset()
+		upscaleController.reset()
 		ssiv.recycle()
 	}
 
@@ -270,6 +279,9 @@ abstract class BasePageHolder<B : ViewBinding>(
 		// The frames of a page that moves are the first thing that can go: the page itself stays on screen
 		if (level >= TRIM_MEMORY_RUNNING_LOW) {
 			animationPlayer?.stop()
+			if (!isResumed()) {
+				upscaleController.reset()
+			}
 		}
 	}
 
@@ -362,6 +374,7 @@ abstract class BasePageHolder<B : ViewBinding>(
 			}
 		}
 		updateAnimation()
+		updateUpscale()
 	}
 
 	/**
@@ -378,6 +391,17 @@ abstract class BasePageHolder<B : ViewBinding>(
 		} else {
 			player.stop()
 		}
+	}
+
+	private fun updateUpscale() {
+		val isShown = viewModel.state.value is PageState.Shown
+		upscaleController.bindState(
+			displayUri = viewModel.shownDisplayImage.takeIf { isShown },
+			region = viewModel.shownRegion,
+			mask = viewModel.shownMask,
+			isAnimated = viewModel.shownAnimation != null,
+			isResumed = isResumed(),
+		)
 	}
 
 	/** This page as something a scrub can act on, or null while nothing erasable is on it. */

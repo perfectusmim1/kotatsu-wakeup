@@ -218,6 +218,13 @@
                 android:text="@string/color_correction"
                 app:drawableStartCompat="@drawable/ic_appearance" />
 
+            <org.koitharu.kotatsu.core.ui.widgets.ListItemTextView
+                android:id="@+id/button_upscale_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/upscale_title"
+                app:drawableStartCompat="@drawable/ic_fav_badge_sparkles" />
+
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switch_translation"
                 android:layout_width="match_parent"

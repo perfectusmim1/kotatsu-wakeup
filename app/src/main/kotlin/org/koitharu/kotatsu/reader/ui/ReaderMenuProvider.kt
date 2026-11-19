@@ -16,6 +16,7 @@ class ReaderMenuProvider(
 	private val viewModel: ReaderViewModel,
 	private val onHiddenImages: () -> Unit,
 	private val onTranslateClick: () -> Unit,
+	private val onUpscaleClick: () -> Unit,
 ) : MenuProvider {
 
 	override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -24,6 +25,16 @@ class ReaderMenuProvider(
 
 	override fun onPrepareMenu(menu: Menu) {
 		super.onPrepareMenu(menu)
+		menu.findItem(R.id.action_upscale)?.let { upscaleItem ->
+			val upscaleActive = viewModel.upscaleSettings.value.mode.isEnabled
+			upscaleItem.isChecked = upscaleActive
+			val upscaleTint = if (upscaleActive) {
+				ColorStateList.valueOf(context.getThemeColor(appcompatR.attr.colorPrimary))
+			} else {
+				ColorStateList.valueOf(context.getThemeColor(appcompatR.attr.colorControlNormal))
+			}
+			MenuItemCompat.setIconTintList(upscaleItem, upscaleTint)
+		}
 		val translateItem = menu.findItem(R.id.action_translate) ?: return
 		val enabled = viewModel.isTranslationEnabled.value
 		translateItem.isChecked = enabled
@@ -40,6 +51,11 @@ class ReaderMenuProvider(
 		return when (menuItem.itemId) {
 			R.id.action_info -> {
 				// TODO
+				true
+			}
+
+			R.id.action_upscale -> {
+				onUpscaleClick()
 				true
 			}
 

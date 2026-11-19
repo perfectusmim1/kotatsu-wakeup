@@ -12,6 +12,12 @@
 		android:layout_height="match_parent"
 		tools:background="@color/grey" />
 
+	<org.koitharu.kotatsu.reader.ui.upscale.UpscaleCompareOverlayView
+		android:id="@+id/upscaleCompareOverlay"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:visibility="gone" />
+
 	<com.google.android.material.button.MaterialButton
 		android:id="@+id/button_timer"
 		style="?materialIconButtonOutlinedStyle"

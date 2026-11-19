@@ -80,6 +80,7 @@ import org.koitharu.kotatsu.parsers.util.requireBody
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import org.koitharu.kotatsu.reader.domain.erase.ImageHider
 import org.koitharu.kotatsu.reader.domain.translate.ReaderTranslationCoordinator
+import org.koitharu.kotatsu.reader.domain.upscale.ReaderUpscaleCoordinator
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
 import java.io.IOException
@@ -104,6 +105,7 @@ class PageLoader @Inject constructor(
 	private val captchaAutoResolveCoordinator: CaptchaAutoResolveCoordinator,
 	val imageHider: ImageHider,
 	val translationCoordinator: ReaderTranslationCoordinator,
+	val upscaleCoordinator: ReaderUpscaleCoordinator,
 	private val preloader: PagePreloader,
 	val animatedPages: AnimatedPages,
 ) {

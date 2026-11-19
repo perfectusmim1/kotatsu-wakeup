@@ -64,6 +64,7 @@ class ChapterPagesMenuProvider(
 				menuInflater.inflate(R.menu.opt_bookmarks_tab, menu)
 				val bookmarksFragment = currentBookmarksFragment()
 				val hasBookmarks = bookmarksFragment?.hasBookmarks() ?: true
+				menu.findItem(R.id.action_random)?.isVisible = bookmarksFragment?.hasVisibleBookmarks() ?: hasBookmarks
 				menu.findItem(R.id.action_search)?.run {
 					isVisible = hasBookmarks
 					setOnActionExpandListener(this@ChapterPagesMenuProvider)
@@ -96,6 +97,11 @@ class ChapterPagesMenuProvider(
 	}
 
 	override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
+		R.id.action_random -> {
+			currentBookmarksFragment()?.openRandomBookmark()
+			true
+		}
+
 		R.id.action_reversed -> {
 			viewModel.setChaptersReversed(!menuItem.isChecked)
 			true

@@ -72,6 +72,7 @@ class AllBookmarksFragment :
 	private var selectionController: ListSelectionController? = null
 	private var lastSortOrder: BookmarkSortOrder? = null
 	private var lastQuery: String? = null
+	private var lastRandomBookmarkPageId: Long? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -152,7 +153,9 @@ class AllBookmarksFragment :
 		viewModel.onActionDone.observeEvent(viewLifecycleOwner, ReversibleActionObserver(binding.recyclerView))
 		viewModel.onDownloadStarted.observeEvent(viewLifecycleOwner, DownloadStartedObserver(binding.recyclerView))
 		addMenuProvider(BookmarksMenuProvider())
-		viewModel.hasBookmarks.observe(viewLifecycleOwner, MenuInvalidator(requireActivity()))
+		val menuInvalidator = MenuInvalidator(requireActivity())
+		viewModel.hasBookmarks.observe(viewLifecycleOwner, menuInvalidator)
+		viewModel.hasVisibleBookmarks.observe(viewLifecycleOwner, menuInvalidator)
 	}
 
 	override fun onApplyWindowInsets(v: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -177,13 +180,24 @@ class AllBookmarksFragment :
 
 	override fun onItemClick(item: Bookmark, view: View) {
 		if (selectionController?.onItemClick(item.pageId) != true) {
-			val intent = ReaderIntent.Builder(view.context)
-				.bookmark(item)
-				.incognito()
-				.build()
-			router.openReader(intent)
-			Toast.makeText(view.context, R.string.incognito_mode, Toast.LENGTH_SHORT).show()
+			openBookmark(item)
 		}
+	}
+
+	private fun openBookmark(item: Bookmark) {
+		val ctx = context ?: return
+		val intent = ReaderIntent.Builder(ctx)
+			.bookmark(item)
+			.incognito()
+			.build()
+		router.openReader(intent)
+		Toast.makeText(ctx, R.string.incognito_mode, Toast.LENGTH_SHORT).show()
+	}
+
+	private fun openRandomBookmark() {
+		val picked = viewModel.pickRandomBookmark(lastRandomBookmarkPageId) ?: return
+		lastRandomBookmarkPageId = picked.pageId
+		openBookmark(picked)
 	}
 
 	override fun onListHeaderClick(item: ListHeader, view: View) {
@@ -352,6 +366,8 @@ class AllBookmarksFragment :
 		override fun onPrepareMenu(menu: Menu) {
 			super.onPrepareMenu(menu)
 			val hasAny = viewModel.hasBookmarks.value
+			val hasVisible = viewModel.hasVisibleBookmarks.value
+			menu.findItem(R.id.action_random)?.isVisible = hasVisible
 			menu.findItem(R.id.action_bookmarks_search)?.isVisible = hasAny
 			menu.findItem(R.id.action_bookmarks_sort)?.isVisible = hasAny
 			menu.findItem(R.id.action_download_bookmarked)?.isVisible = hasAny
@@ -365,6 +381,11 @@ class AllBookmarksFragment :
 		}
 
 		override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
+			R.id.action_random -> {
+				openRandomBookmark()
+				true
+			}
+
 			R.id.action_bookmarks_sort_newest -> {
 				menuItem.isChecked = true
 				viewModel.setSortOrder(BookmarkSortOrder.CREATED_DESC)

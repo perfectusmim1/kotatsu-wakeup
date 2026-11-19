@@ -67,6 +67,10 @@ class PageViewModel(
 	val shownImage: Uri?
 		get() = rawUri.takeIf { state.value is PageState.Shown }
 
+	/** The exact file currently rendered on screen (translated file when active, or [rawUri] otherwise). */
+	val shownDisplayImage: Uri?
+		get() = (displayedUri ?: rawUri).takeIf { state.value is PageState.Shown }
+
 	/**
 	 * The file to play over what is on screen, for a page that moves and is shown whole. One with a part of it
 	 * erased stays still: the frames know nothing of what was taken out of the page, and would put it back.

@@ -6,6 +6,7 @@ import org.koitharu.kotatsu.list.ui.model.ListModel
 import org.koitharu.kotatsu.parsers.model.Manga
 import org.koitharu.kotatsu.parsers.model.MangaPage
 import java.time.Instant
+import kotlin.random.Random
 
 data class Bookmark(
 	val manga: Manga,
@@ -33,4 +34,16 @@ data class Bookmark(
 		},
 		source = manga.source,
 	)
+}
+
+fun List<Bookmark>.pickRandomBookmark(
+	excludePageId: Long? = null,
+	random: Random = Random.Default,
+): Bookmark? {
+	if (isEmpty()) return null
+	if (size == 1 || excludePageId == null) {
+		return random(random)
+	}
+	val filtered = filter { it.pageId != excludePageId }
+	return if (filtered.isNotEmpty()) filtered.random(random) else random(random)
 }

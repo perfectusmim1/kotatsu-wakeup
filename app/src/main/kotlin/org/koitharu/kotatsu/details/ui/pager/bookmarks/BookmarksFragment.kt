@@ -72,6 +72,7 @@ class BookmarksFragment : BaseFragment<FragmentMangaBookmarksBinding>(),
 	private var selectionController: ListSelectionController? = null
 	private var lastSortOrder: BookmarkSortOrder? = null
 	private var lastQuery: String? = null
+	private var lastRandomBookmarkPageId: Long? = null
 
 	private val spanSizeLookup = SpanSizeLookup()
 	private val listCommitCallback = Runnable {
@@ -180,17 +181,28 @@ class BookmarksFragment : BaseFragment<FragmentMangaBookmarksBinding>(),
 		if (selectionController?.onItemClick(item.pageId) == true) {
 			return
 		}
+		openBookmark(item)
+	}
+
+	private fun openBookmark(item: Bookmark) {
 		val listener = findParentCallback(ReaderNavigationCallback::class.java)
 		if (listener != null && listener.onBookmarkSelected(item)) {
 			dismissParentDialog()
 		} else {
-			val intent = ReaderIntent.Builder(view.context)
-				.manga(activityViewModel.getMangaOrNull() ?: return)
+			val ctx = context ?: return
+			val intent = ReaderIntent.Builder(ctx)
+				.manga(activityViewModel.getMangaOrNull() ?: item.manga)
 				.bookmark(item)
 				.incognito()
 				.build()
 			router.openReader(intent)
 		}
+	}
+
+	fun openRandomBookmark() {
+		val picked = viewModel.pickRandomBookmark(lastRandomBookmarkPageId) ?: return
+		lastRandomBookmarkPageId = picked.pageId
+		openBookmark(picked)
 	}
 
 	override fun onItemLongClick(item: Bookmark, view: View): Boolean {
@@ -286,6 +298,8 @@ class BookmarksFragment : BaseFragment<FragmentMangaBookmarksBinding>(),
 	fun getBookmarksSortOrder(): BookmarkSortOrder = viewModel.sortOrder.value
 
 	fun hasBookmarks(): Boolean = viewModel.hasBookmarks.value
+
+	fun hasVisibleBookmarks(): Boolean = viewModel.content.value.any { it is Bookmark }
 
 	fun downloadBookmarkedChapters(selectedIds: Set<Long>? = null, extraNextChapters: Int = 0) {
 		router.askForDownloadOverMeteredNetwork { allow ->

@@ -94,6 +94,9 @@ import org.koitharu.kotatsu.reader.domain.PageLoader
 import org.koitharu.kotatsu.reader.domain.translate.ReaderTranslationCoordinator
 import org.koitharu.kotatsu.reader.domain.translate.TranslationUiEvent
 import org.koitharu.kotatsu.reader.domain.translate.model.PageTranslationState
+import org.koitharu.kotatsu.reader.domain.upscale.ReaderUpscaleCoordinator
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleRuntimeStatus
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleSettingsSnapshot
 import org.koitharu.kotatsu.reader.ui.config.ReaderSettings
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import org.koitharu.kotatsu.reader.ui.pager.ReaderUiState
@@ -594,6 +597,16 @@ class ReaderViewModel @Inject constructor(
     val isTranslationEnabled: StateFlow<Boolean> = translationCoordinator.isEnabled
     val translationBannerState: StateFlow<PageTranslationState?> = translationCoordinator.activeBannerState
     val translationUiEvents: SharedFlow<TranslationUiEvent> = translationCoordinator.uiEvents
+
+    val upscaleCoordinator: ReaderUpscaleCoordinator = pageLoader.upscaleCoordinator
+    val upscaleSettings: StateFlow<UpscaleSettingsSnapshot> = upscaleCoordinator.settingsSnapshot
+    val upscaleRuntimeStatus: StateFlow<UpscaleRuntimeStatus> = upscaleCoordinator.runtimeStatus
+    val isUpscaleCompareEnabled: StateFlow<Boolean> = upscaleCoordinator.compareEnabled
+    val upscaleCompareSplitRatio: StateFlow<Float> = upscaleCoordinator.compareSplitRatio
+
+    fun setUpscaleCompareSplitRatio(ratio: Float) {
+        upscaleCoordinator.setCompareSplitRatio(ratio)
+    }
 
     fun toggleTranslation(): Boolean = translationCoordinator.toggle()
 

@@ -17,6 +17,7 @@ import org.koitharu.kotatsu.bookmarks.domain.Bookmark
 import org.koitharu.kotatsu.bookmarks.domain.BookmarkSortOrder
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.bookmarks.domain.matchesBookmarkQuery
+import org.koitharu.kotatsu.bookmarks.domain.pickRandomBookmark
 import org.koitharu.kotatsu.bookmarks.domain.resolveBookmarkDownloadChapterIds
 import org.koitharu.kotatsu.bookmarks.domain.sortedByOrder
 import org.koitharu.kotatsu.core.LocalizedAppContext
@@ -82,6 +83,14 @@ class AllBookmarksViewModel @Inject constructor(
 	val hasBookmarks: StateFlow<Boolean> = screenState
 		.map { it.hasAnyBookmarks }
 		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
+
+	val hasVisibleBookmarks: StateFlow<Boolean> = screenState
+		.map { state -> state.visibleByManga.values.any { it.isNotEmpty() } }
+		.stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
+
+	fun pickRandomBookmark(excludePageId: Long? = null): Bookmark? {
+		return screenState.value.visibleByManga.values.flatten().pickRandomBookmark(excludePageId)
+	}
 
 	fun setQuery(newQuery: String?) {
 		query.value = newQuery?.trim().orEmpty()

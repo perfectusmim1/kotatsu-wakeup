@@ -46,6 +46,8 @@ import org.koitharu.kotatsu.reader.domain.translate.model.GeminiThinkingLevel
 import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationProvider
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationSettingsSnapshot
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleMode
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleSettingsSnapshot
 import java.io.File
 import java.net.Proxy
 import java.util.EnumSet
@@ -656,6 +658,26 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		.distinctUntilChanged()
 		.flowOn(Dispatchers.Default)
 
+	var upscaleMode: UpscaleMode
+		get() = UpscaleMode.fromId(prefs.getString(KEY_READER_UPSCALE_MODE, UpscaleMode.OFF.id))
+		set(value) = prefs.edit { putString(KEY_READER_UPSCALE_MODE, value.id) }
+
+	var isUpscaleHighResEnabled: Boolean
+		get() = prefs.getBoolean(KEY_READER_UPSCALE_HIGH_RES, false)
+		set(value) = prefs.edit { putBoolean(KEY_READER_UPSCALE_HIGH_RES, value) }
+
+	fun getUpscaleSettingsSnapshot(): UpscaleSettingsSnapshot = UpscaleSettingsSnapshot(
+		mode = upscaleMode,
+		upscaleHighRes = isUpscaleHighResEnabled,
+	)
+
+	fun observeUpscaleSettings(): Flow<UpscaleSettingsSnapshot> = prefs.observeChanges()
+		.filter { key -> key == null || key in UPSCALE_PREF_KEYS }
+		.onStart { emit(null) }
+		.map { getUpscaleSettingsSnapshot() }
+		.distinctUntilChanged()
+		.flowOn(Dispatchers.Default)
+
 	/**
 	 * A saved layout's EXPLORE used to be the list of sources, which is now the SOURCES tab, so it gets
 	 * that tab beside the new screen, once. Removing it afterwards has to stick, hence the flag. A bar
@@ -1107,6 +1129,14 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			KEY_TRANSLATION_AUTO,
 			KEY_TRANSLATION_SKIP_SFX,
 			KEY_TRANSLATION_FILTER_PROMO,
+		)
+
+		const val KEY_READER_UPSCALE_MODE = "reader_upscale_mode"
+		const val KEY_READER_UPSCALE_HIGH_RES = "reader_upscale_high_res"
+
+		private val UPSCALE_PREF_KEYS = setOf(
+			KEY_READER_UPSCALE_MODE,
+			KEY_READER_UPSCALE_HIGH_RES,
 		)
 
 		// keys for non-persistent preferences

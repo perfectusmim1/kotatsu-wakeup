@@ -83,8 +83,11 @@ import org.koitharu.kotatsu.reader.domain.indexOfPosition
 import org.koitharu.kotatsu.reader.domain.translate.TranslationUiEvent
 import org.koitharu.kotatsu.reader.domain.translate.model.PageTranslationState
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationStage
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleRuntimeStatus
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleStage
 import org.koitharu.kotatsu.reader.ui.config.ReaderConfigSheet
 import org.koitharu.kotatsu.reader.ui.translate.TranslationSettingsSheet
+import org.koitharu.kotatsu.reader.ui.upscale.UpscaleSettingsSheet
 import org.koitharu.kotatsu.reader.ui.erase.EraseController
 import org.koitharu.kotatsu.reader.ui.erase.ErasePageTarget
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
@@ -153,6 +156,7 @@ class ReaderActivity :
     private var isFoldUnfolded: Boolean = false
     private var isChapterLoadingToast: Boolean = false
     private var currentTranslationBanner: PageTranslationState? = null
+    private var currentUpscaleStatus: UpscaleRuntimeStatus = UpscaleRuntimeStatus()
     private var isShowingStatusToast: Boolean = false
     private var lastHandledBrowserVersion: Long = 0L
     private var wasPaused: Boolean = false
@@ -263,7 +267,36 @@ class ReaderActivity :
             updateStatusToast()
         }
         viewModel.translationUiEvents.observe(this, ::onTranslationUiEvent)
-        addMenuProvider(ReaderMenuProvider(this, viewModel, { router.openHiddenImages() }, ::onTranslateClick))
+
+        viewBinding.upscaleCompareOverlay.onSplitRatioChanged = { ratio ->
+            viewModel.setUpscaleCompareSplitRatio(ratio)
+        }
+        viewModel.upscaleSettings.observe(this) { snap ->
+            invalidateOptionsMenu()
+            viewBinding.upscaleCompareOverlay.isVisible =
+                snap.mode.isEnabled && viewModel.isUpscaleCompareEnabled.value
+        }
+        viewModel.isUpscaleCompareEnabled.observe(this) { compare ->
+            viewBinding.upscaleCompareOverlay.isVisible =
+                compare && viewModel.upscaleSettings.value.mode.isEnabled
+        }
+        viewModel.upscaleCompareSplitRatio.observe(this) { ratio ->
+            viewBinding.upscaleCompareOverlay.splitRatio = ratio
+        }
+        viewModel.upscaleRuntimeStatus.observe(this) { status ->
+            currentUpscaleStatus = status
+            updateStatusToast()
+        }
+
+        addMenuProvider(
+            ReaderMenuProvider(
+                context = this,
+                viewModel = viewModel,
+                onHiddenImages = { router.openHiddenImages() },
+                onTranslateClick = ::onTranslateClick,
+                onUpscaleClick = ::onUpscaleSettingsClick,
+            ),
+        )
 
         observeWindowLayout()
 
@@ -442,6 +475,14 @@ class ReaderActivity :
             TranslationStage.TRANSLATING_TEXT -> getString(R.string.translation_translating_text)
             TranslationStage.RENDERING_PAGE -> getString(R.string.translation_rendering_page)
             else -> null
+        } ?: when (currentUpscaleStatus.stage) {
+            UpscaleStage.DOWNLOADING_MODEL -> getString(
+                R.string.upscale_model_downloading,
+                currentUpscaleStatus.downloadPercent.coerceIn(0, 100),
+            )
+
+            UpscaleStage.INITIALIZING_MODEL -> getString(R.string.upscale_model_initializing)
+            else -> null
         }
         if (bannerMessage != null) {
             isShowingStatusToast = true
@@ -505,6 +546,17 @@ class ReaderActivity :
             EraseController.TouchResult.NOT_CLAIMED -> Unit
             EraseController.TouchResult.CONSUMED -> return true
             EraseController.TouchResult.TO_OVERLAY -> return super.dispatchTouchEvent(ev)
+        }
+        if (viewBinding.upscaleCompareOverlay.isVisible) {
+            val rawX = ev.rawX.toInt()
+            val rawY = ev.rawY.toInt()
+            val overChrome = ev.actionMasked == MotionEvent.ACTION_DOWN && (
+                viewBinding.appbarTop.hasGlobalPoint(rawX, rawY) ||
+                    viewBinding.toolbarDocked?.hasGlobalPoint(rawX, rawY) == true
+                )
+            if (!overChrome && viewBinding.upscaleCompareOverlay.onInterceptOrDispatchTouch(ev)) {
+                return true
+            }
         }
         touchHelper.dispatchTouchEvent(ev)
         if (!viewBinding.timerControl.hasGlobalPoint(ev.rawX.toInt(), ev.rawY.toInt())) {
@@ -572,6 +624,10 @@ class ReaderActivity :
         TranslationSettingsSheet.show(supportFragmentManager)
     }
 
+    override fun onUpscaleSettingsClick() {
+        UpscaleSettingsSheet.show(supportFragmentManager)
+    }
+
     private fun applyDoubleModeAuto(manualEnabled: Boolean? = null) {
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         // Auto double-page on foldable when device is unfolded (half-opened or flat)
@@ -630,6 +686,7 @@ class ReaderActivity :
         viewBinding.infoBar.updatePadding(
             top = systemBars.top,
         )
+        viewBinding.upscaleCompareOverlay.topInsetPx = systemBars.top
         val innerInsets = Insets.of(
             systemBars.left,
             if (viewBinding.appbarTop.isVisible) viewBinding.appbarTop.height else systemBars.top,

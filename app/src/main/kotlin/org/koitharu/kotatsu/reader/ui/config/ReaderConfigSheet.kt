@@ -33,6 +33,7 @@ import org.koitharu.kotatsu.core.util.progress.IntPercentLabelFormatter
 import org.koitharu.kotatsu.databinding.SheetReaderConfigBinding
 import org.koitharu.kotatsu.reader.domain.PageLoader
 import org.koitharu.kotatsu.reader.domain.translate.api.TranslationLanguages
+import org.koitharu.kotatsu.reader.domain.upscale.model.UpscaleMode
 import org.koitharu.kotatsu.reader.ui.ReaderViewModel
 import org.koitharu.kotatsu.reader.ui.ScreenOrientationHelper
 import javax.inject.Inject
@@ -106,6 +107,7 @@ class ReaderConfigSheet :
         binding.buttonSettings.setOnClickListener(this)
         binding.buttonImageServer.setOnClickListener(this)
         binding.buttonColorFilter.setOnClickListener(this)
+        binding.buttonUpscaleSettings.setOnClickListener(this)
         binding.buttonTranslationSettings.setOnClickListener(this)
         binding.buttonScrollTimer.setOnClickListener(this)
         binding.buttonBookmark.setOnClickListener(this)
@@ -122,6 +124,11 @@ class ReaderConfigSheet :
         }
         binding.switchTranslation.setOnCheckedChangeListener(this)
         bindTranslationSummary(binding)
+
+        viewModel.upscaleSettings.observe(viewLifecycleOwner) { snap ->
+            bindUpscaleSummary(binding, snap.mode)
+        }
+        bindUpscaleSummary(binding, settings.upscaleMode)
 
         viewModel.isBookmarkAdded.observe(viewLifecycleOwner) {
             binding.buttonBookmark.setText(if (it) R.string.bookmark_remove else R.string.bookmark_add)
@@ -176,6 +183,12 @@ class ReaderConfigSheet :
                 val page = viewModel.getCurrentPage() ?: return
                 val manga = viewModel.getMangaOrNull() ?: return
                 router.openColorFilterConfig(manga, page)
+            }
+
+            R.id.button_upscale_settings -> {
+                val callback = findParentCallback(Callback::class.java)
+                dismissAllowingStateLoss()
+                callback?.onUpscaleSettingsClick()
             }
 
             R.id.button_translation_settings -> {
@@ -286,6 +299,21 @@ class ReaderConfigSheet :
         )
     }
 
+    private fun bindUpscaleSummary(binding: SheetReaderConfigBinding, mode: UpscaleMode) {
+        val modeLabel = getString(
+            when (mode) {
+                UpscaleMode.OFF -> R.string.upscale_mode_off
+                UpscaleMode.FAST -> R.string.upscale_mode_fast
+                UpscaleMode.AI -> R.string.upscale_mode_ai
+            },
+        )
+        binding.buttonUpscaleSettings.text = getString(
+            R.string.inline_preference_pattern,
+            getString(R.string.upscale_title),
+            modeLabel,
+        )
+    }
+
     private suspend fun bindImageServerTitle() {
         viewBinding?.buttonImageServer?.text = getString(
             R.string.inline_preference_pattern,
@@ -326,5 +354,7 @@ class ReaderConfigSheet :
         fun onTranslationToggle(isEnabled: Boolean): Boolean
 
         fun onTranslationSettingsClick()
+
+        fun onUpscaleSettingsClick()
     }
 }
