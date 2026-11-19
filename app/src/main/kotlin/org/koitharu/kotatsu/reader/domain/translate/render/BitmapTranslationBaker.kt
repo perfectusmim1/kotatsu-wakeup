@@ -149,6 +149,14 @@ class BitmapTranslationBaker @Inject constructor(
 		}
 
 		try {
+			val hasStroke = style.hasTextStroke || style.strokeWidthEm > 0f
+			val outerStrokeEm = if (hasStroke) {
+				if (style.strokeWidthEm > 0f) style.strokeWidthEm else 0.10f
+			} else {
+				0f
+			}
+			val hasRowContour = style.lineWidthsPct.size == lines.size && lines.isNotEmpty()
+
 			var effectiveBaseFontPx = baseFontPx
 			var totalHeightPx = 0f
 			for (line in lines) {
@@ -158,11 +166,43 @@ class BitmapTranslationBaker @Inject constructor(
 			if (!blockSaved && rect.height() >= 14f && totalHeightPx > rect.height() && totalHeightPx > 0f) {
 				val fitScale = (rect.height() / totalHeightPx).coerceIn(0.42f, 1f)
 				effectiveBaseFontPx = (effectiveBaseFontPx * fitScale).coerceAtLeast(6f)
-				totalHeightPx = 0f
-				for (line in lines) {
-					val lineFontPx = (effectiveBaseFontPx * line.scale).coerceAtLeast(6f)
-					totalHeightPx += lineFontPx * layout.lineHeightRatio
+			}
+
+			// Compute a single uniform horizontal shrink factor across all lines so every line stays strictly inside
+			// the bubble's physical/oval contour without creating inconsistent font sizes between lines.
+			if (!blockSaved && rect.width() >= 20f) {
+				var uniformHorizFit = 1f
+				for (lineIdx in lines.indices) {
+					val line = lines[lineIdx]
+					val candidateFontPx = (effectiveBaseFontPx * line.scale).coerceAtLeast(6f)
+					paint.shader = null
+					paint.style = Paint.Style.FILL
+					paint.strokeWidth = 0f
+					paint.textSize = candidateFontPx
+					val rawPadPx = if (hasStroke) {
+						(outerStrokeEm * candidateFontPx).coerceIn(0.75f, candidateFontPx * 0.22f)
+					} else {
+						2f
+					}
+					val rowPct = if (hasRowContour) style.lineWidthsPct[lineIdx].coerceIn(0.32f, 1.0f) else 1f
+					val rowBoundW = (rect.width() * rowPct) - rawPadPx * 2f
+					val maxSpanW = (imgW - 8f - rawPadPx * 2f)
+						.coerceAtMost(rowBoundW.coerceAtLeast(14f))
+						.coerceAtLeast(10f)
+					val measuredW = paint.measureText(line.text)
+					if (measuredW > maxSpanW && measuredW > 0f) {
+						uniformHorizFit = min(uniformHorizFit, maxSpanW / measuredW)
+					}
 				}
+				if (uniformHorizFit < 0.999f) {
+					effectiveBaseFontPx = (effectiveBaseFontPx * uniformHorizFit.coerceIn(0.42f, 1f)).coerceAtLeast(6f)
+				}
+			}
+
+			totalHeightPx = 0f
+			for (line in lines) {
+				val lineFontPx = (effectiveBaseFontPx * line.scale).coerceAtLeast(6f)
+				totalHeightPx += lineFontPx * layout.lineHeightRatio
 			}
 
 			var cursorY = rect.top + (rect.height() - totalHeightPx) * 0.5f
@@ -173,14 +213,8 @@ class BitmapTranslationBaker @Inject constructor(
 				cursorY = cursorY.coerceIn(minTop, maxTop)
 			}
 
-			val hasStroke = style.hasTextStroke || style.strokeWidthEm > 0f
-			val outerStrokeEm = if (hasStroke) {
-				if (style.strokeWidthEm > 0f) style.strokeWidthEm else 0.10f
-			} else {
-				0f
-			}
-
-			for (line in lines) {
+			for (lineIdx in lines.indices) {
+				val line = lines[lineIdx]
 				val rawLineFontPx = (effectiveBaseFontPx * line.scale).coerceAtLeast(6f)
 				val lineH = rawLineFontPx * layout.lineHeightRatio
 				val lineCenterY = cursorY + lineH * 0.5f
@@ -196,8 +230,9 @@ class BitmapTranslationBaker @Inject constructor(
 				} else {
 					2f
 				}
+				val rowPct = if (hasRowContour) style.lineWidthsPct[lineIdx].coerceIn(0.32f, 1.0f) else 1f
 				val boxBoundW = if (!blockSaved && rect.width() >= 20f) {
-					rect.width() - rawPadPx * 2f
+					(rect.width() * rowPct) - rawPadPx * 2f
 				} else {
 					imgW - 8f - rawPadPx * 2f
 				}
@@ -230,8 +265,9 @@ class BitmapTranslationBaker @Inject constructor(
 						drawX = drawX.coerceIn(minLeftX, maxLeftX)
 					} else {
 						val halfSpan = finalLineW * 0.5f + finalPadPx
-						val leftLim = if (rect.width() >= 20f) max(4f, rect.left) else 4f
-						val rightLim = if (rect.width() >= 20f) min(imgW - 4f, rect.right) else imgW - 4f
+						val rowHalfW = if (rect.width() >= 20f) rect.width() * rowPct * 0.5f else (imgW - 8f) * 0.5f
+						val leftLim = if (rect.width() >= 20f) max(4f, rect.centerX() - rowHalfW) else 4f
+						val rightLim = if (rect.width() >= 20f) min(imgW - 4f, rect.centerX() + rowHalfW) else imgW - 4f
 						val minCenterX = (leftLim + halfSpan).coerceAtMost((leftLim + rightLim) * 0.5f)
 						val maxCenterX = (rightLim - halfSpan).coerceAtLeast((leftLim + rightLim) * 0.5f)
 						drawX = drawX.coerceIn(minCenterX, maxCenterX)
@@ -414,6 +450,9 @@ class BitmapTranslationBaker @Inject constructor(
 
 		fun toDrawnContentRect(layout: RefinedBlockLayout): BlockRect {
 			val r = toBlockRect(layout.refinedBox)
+			if (layout.style.lineWidthsPct.isNotEmpty()) {
+				return r
+			}
 			var totalH = 0f
 			var maxW = 0f
 			for (wl in layout.wrappedLines) {

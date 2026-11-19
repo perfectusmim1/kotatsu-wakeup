@@ -495,6 +495,82 @@ class OcrBubbleGroupingAndFiltersTest {
 		assertEquals(2, rowGroups.size)
 	}
 
+	@Test
+	fun `groupLinesIntoBubbles keeps top word near curved dark oval border merged with lower lines and avoids fake emphasis`() {
+		val w = 360
+		val h = 300
+		val white = argb(255, 255, 255)
+		val black = argb(18, 18, 18)
+		val aaGray = argb(196, 196, 196)
+		// Dark scene outside oval bubble; white interior inside oval centered at (180, 120) rx=130, ry=88
+		val pixels = IntArray(w * h) { argb(95, 95, 110) }
+		for (y in 0 until h) {
+			for (x in 0 until w) {
+				val dx = (x - 180f) / 130f
+				val dy = (y - 120f) / 88f
+				val r2 = dx * dx + dy * dy
+				if (r2 <= 1.0f) {
+					pixels[y * w + x] = if (r2 >= 0.90f) black else white
+				}
+			}
+		}
+
+		// Top short word "WAIT" hugs the top black border (y0=42 -> y0-3=39 hits black top curve!)
+		// Plus 1px anti-aliased descender bleed at y=67 (lum 196 <= 215) across its width!
+		fillRect(pixels, w, h, 152, 67, 208, 67, aaGray)
+		// Second row split into 2 OCR boxes ("ARE YOU" and "SERIOUS?") with hGap=16px (~0.67 * h, > 0.55h but <= 0.95h)
+		val ovalLines = listOf(
+			RawOcrLine("WAIT", 95f, x0 = 152f, y0 = 42f, x1 = 208f, y1 = 66f),
+			RawOcrLine("ARE YOU", 96f, x0 = 92f, y0 = 76f, x1 = 176f, y1 = 100f),
+			RawOcrLine("SERIOUS?", 96f, x0 = 192f, y0 = 76f, x1 = 274f, y1 = 100f),
+			RawOcrLine("RIGHT NOW?!", 95f, x0 = 108f, y0 = 112f, x1 = 252f, y1 = 136f),
+		)
+		for (l in ovalLines) {
+			fillRect(pixels, w, h, l.x0.toInt() + 4, l.y0.toInt() + 4, l.x1.toInt() - 4, l.y1.toInt() - 4, black)
+		}
+
+		val merged = PaddleOcrEngine.groupLinesIntoBubbles(ovalLines, w, h, pixels)
+		assertEquals(1, merged.size)
+		assertEquals("WAIT ARE YOU SERIOUS? RIGHT NOW?!", merged.single().text)
+		assertEquals(1f, merged.single().emphasisLastLineScale, 0.01f)
+
+		// 2-line bubble with slight OCR box height jitter (20px top vs 27px bottom = 1.35x) must stay uniform font size
+		val jitterPixels = IntArray(w * h) { white }
+		val jitterLines = listOf(
+			RawOcrLine("so...", 92f, x0 = 140f, y0 = 100f, x1 = 210f, y1 = 120f),
+			RawOcrLine("WHAT HAPPENED?", 95f, x0 = 100f, y0 = 126f, x1 = 260f, y1 = 153f),
+		)
+		for (l in jitterLines) {
+			fillRect(jitterPixels, w, h, l.x0.toInt() + 4, l.y0.toInt() + 4, l.x1.toInt() - 4, l.y1.toInt() - 4, black)
+		}
+		val jitterMerged = PaddleOcrEngine.groupLinesIntoBubbles(jitterLines, w, h, jitterPixels)
+		assertEquals(1, jitterMerged.size)
+		assertEquals("so... WHAT HAPPENED?", jitterMerged.single().text)
+		assertEquals(1f, jitterMerged.single().emphasisLastLineScale, 0.01f)
+
+		// Unclipped vertically-overlapping horizontal lines inside a white bubble (e.g. "MY DEBT" + "DOWN")
+		// MUST NOT trigger collar-lum or tilted-divider barriers on their own glyph strokes;
+		// numeric continuation ("100,000?") rescues into the second bubble cleanly.
+		val unclippedPixels = IntArray(w * h) { white }
+		fillRect(unclippedPixels, w, h, 0, 176, w - 1, 198, argb(70, 70, 80))
+		val unclippedBubble = listOf(
+			RawOcrLine("THAT", 96f, x0 = 140f, y0 = 30f, x1 = 215f, y1 = 68f),
+			RawOcrLine("BRINGS", 96f, x0 = 125f, y0 = 54f, x1 = 230f, y1 = 92f),
+			RawOcrLine("MY DEBT", 96f, x0 = 115f, y0 = 78f, x1 = 240f, y1 = 116f),
+			RawOcrLine("DOWN", 96f, x0 = 130f, y0 = 102f, x1 = 225f, y1 = 140f),
+			RawOcrLine("TOOOO...", 95f, x0 = 115f, y0 = 126f, x1 = 240f, y1 = 164f),
+			RawOcrLine("NOT EVEN", 95f, x0 = 120f, y0 = 210f, x1 = 235f, y1 = 238f),
+			RawOcrLine("100,000?", 92f, x0 = 125f, y0 = 242f, x1 = 230f, y1 = 268f),
+		)
+		for (l in unclippedBubble) {
+			fillRect(unclippedPixels, w, h, l.x0.toInt() + 6, l.y0.toInt() + 10, l.x1.toInt() - 6, l.y1.toInt() - 10, black)
+		}
+		val unclippedMerged = PaddleOcrEngine.groupLinesIntoBubbles(unclippedBubble, w, h, unclippedPixels)
+		assertEquals(2, unclippedMerged.size)
+		assertEquals("THAT BRINGS MY DEBT DOWN TOOOO...", unclippedMerged[0].text)
+		assertEquals("NOT EVEN 100,000?", unclippedMerged[1].text)
+	}
+
 	private fun line(text: String, conf: Float = 90f) = RawOcrLine(
 		text = text,
 		confidence = conf,

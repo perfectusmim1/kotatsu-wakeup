@@ -2638,25 +2638,206 @@ class BubbleInpainter @Inject constructor(
 			)
 		}
 
+		// Refine physical bubble walls for layout: in addition to dark/high-contrast structural outlines,
+		// detect borderless or light-gray-outlined flat speech bubbles floating over colored webtoon artwork.
+		val enableFlatBubbleEdgeWalls = isFlatLightBubble && !isDarkCard && ringMedLum >= 210f
+		val layoutWallPadX = if (isDarkCard) {
+			wallPadX
+		} else {
+			max(wallPadX, (medGlyphH * 0.22f).roundToInt().coerceIn(5, 10))
+		}
+		val layoutWallPadY = if (isDarkCard) {
+			wallPadY
+		} else {
+			max(wallPadY, (medGlyphH * 0.24f).roundToInt().coerceIn(5, 10))
+		}
+
+		fun isFlatBubbleEdgePixel(lx: Int, ly: Int): Boolean {
+			if (!enableFlatBubbleEdgeWalls) return false
+			val idx = ly * ww + lx
+			if (eraseMask[idx] != 0.toByte()) return false
+			return PixelColorMath.maxChannelDiff(pixels[idx], ringMedR, ringMedG, ringMedB) >= 36
+		}
+
+		fun isLayoutWallAt(lx: Int, ly: Int): Boolean =
+			isStructuralWallAt(lx, ly) || isFlatBubbleEdgePixel(lx, ly)
+
+		var layoutSafeLeft = safeLocalLeft
+		var layoutSafeRight = safeLocalRight
+		var layoutSafeTop = safeLocalTop
+		var layoutSafeBottom = safeLocalBottom
+		var layoutHitLeft = hitLeftWall
+		var layoutHitRight = hitRightWall
+		var layoutHitTop = hitTopWall
+		var layoutHitBottom = hitBottomWall
+
+		if (hitLeftWall && !isDarkCard) {
+			val extraPad = (layoutWallPadX - wallPadX).coerceAtLeast(0)
+			if (extraPad > 0 && !sibClampedLeft) {
+				layoutSafeLeft = min(gMinX, layoutSafeLeft + extraPad)
+			}
+		}
+		if (hitRightWall && !isDarkCard) {
+			val extraPad = (layoutWallPadX - wallPadX).coerceAtLeast(0)
+			if (extraPad > 0 && !sibClampedRight) {
+				layoutSafeRight = max(gMaxX, layoutSafeRight - extraPad)
+			}
+		}
+		if (hitTopWall && !isDarkCard) {
+			val extraPad = (layoutWallPadY - wallPadY).coerceAtLeast(0)
+			if (extraPad > 0 && !sibClampedTop) {
+				layoutSafeTop = min(gMinY, layoutSafeTop + extraPad)
+			}
+		}
+		if (hitBottomWall && !isDarkCard) {
+			val extraPad = (layoutWallPadY - wallPadY).coerceAtLeast(0)
+			if (extraPad > 0 && !sibClampedBottom) {
+				layoutSafeBottom = max(gMaxY, layoutSafeBottom - extraPad)
+			}
+		}
+
+		if (enableFlatBubbleEdgeWalls) {
+			if (!layoutHitLeft) {
+				var run = 0
+				for (x in (gMinX - 1).coerceIn(0, ww - 1) downTo 0) {
+					var colEdge = false
+					var y = bandY0
+					while (y <= bandY1) {
+						if (isFlatBubbleEdgePixel(x, y)) {
+							colEdge = true
+							break
+						}
+						y += 2
+					}
+					if (colEdge) {
+						run++
+						if (run >= 2) {
+							val wallX = x + 1
+							layoutSafeLeft = max(layoutSafeLeft, wallX + layoutWallPadX)
+							layoutHitLeft = true
+							break
+						}
+					} else {
+						run = 0
+					}
+				}
+			}
+			if (!layoutHitRight) {
+				var run = 0
+				for (x in (gMaxX + 1).coerceIn(0, ww - 1) until ww) {
+					var colEdge = false
+					var y = bandY0
+					while (y <= bandY1) {
+						if (isFlatBubbleEdgePixel(x, y)) {
+							colEdge = true
+							break
+						}
+						y += 2
+					}
+					if (colEdge) {
+						run++
+						if (run >= 2) {
+							val wallX = x - 1
+							layoutSafeRight = min(layoutSafeRight, wallX - layoutWallPadX)
+							layoutHitRight = true
+							break
+						}
+					} else {
+						run = 0
+					}
+				}
+			}
+			if (!layoutHitTop) {
+				var run = 0
+				for (y in (gMinY - 1).coerceIn(0, wh - 1) downTo 0) {
+					var rowEdge = false
+					var x = bandX0
+					while (x <= bandX1) {
+						if (isFlatBubbleEdgePixel(x, y)) {
+							rowEdge = true
+							break
+						}
+						x += 3
+					}
+					if (rowEdge) {
+						run++
+						if (run >= 2) {
+							val wallY = y + 1
+							layoutSafeTop = max(layoutSafeTop, wallY + layoutWallPadY)
+							layoutHitTop = true
+							break
+						}
+					} else {
+						run = 0
+					}
+				}
+			}
+			if (!layoutHitBottom) {
+				var run = 0
+				for (y in (gMaxY + 1).coerceIn(0, wh - 1) until wh) {
+					var rowEdge = false
+					var x = bandX0
+					while (x <= bandX1) {
+						if (isFlatBubbleEdgePixel(x, y)) {
+							rowEdge = true
+							break
+						}
+						x += 3
+					}
+					if (rowEdge) {
+						run++
+						if (run >= 2) {
+							val wallY = y - 1
+							layoutSafeBottom = min(layoutSafeBottom, wallY - layoutWallPadY)
+							layoutHitBottom = true
+							break
+						}
+					} else {
+						run = 0
+					}
+				}
+			}
+		}
+
+		if (layoutSafeRight < layoutSafeLeft + 20) {
+			layoutSafeLeft = safeLocalLeft
+			layoutSafeRight = safeLocalRight
+			layoutHitLeft = hitLeftWall
+			layoutHitRight = hitRightWall
+		}
+		if (layoutSafeBottom < layoutSafeTop + 16) {
+			layoutSafeTop = safeLocalTop
+			layoutSafeBottom = safeLocalBottom
+			layoutHitTop = hitTopWall
+			layoutHitBottom = hitBottomWall
+		}
+
+		val layoutWallHits =
+			(if (layoutHitLeft) 1 else 0) +
+				(if (layoutHitRight) 1 else 0) +
+				(if (layoutHitTop) 1 else 0) +
+				(if (layoutHitBottom) 1 else 0)
+		val hasLayoutPhysicalWalls = hasActualPhysicalWalls || (enableFlatBubbleEdgeWalls && layoutWallHits >= 3)
+
 		// Symmetric centered safe interior box + Cap-Height font sizing + contour width measurement.
 		val glyphW = max(24f, (gMaxX - gMinX + 1).toFloat())
 		val glyphH = max(18f, (gMaxY - gMinY + 1).toFloat())
 		val coreCenterY = ((cy0 + cy1) * 0.5f).roundToInt()
 		val baseMidY = if (abs(midLocalY - coreCenterY) <= max(18f, medGlyphH * 0.85f)) midLocalY else coreCenterY
-		val wallCenterY = ((safeLocalTop + safeLocalBottom) * 0.5f).roundToInt()
-		val layoutCenterX = if (hitLeftWall &&
-			hitRightWall &&
-			safeLocalRight > safeLocalLeft + 24 &&
-			abs(midLocalX - (safeLocalLeft + safeLocalRight) * 0.5f) <=
-			(safeLocalRight - safeLocalLeft) * (if (isFlatLightBubble) 0.34f else 0.18f)
+		val wallCenterY = ((layoutSafeTop + layoutSafeBottom) * 0.5f).roundToInt()
+		val layoutCenterX = if (layoutHitLeft &&
+			layoutHitRight &&
+			layoutSafeRight > layoutSafeLeft + 24 &&
+			abs(midLocalX - (layoutSafeLeft + layoutSafeRight) * 0.5f) <=
+			(layoutSafeRight - layoutSafeLeft) * (if (isFlatLightBubble) 0.34f else 0.18f)
 		) {
-			((safeLocalLeft + safeLocalRight) * 0.5f).roundToInt()
+			((layoutSafeLeft + layoutSafeRight) * 0.5f).roundToInt()
 		} else {
 			midLocalX
 		}
-		val layoutCenterY = if (hitTopWall &&
-			hitBottomWall &&
-			safeLocalBottom > safeLocalTop + 20 &&
+		val layoutCenterY = if (layoutHitTop &&
+			layoutHitBottom &&
+			layoutSafeBottom > layoutSafeTop + 20 &&
 			abs(wallCenterY - baseMidY) <= max(14f, medGlyphH * 0.60f)
 		) {
 			wallCenterY
@@ -2664,24 +2845,45 @@ class BubbleInpainter @Inject constructor(
 			baseMidY
 		}
 
-		val spanLocalW = if (safeLocalRight > safeLocalLeft + 24) (safeLocalRight - safeLocalLeft).toFloat() else glyphW
-		val maxHalfW = max(
-			glyphW * 0.5f,
-			if (hitLeftWall && hitRightWall && isFlatLightBubble) {
-				spanLocalW * 0.5f
-			} else {
-				min((layoutCenterX - safeLocalLeft).toFloat(), (safeLocalRight - layoutCenterX).toFloat())
-			},
-		)
-		val maxHalfH = max(
-			glyphH * 0.55f,
-			min((layoutCenterY - safeLocalTop).toFloat(), (safeLocalBottom - layoutCenterY).toFloat()),
-		)
-		var safeW = max(glyphW, maxHalfW * 2f)
-		if (!(hitLeftWall && hitRightWall)) {
-			safeW = min(safeW, max(glyphW * 1.32f, medGlyphH * 10f))
+		val spanLocalW = if (layoutSafeRight > layoutSafeLeft + 24) (layoutSafeRight - layoutSafeLeft).toFloat() else glyphW
+		val strictWallInteriorW = if (layoutHitLeft && layoutHitRight && layoutSafeRight > layoutSafeLeft + 20) {
+			(layoutSafeRight - layoutSafeLeft).toFloat()
+		} else {
+			Float.POSITIVE_INFINITY
 		}
-		val safeH = max(glyphH * 1.1f, maxHalfH * 2f)
+		val strictWallInteriorH = if (layoutHitTop && layoutHitBottom && layoutSafeBottom > layoutSafeTop + 16) {
+			(layoutSafeBottom - layoutSafeTop).toFloat()
+		} else {
+			Float.POSITIVE_INFINITY
+		}
+		val maxHalfW = if (layoutHitLeft && layoutHitRight && isFlatLightBubble) {
+			spanLocalW * 0.5f
+		} else if (layoutHitLeft && layoutHitRight) {
+			min(spanLocalW * 0.5f, min((layoutCenterX - layoutSafeLeft).toFloat(), (layoutSafeRight - layoutCenterX).toFloat())).coerceAtLeast(12f)
+		} else {
+			max(
+				glyphW * 0.5f,
+				min((layoutCenterX - layoutSafeLeft).toFloat(), (layoutSafeRight - layoutCenterX).toFloat()),
+			)
+		}
+		val maxHalfH = if (layoutHitTop && layoutHitBottom) {
+			min((layoutCenterY - layoutSafeTop).toFloat(), (layoutSafeBottom - layoutCenterY).toFloat()).coerceAtLeast(10f)
+		} else {
+			max(
+				glyphH * 0.55f,
+				min((layoutCenterY - layoutSafeTop).toFloat(), (layoutSafeBottom - layoutCenterY).toFloat()),
+			)
+		}
+		var safeW = if (layoutHitLeft && layoutHitRight) {
+			min(strictWallInteriorW, max(24f, maxHalfW * 2f))
+		} else {
+			min(max(glyphW, maxHalfW * 2f), max(glyphW * 1.32f, medGlyphH * 10f))
+		}
+		val safeH = if (layoutHitTop && layoutHitBottom) {
+			min(strictWallInteriorH, max(18f, maxHalfH * 2f))
+		} else {
+			max(glyphH * 1.1f, maxHalfH * 2f)
+		}
 
 		val capHeights = accComps
 			.filter { it.h >= max(8f, medGlyphH * 0.55f) }
@@ -2719,10 +2921,10 @@ class BubbleInpainter @Inject constructor(
 		var finalWrap = SmartWrapResult(emptyList(), 0f, 0f, 0f, false)
 
 		if (isSingleLineStat) {
-			val statLeftLocalX = max(gMinX.toFloat(), safeLocalLeft.toFloat())
+			val statLeftLocalX = max(gMinX.toFloat(), layoutSafeLeft.toFloat())
 			val wallRBound = when {
-				sibClampedRight -> safeLocalRight
-				hitRightWall -> safeLocalRight + (wallPadX * 0.5f).roundToInt()
+				sibClampedRight -> layoutSafeRight
+				layoutHitRight -> layoutSafeRight + (wallPadX * 0.5f).roundToInt()
 				else -> ww - 4
 			}
 			val maxStatW = max(
@@ -2730,7 +2932,7 @@ class BubbleInpainter @Inject constructor(
 				min(fullWidth - (wx0 + statLeftLocalX) - 8f, wallRBound - statLeftLocalX),
 			).coerceAtLeast(24f)
 			val sibMaxStatH = if (sibClampedTop || sibClampedBottom) {
-				max(bh.toFloat(), (safeLocalBottom - safeLocalTop).toFloat())
+				max(bh.toFloat(), (layoutSafeBottom - layoutSafeTop).toFloat())
 			} else {
 				Float.POSITIVE_INFINITY
 			}
@@ -2780,13 +2982,13 @@ class BubbleInpainter @Inject constructor(
 				max(glyphW * 1.25f, safeW)
 			}
 			val sibCapW = if (sibClampedLeft || sibClampedRight) {
-				max(glyphW, (safeLocalRight - safeLocalLeft).toFloat())
+				max(glyphW, (layoutSafeRight - layoutSafeLeft).toFloat())
 			} else {
 				fullWidth * 0.92f
 			}
 			finalBoxW = min(finalBoxW, min(fullWidth * 0.92f, sibCapW)).coerceAtLeast(24f)
 			val sibCapH = if (sibClampedTop || sibClampedBottom) {
-				max(glyphH, (safeLocalBottom - safeLocalTop).toFloat())
+				max(glyphH, (layoutSafeBottom - layoutSafeTop).toFloat())
 			} else {
 				Float.POSITIVE_INFINITY
 			}
@@ -2826,6 +3028,12 @@ class BubbleInpainter @Inject constructor(
 			)
 			fontPx = targetEmPx.coerceIn(minInitDialogPx, maxDialogFontPx)
 			val minFontPx = max(11f, fullWidth * 0.014f)
+			// Hard emergency floor when confined by physical speech bubble walls so tight bubbles shrink cleanly instead of overflowing.
+			val hardMinFontPx = if (hasLayoutPhysicalWalls || (layoutHitLeft && layoutHitRight)) {
+				max(8.5f, fullWidth * 0.010f)
+			} else {
+				minFontPx
+			}
 
 			val charLen = displayText.length
 			val desiredCharsPerLine = if (charLen <= 10) {
@@ -2835,21 +3043,12 @@ class BubbleInpainter @Inject constructor(
 			}
 			val singleCharW = measureAtFontPx("A", fontPx).let { if (it > 0f) it else fontPx * 0.61f }
 			val desiredW = desiredCharsPerLine * singleCharW + 18f
-			val rawLeftWall = if (hitLeftWall) (safeLocalLeft - wallPadX).toFloat() else safeLocalLeft.toFloat()
-			val rawRightWall = if (hitRightWall) (safeLocalRight + wallPadX).toFloat() else safeLocalRight.toFloat()
-			val rawWallSpan = max(glyphW, rawRightWall - rawLeftWall)
-			val targetWallClear = if (isDarkCard) {
-				(medGlyphH * 0.34f).roundToInt().coerceIn(8, 16)
-			} else {
-				(medGlyphH * 0.12f).roundToInt().coerceIn(2, 4)
-			}
-			val maxDrawableW = max(glyphW, rawWallSpan - 2f * targetWallClear)
-			val interiorSpan = if (safeLocalRight > safeLocalLeft + 24) (safeLocalRight - safeLocalLeft).toFloat() else safeW
+			val interiorSpan = if (layoutSafeRight > layoutSafeLeft + 24) (layoutSafeRight - layoutSafeLeft).toFloat() else safeW
 			val isOpenMultilineScene =
 				!isFlatLightBubble && !hasClosedBubbleWalls && origLineCount >= 3
-			val closedHorizW = min((ww - 4).toFloat(), max(safeW, maxDrawableW / 0.88f))
-			val rawUsableSafeW = if (hitLeftWall && hitRightWall && !isOpenMultilineScene) {
-				closedHorizW
+			val enclosedHorizontally = layoutHitLeft && layoutHitRight && !isOpenMultilineScene
+			val rawUsableSafeW = if (enclosedHorizontally) {
+				min((ww - 4).toFloat(), strictWallInteriorW)
 			} else {
 				min(safeW, max(28f, interiorSpan))
 			}
@@ -2858,7 +3057,9 @@ class BubbleInpainter @Inject constructor(
 			} else {
 				rawUsableSafeW
 			}.coerceAtLeast(24f)
-			val horizSlack = 0.89f
+			// When strictly confined inside wall-padded interiorSpan, wrap cleanly up to 96% without inflating box width past the walls.
+			val wrapWidthFactor = if (enclosedHorizontally) 0.96f else 0.88f
+			val horizSlack = if (enclosedHorizontally) 0.96f else 0.89f
 
 			finalBoxW = if (isOpenMultilineScene) {
 				max(min(glyphW * 1.15f, usableSafeW), min(glyphW * 0.96f, usableSafeW))
@@ -2867,110 +3068,158 @@ class BubbleInpainter @Inject constructor(
 				max(glyphW * 0.94f, desiredW).coerceIn(minBoxW, max(minBoxW, usableSafeW))
 			}
 
-			val topWallDist = if (hitTopWall) (max(gMinY, layoutCenterY) - min(gMinY, safeLocalTop)).toFloat() else Float.POSITIVE_INFINITY
-			val botWallDist = if (hitBottomWall) (max(gMaxY + 1, safeLocalBottom) - min(gMaxY + 1, layoutCenterY)).toFloat() else Float.POSITIVE_INFINITY
-			val vTopCandidate = if (hitTopWall) min(gMinY.toFloat(), safeLocalTop.toFloat()) else min(gMinY.toFloat(), layoutCenterY - safeH * 0.5f)
-			val vBotCandidate = if (hitBottomWall) max((gMaxY + 1).toFloat(), safeLocalBottom.toFloat()) else max((gMaxY + 1).toFloat(), layoutCenterY + safeH * 0.5f)
+			val topWallDist = if (layoutHitTop) (max(gMinY, layoutCenterY) - min(gMinY, layoutSafeTop)).toFloat() else Float.POSITIVE_INFINITY
+			val botWallDist = if (layoutHitBottom) (max(gMaxY + 1, layoutSafeBottom) - min(gMaxY + 1, layoutCenterY)).toFloat() else Float.POSITIVE_INFINITY
+			val vTopCandidate = if (layoutHitTop) min(gMinY.toFloat(), layoutSafeTop.toFloat()) else min(gMinY.toFloat(), layoutCenterY - safeH * 0.5f)
+			val vBotCandidate = if (layoutHitBottom) max((gMaxY + 1).toFloat(), layoutSafeBottom.toFloat()) else max((gMaxY + 1).toFloat(), layoutCenterY + safeH * 0.5f)
 			val wallSpanV = if (vTopCandidate < vBotCandidate) {
-				val b = if (hitBottomWall) max((gMaxY + 1).toFloat(), safeLocalBottom.toFloat()) else max((gMaxY + 1).toFloat(), layoutCenterY + safeH * 0.65f)
-				val t = if (hitTopWall) min(gMinY.toFloat(), safeLocalTop.toFloat()) else min(gMinY.toFloat(), layoutCenterY - safeH * 0.65f)
+				val b = if (layoutHitBottom) max((gMaxY + 1).toFloat(), layoutSafeBottom.toFloat()) else max((gMaxY + 1).toFloat(), layoutCenterY + safeH * 0.65f)
+				val t = if (layoutHitTop) min(gMinY.toFloat(), layoutSafeTop.toFloat()) else min(gMinY.toFloat(), layoutCenterY - safeH * 0.65f)
 				b - t
 			} else {
 				safeH
 			}
 			val wallVertCapH = when {
-				hitTopWall && hitBottomWall && isDarkCard ->
+				layoutHitTop && layoutHitBottom ->
 					min(
-						(safeLocalBottom - safeLocalTop).toFloat().coerceAtLeast(glyphH),
-						max(glyphH * 1.05f, min(topWallDist + botWallDist, wallSpanV) * 0.90f),
+						strictWallInteriorH,
+						max(18f, min(topWallDist + botWallDist, wallSpanV) * 0.94f),
 					)
-				hitTopWall && hitBottomWall -> max(glyphH * 1.05f, min(topWallDist + botWallDist, wallSpanV) * 0.90f)
-				hitTopWall xor hitBottomWall -> max(glyphH * 1.15f, (topWallDist + botWallDist) * 0.90f)
+				layoutHitTop xor layoutHitBottom -> max(glyphH * 1.15f, (topWallDist + botWallDist) * 0.90f)
 				else -> min(topWallDist * 2f, botWallDist * 2f)
 			}
 			val sibCapBoxH = if (sibClampedTop || sibClampedBottom) {
-				max(glyphH, (safeLocalBottom - safeLocalTop).toFloat())
+				max(glyphH, (layoutSafeBottom - layoutSafeTop).toFloat())
 			} else {
 				Float.POSITIVE_INFINITY
 			}
 			val maxAvailBoxH = min(
 				sibCapBoxH,
 				when {
-					hitTopWall && hitBottomWall && isDarkCard ->
-						(safeLocalBottom - safeLocalTop).toFloat().coerceAtLeast(glyphH)
-					hitTopWall && hitBottomWall -> max(safeH, wallVertCapH)
-					(hitTopWall xor hitBottomWall) && !isSingleOrDarkSfx -> {
-						max(safeH, min(safeLocalBottom - safeLocalTop, wh) * 0.55f).coerceAtMost(max(safeH, glyphH * 1.95f))
+					layoutHitTop && layoutHitBottom -> strictWallInteriorH
+					(layoutHitTop xor layoutHitBottom) && !isSingleOrDarkSfx -> {
+						max(safeH, min(layoutSafeBottom - layoutSafeTop, wh) * 0.55f).coerceAtMost(max(safeH, glyphH * 1.95f))
 					}
 					else -> max(safeH, glyphH * 1.4f)
 				},
 			)
-			finalBoxH = min(sibCapBoxH, min(max(glyphH * 1.15f, safeH), wallVertCapH))
+			finalBoxH = min(sibCapBoxH, min(if (layoutHitTop && layoutHitBottom) strictWallInteriorH else max(glyphH * 1.15f, safeH), wallVertCapH))
 
 			val canMeasureContour =
-				hasActualPhysicalWalls &&
-					hitLeftWall &&
-					hitRightWall &&
-					(hitTopWall || hitBottomWall) &&
+				hasLayoutPhysicalWalls &&
+					layoutHitLeft &&
+					layoutHitRight &&
+					(layoutHitTop || layoutHitBottom) &&
 					!isOpenMultilineScene
 			val contourScanX = layoutCenterX.coerceIn(0, ww - 1)
-			val contourPadX = (medGlyphH * 0.22f).roundToInt().coerceIn(4, 9)
+			val contourPadX = max(5, (medGlyphH * 0.24f).roundToInt().coerceIn(5, 11))
+			val hasStrokePad = style.hasTextStroke || style.strokeWidthEm > 0f
+			val strokeEmFactor = if (hasStrokePad) (if (style.strokeWidthEm > 0f) style.strokeWidthEm else 0.10f) * 2f else 0f
 
 			fun measureRowClearSpanPx(yTopLocal: Float, yBotLocal: Float): Float {
-				val yMid = ((yTopLocal + yBotLocal) * 0.5f).roundToInt()
-				val sampleYs = intArrayOf(
-					yTopLocal.roundToInt().coerceIn(0, wh - 1),
-					yMid.coerceIn(0, wh - 1),
-					yBotLocal.roundToInt().coerceIn(0, wh - 1),
-				)
+				if (layoutHitTop && yTopLocal < layoutSafeTop - 1f) return 0f
+				if (layoutHitBottom && yBotLocal > layoutSafeBottom + 1f) return 0f
+				val yTopInt = yTopLocal.roundToInt().coerceIn(0, wh - 1)
+				val yMidInt = ((yTopLocal + yBotLocal) * 0.5f).roundToInt().coerceIn(0, wh - 1)
+				val yBotInt = yBotLocal.roundToInt().coerceIn(0, wh - 1)
+				val centerYClamped = layoutCenterY.coerceIn(0, wh - 1)
+
+				// Ensure vertical continuity from bubble center to this row (reject rows that escaped past a curved bubble wall).
+				if (yTopInt < centerYClamped) {
+					var edgeRun = 0
+					for (vy in centerYClamped downTo yTopInt) {
+						if (isStructuralWallAt(contourScanX, vy)) return 0f
+						if (isFlatBubbleEdgePixel(contourScanX, vy)) {
+							if (++edgeRun >= 2) return 0f
+						} else {
+							edgeRun = 0
+						}
+					}
+				}
+				if (yBotInt > centerYClamped) {
+					var edgeRun = 0
+					for (vy in centerYClamped..yBotInt) {
+						if (isStructuralWallAt(contourScanX, vy)) return 0f
+						if (isFlatBubbleEdgePixel(contourScanX, vy)) {
+							if (++edgeRun >= 2) return 0f
+						} else {
+							edgeRun = 0
+						}
+					}
+				}
+
+				val sampleYs = intArrayOf(yTopInt, yMidInt, yBotInt)
 				var minHalf = Float.MAX_VALUE
 				var spanCount = 0
 				for (sy in sampleYs) {
-					if (isStructuralWallAt(contourScanX, sy)) {
-						minHalf = 0f
-						spanCount++
-						break
+					if (isLayoutWallAt(contourScanX, sy)) {
+						return 0f
 					}
-					var halfL = (contourScanX - rawLeftWall - contourPadX).toFloat()
+					var halfL = (contourScanX - layoutSafeLeft).toFloat()
 					var hitL = false
+					var edgeRunL = 0
 					for (x in contourScanX downTo 0) {
 						if (isStructuralWallAt(x, sy)) {
 							halfL = (contourScanX - x - contourPadX).toFloat()
 							hitL = true
 							break
 						}
+						if (isFlatBubbleEdgePixel(x, sy)) {
+							if (++edgeRunL >= 2) {
+								halfL = (contourScanX - (x + 1) - contourPadX).toFloat()
+								hitL = true
+								break
+							}
+						} else {
+							edgeRunL = 0
+						}
 					}
-					var halfR = (rawRightWall - contourScanX - contourPadX).toFloat()
+					var halfR = (layoutSafeRight - contourScanX).toFloat()
 					var hitR = false
+					var edgeRunR = 0
 					for (x in contourScanX until ww) {
 						if (isStructuralWallAt(x, sy)) {
 							halfR = (x - contourScanX - contourPadX).toFloat()
 							hitR = true
 							break
 						}
+						if (isFlatBubbleEdgePixel(x, sy)) {
+							if (++edgeRunR >= 2) {
+								halfR = ((x - 1) - contourScanX - contourPadX).toFloat()
+								hitR = true
+								break
+							}
+						} else {
+							edgeRunR = 0
+						}
 					}
-					if (hitL && hitR) {
-						minHalf = min(minHalf, max(0f, min(halfL, halfR)))
+					if (hitL || hitR) {
+						val boundHalf = when {
+							hitL && hitR -> min(halfL, halfR)
+							hitL -> min(halfL, (layoutSafeRight - contourScanX).toFloat())
+							else -> min(halfR, (contourScanX - layoutSafeLeft).toFloat())
+						}
+						minHalf = min(minHalf, max(0f, boundHalf))
 						spanCount++
 					}
 				}
-				if (spanCount == 0) return finalBoxW * 0.88f
-				return (2f * minHalf).coerceAtLeast(8f)
+				if (spanCount == 0) return finalBoxW * wrapWidthFactor
+				return (2f * minHalf).coerceAtLeast(0f)
 			}
 
 			fun computeRowPctsForWrapped(wrappedRes: SmartWrapResult): Pair<List<Float>, List<Float>> {
 				if (!canMeasureContour || wrappedRes.lines.isEmpty()) {
 					return emptyList<Float>() to emptyList()
 				}
-				val boxWrapW = max(1f, finalBoxW * 0.88f)
+				val boxWrapW = max(1f, finalBoxW * wrapWidthFactor)
 				val rowSpans = ArrayList<Float>(wrappedRes.lines.size)
 				val rowPcts = ArrayList<Float>(wrappedRes.lines.size)
 				var curY = layoutCenterY - wrappedRes.totalHeightPx * 0.5f
 				for (line in wrappedRes.lines) {
 					val lh = fontPx * line.scale * lineHeightRatio
-					val spanPx = measureRowClearSpanPx(curY + lh * 0.10f, curY + lh * 0.90f)
+					val spanPx = measureRowClearSpanPx(curY + lh * 0.08f, curY + lh * 0.92f)
 					rowSpans.add(spanPx)
-					rowPcts.add(((spanPx / boxWrapW).coerceIn(0.56f, 1.0f) * 1000f).roundToInt() / 1000f)
+					rowPcts.add(((spanPx / boxWrapW).coerceIn(0.32f, 1.0f) * 1000f).roundToInt() / 1000f)
 					curY += lh
 				}
 				return if (wrappedRes.lines.size >= 2) {
@@ -2980,10 +3229,27 @@ class BubbleInpainter @Inject constructor(
 				}
 			}
 
-			for (step in 0 until 26) {
+			fun probeContourPctsForLineCount(lineCount: Int, curFontPx: Float): List<Float> {
+				if (!canMeasureContour || lineCount < 2) return emptyList()
+				val boxWrapW = max(1f, finalBoxW * wrapWidthFactor)
+				val rowH = curFontPx * lineHeightRatio
+				val estTotalH = rowH * lineCount
+				var curY = layoutCenterY - estTotalH * 0.5f
+				val pcts = ArrayList<Float>(lineCount)
+				for (li in 0 until lineCount) {
+					val spanPx = measureRowClearSpanPx(curY + rowH * 0.08f, curY + rowH * 0.92f)
+					pcts.add(((spanPx / boxWrapW).coerceIn(0.32f, 1.0f) * 1000f).roundToInt() / 1000f)
+					curY += rowH
+				}
+				return pcts
+			}
+
+			var lastRowPcts: List<Float> = emptyList()
+			for (step in 0 until 38) {
+				val curWrapW = finalBoxW * wrapWidthFactor
 				var wrapped = SmartTextLayout.computeSmartWrappedLines(
 					text = displayText,
-					maxWidthPx = finalBoxW * 0.88f,
+					maxWidthPx = curWrapW,
 					fontPx = fontPx,
 					emphasisLastLineScale = emphasisLastLineScale,
 					fontFamily = style.fontFamily,
@@ -2994,7 +3260,7 @@ class BubbleInpainter @Inject constructor(
 				if (canMeasureContour && rowPcts.any { it < 0.96f }) {
 					val contoured = SmartTextLayout.computeSmartWrappedLines(
 						text = displayText,
-						maxWidthPx = finalBoxW * 0.88f,
+						maxWidthPx = curWrapW,
 						fontPx = fontPx,
 						lineWidthsPct = rowPcts,
 						emphasisLastLineScale = emphasisLastLineScale,
@@ -3006,18 +3272,37 @@ class BubbleInpainter @Inject constructor(
 						val updated = computeRowPctsForWrapped(wrapped)
 						rowSpans = updated.first
 						rowPcts = updated.second
+					} else if (contoured.lines.size in 2..8) {
+						val probedPcts = probeContourPctsForLineCount(contoured.lines.size, fontPx)
+						if (probedPcts.size == contoured.lines.size) {
+							val reContoured = SmartTextLayout.computeSmartWrappedLines(
+								text = displayText,
+								maxWidthPx = curWrapW,
+								fontPx = fontPx,
+								lineWidthsPct = probedPcts,
+								emphasisLastLineScale = emphasisLastLineScale,
+								fontFamily = style.fontFamily,
+								lineHeightRatio = lineHeightRatio,
+							) { s, px -> measureAtFontPx(s, px) }
+							if (reContoured.lines.size == probedPcts.size) {
+								wrapped = reContoured
+								val updated = computeRowPctsForWrapped(wrapped)
+								rowSpans = updated.first
+								rowPcts = updated.second
+							}
+						}
 					}
 				}
 				finalWrap = wrapped
+				lastRowPcts = rowPcts
 
+				val extraStrokeW = if (hasStrokePad) max(2f, fontPx * strokeEmFactor) else 0f
 				var linesClearWalls = true
-				val boxWrapWCheck = max(1f, finalBoxW * 0.88f)
-				if (canMeasureContour && rowSpans.size == wrapped.lines.size && step < 22) {
+				if (canMeasureContour && rowSpans.size == wrapped.lines.size) {
 					for (li in wrapped.lines.indices) {
-						if (rowSpans[li] >= boxWrapWCheck * 0.98f) continue
 						val line = wrapped.lines[li]
-						val drawnW = line.widthPx * line.scale
-						if (drawnW > rowSpans[li] * 1.01f) {
+						val drawnW = line.widthPx * line.scale + extraStrokeW
+						if (rowSpans[li] <= 0f || drawnW > rowSpans[li]) {
 							linesClearWalls = false
 							break
 						}
@@ -3025,32 +3310,39 @@ class BubbleInpainter @Inject constructor(
 				}
 
 				val vertFillRatio = when {
-					hitTopWall && hitBottomWall && isDarkCard -> 0.78f
-					hitTopWall && hitBottomWall -> 0.88f
+					layoutHitTop && layoutHitBottom && isDarkCard -> 0.78f
+					layoutHitTop && layoutHitBottom -> 0.92f
 					else -> 1.0f
 				}
-				val maxSafeLineW = if (hitLeftWall && hitRightWall) {
+				val maxSafeLineW = if (layoutHitLeft && layoutHitRight) {
 					val cardMargin = if (isDarkCard) 6f else 0f
-					min(finalBoxW * horizSlack, (interiorSpan - cardMargin).coerceAtLeast(24f))
+					min(finalBoxW * horizSlack, (strictWallInteriorW - cardMargin).coerceAtLeast(24f))
 				} else {
 					finalBoxW * horizSlack
 				}
-				val fitsContainerH = if (hitTopWall && hitBottomWall && isDarkCard) {
-					wrapped.totalHeightPx + fontPx * 0.42f <= (safeLocalBottom - safeLocalTop).toFloat().coerceAtLeast(glyphH) &&
+				val fitsContainerH = if (layoutHitTop && layoutHitBottom && isDarkCard) {
+					wrapped.totalHeightPx + fontPx * 0.42f <= strictWallInteriorH &&
+						wrapped.totalHeightPx <= finalBoxH * vertFillRatio
+				} else if (layoutHitTop && layoutHitBottom) {
+					wrapped.totalHeightPx + extraStrokeW <= strictWallInteriorH * 0.95f &&
 						wrapped.totalHeightPx <= finalBoxH * vertFillRatio
 				} else {
 					wrapped.totalHeightPx <= finalBoxH * vertFillRatio
 				}
 				if (fitsContainerH &&
 					!wrapped.hasOverflow &&
-					wrapped.maxWordWidth <= maxSafeLineW &&
-					wrapped.maxLineWidthPx <= maxSafeLineW * 1.01f &&
+					wrapped.maxWordWidth + extraStrokeW <= maxSafeLineW &&
+					wrapped.maxLineWidthPx + extraStrokeW <= maxSafeLineW &&
 					linesClearWalls
 				) {
 					if (rowPcts.size == wrapped.lines.size && rowPcts.any { it < 0.98f }) {
 						finalLineWidthsPct = rowPcts
 					}
-					finalBoxH = max(glyphH, wrapped.totalHeightPx + fontPx * 0.35f)
+					finalBoxH = if (layoutHitTop && layoutHitBottom) {
+						min(strictWallInteriorH, max(18f, wrapped.totalHeightPx + fontPx * 0.25f))
+					} else {
+						max(glyphH, wrapped.totalHeightPx + fontPx * 0.35f)
+					}
 					break
 				}
 
@@ -3059,14 +3351,18 @@ class BubbleInpainter @Inject constructor(
 					continue
 				}
 				if (finalBoxH < maxAvailBoxH - 1f &&
-					wrapped.maxWordWidth <= finalBoxW * horizSlack &&
+					wrapped.maxWordWidth + extraStrokeW <= maxSafeLineW &&
 					linesClearWalls
 				) {
 					finalBoxH = maxAvailBoxH
 					continue
 				}
-				if (fontPx <= minFontPx) break
-				fontPx = max(minFontPx, fontPx * 0.95f)
+				val effectiveFloor = if (linesClearWalls && fitsContainerH) minFontPx else hardMinFontPx
+				if (fontPx <= effectiveFloor) break
+				fontPx = max(effectiveFloor, fontPx * 0.94f)
+			}
+			if (finalLineWidthsPct.isEmpty() && lastRowPcts.size == finalWrap.lines.size && lastRowPcts.any { it < 0.98f }) {
+				finalLineWidthsPct = lastRowPcts
 			}
 		}
 
@@ -3084,45 +3380,40 @@ class BubbleInpainter @Inject constructor(
 			refinedY1 = (absStatCenterY + finalBoxH * 0.5f).coerceIn(refinedY0 + 4f, fullHeight.toFloat())
 		} else {
 			val absCenterX = wx0 + layoutCenterX.toFloat()
-			val rawBoundPad = if (hitLeftWall && hitRightWall && !isDarkCard) wallPadX + 12 else 0
-			val safeAbsLeft = (wx0 + safeLocalLeft - if (sibClampedLeft) 0 else rawBoundPad).toFloat()
-			val safeAbsRight = (wx0 + safeLocalRight + if (sibClampedRight) 0 else rawBoundPad).toFloat()
+			val safeAbsLeft = (wx0 + layoutSafeLeft).toFloat()
+			val safeAbsRight = (wx0 + layoutSafeRight).toFloat()
 			val minBoundX = max(
 				4f,
 				when {
-					sibClampedLeft -> min((wx0 + gMinX).toFloat(), safeAbsLeft)
-					isDarkCard && hitLeftWall -> safeAbsLeft
+					sibClampedLeft || layoutHitLeft -> safeAbsLeft
 					else -> min((wx0 + gMinX).toFloat(), safeAbsLeft)
-				}.let { if (sibClampedLeft) max(it, safeAbsLeft) else it },
+				},
 			)
 			val maxBoundX = min(
 				(fullWidth - 4).toFloat(),
 				when {
-					sibClampedRight -> max((wx0 + gMaxX).toFloat(), safeAbsRight)
-					isDarkCard && hitRightWall -> safeAbsRight
+					sibClampedRight || layoutHitRight -> safeAbsRight
 					else -> max((wx0 + gMaxX).toFloat(), safeAbsRight)
-				}.let { if (sibClampedRight) min(it, safeAbsRight) else it },
+				},
 			)
-			if (finalBoxW > maxBoundX - minBoundX && maxBoundX - minBoundX >= 28f) {
+			if (finalBoxW > maxBoundX - minBoundX && maxBoundX - minBoundX >= 20f) {
 				finalBoxW = maxBoundX - minBoundX
 			}
 			refinedX0 = (absCenterX - finalBoxW * 0.5f).coerceIn(minBoundX, max(minBoundX, maxBoundX - finalBoxW))
 			refinedX1 = (refinedX0 + finalBoxW).coerceIn(min(refinedX0 + 4f, maxBoundX), maxBoundX)
 
 			val absCenterY = wy0 + layoutCenterY.toFloat()
-			val safeAbsTop = (wy0 + safeLocalTop).toFloat()
-			val safeAbsBot = (wy0 + safeLocalBottom).toFloat()
+			val safeAbsTop = (wy0 + layoutSafeTop).toFloat()
+			val safeAbsBot = (wy0 + layoutSafeBottom).toFloat()
 			val minBoundY = when {
-				sibClampedTop -> max(4f, safeAbsTop)
-				hitTopWall -> if (isDarkCard && gMinY >= safeLocalTop) safeAbsTop else min((wy0 + gMinY).toFloat(), safeAbsTop)
+				sibClampedTop || layoutHitTop -> max(4f, safeAbsTop)
 				else -> 0f
 			}
 			val maxBoundY = when {
-				sibClampedBottom -> min(fullHeight.toFloat(), safeAbsBot)
-				hitBottomWall -> if (isDarkCard && gMaxY <= safeLocalBottom) safeAbsBot else max((wy0 + gMaxY).toFloat(), safeAbsBot)
+				sibClampedBottom || layoutHitBottom -> min((fullHeight - 4).toFloat(), safeAbsBot)
 				else -> fullHeight.toFloat()
 			}
-			if (finalBoxH > maxBoundY - minBoundY && maxBoundY - minBoundY >= min(glyphH, 24f)) {
+			if (finalBoxH > maxBoundY - minBoundY && maxBoundY - minBoundY >= 16f) {
 				finalBoxH = maxBoundY - minBoundY
 			}
 			refinedY0 = (absCenterY - finalBoxH * 0.5f).coerceIn(minBoundY, max(minBoundY, maxBoundY - finalBoxH))
@@ -3136,7 +3427,7 @@ class BubbleInpainter @Inject constructor(
 			xMax = (refinedX1 / fullWidth * 1000f).coerceIn(0f, 1000f),
 		)
 
-		val fontSizeCqw = ((fontPx / fullWidth.coerceAtLeast(1)) * 100f).coerceIn(1.5f, 13.5f)
+		val fontSizeCqw = ((fontPx / fullWidth.coerceAtLeast(1)) * 100f).coerceIn(1.0f, 13.5f)
 		val finalStyle = style.copy(
 			fontSizeCqw = fontSizeCqw,
 			lineWidthsPct = finalLineWidthsPct,

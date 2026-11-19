@@ -341,9 +341,116 @@ class ReaderTranslationPipelineTest {
 		}
 	}
 
+	@Test
+	fun disabledTranslation_staysDisabledAcrossNewChapterEvenWhenAutoTranslateIsOn() = runBlocking {
+		withTimeout(10_000L) {
+			var persistedEnabled = true
+			val chapter1Env = createCoordinator(
+				autoTranslate = true,
+				prefetchNextPage = true,
+				translationEnabled = persistedEnabled,
+				onPersistEnabled = { persistedEnabled = it },
+			)
+			assertTrue(chapter1Env.coordinator.isEnabled.value)
+
+			// User explicitly disables translation while Auto-translate remains ON
+			chapter1Env.coordinator.setEnabled(false, fromUserTap = true)
+			assertFalse(chapter1Env.coordinator.isEnabled.value)
+			assertFalse(persistedEnabled)
+
+			// Opening another chapter / ReaderActivity constructs a fresh coordinator with persisted settings
+			val chapter2Env = createCoordinator(
+				autoTranslate = true,
+				prefetchNextPage = true,
+				translationEnabled = persistedEnabled,
+				onPersistEnabled = { persistedEnabled = it },
+			)
+			assertFalse("New chapter must stay disabled when user disabled translation", chapter2Env.coordinator.isEnabled.value)
+			val ch2Page = createPage(601L, index = 0)
+			chapter2Env.coordinator.updateReadingWindow(
+				activePages = listOf(ch2Page.toReaderPage()),
+				prefetchPages = emptyList(),
+			)
+			delay(100)
+			assertTrue(chapter2Env.ocrEngine.startedPages.isEmpty())
+			assertTrue(chapter2Env.coordinator.pageStates.value.isEmpty())
+
+			// User turns translation back ON -> next chapter with autoTranslate=true auto-enables again
+			assertTrue(chapter2Env.coordinator.setEnabled(true, fromUserTap = true))
+			assertTrue(persistedEnabled)
+			awaitPageDone(chapter2Env.coordinator, ch2Page.id)
+
+			val chapter3Env = createCoordinator(
+				autoTranslate = true,
+				prefetchNextPage = true,
+				translationEnabled = persistedEnabled,
+				onPersistEnabled = { persistedEnabled = it },
+			)
+			assertTrue(chapter3Env.coordinator.isEnabled.value)
+		}
+	}
+
+	@Test
+	fun rapidScrollPastActivePages_cancelsOffscreenActiveOcrAndTranslatesCurrentVisiblePageImmediately() = runBlocking {
+		withTimeout(10_000L) {
+			val env = createCoordinator(autoTranslate = true, prefetchNextPage = false)
+			val page1 = createPage(701L, index = 0)
+			val page2 = createPage(702L, index = 1)
+			val page3 = createPage(703L, index = 2)
+			val page4 = createPage(704L, index = 3)
+			val currentVisible = createPage(705L, index = 4)
+
+			val page1OcrEntered = CompletableDeferred<Unit>()
+			val page1OcrRelease = CompletableDeferred<Unit>()
+			val page1OcrCancelled = CompletableDeferred<Boolean>()
+			env.ocrEngine.enteredCallbacks[page1.id] = page1OcrEntered
+			env.ocrEngine.releaseGates[page1.id] = page1OcrRelease
+			env.ocrEngine.cancelledSignals[page1.id] = page1OcrCancelled
+
+			env.coordinator.updateReadingWindow(listOf(page1.toReaderPage()), emptyList())
+			page1OcrEntered.await()
+
+			// Rapidly scroll past pages 2, 3, 4 and settle on page 5 while page 1 is still stuck in OCR
+			env.coordinator.updateReadingWindow(listOf(page2.toReaderPage()), emptyList())
+			env.coordinator.updateReadingWindow(listOf(page3.toReaderPage()), emptyList())
+			env.coordinator.updateReadingWindow(listOf(page4.toReaderPage()), emptyList())
+			env.coordinator.updateReadingWindow(listOf(currentVisible.toReaderPage()), emptyList())
+
+			// Page 1 must be cancelled without ever releasing its gate, freeing OCR immediately for page 5
+			assertTrue(page1OcrCancelled.await())
+			awaitPageDone(env.coordinator, currentVisible.id)
+			env.coordinator.activeTranslatedPages.first { currentVisible.id in it }
+			assertFalse("Skipped off-screen pages should not run OCR ahead of currentVisible", page2.id in env.ocrEngine.completedPages)
+			assertFalse("Skipped off-screen pages should not run OCR ahead of currentVisible", page3.id in env.ocrEngine.completedPages)
+			Unit
+		}
+	}
+
+	@Test
+	fun transientTranslationError_autoRetriesActivePageAndRecoversWithoutStalling() = runBlocking {
+		withTimeout(10_000L) {
+			val env = createCoordinator(autoTranslate = true, prefetchNextPage = false)
+			val page = createPage(801L, index = 0)
+			val attempts = AtomicInteger(0)
+			env.translator.transientFailOnce[page.id] = attempts
+
+			env.coordinator.updateReadingWindow(
+				activePages = listOf(page.toReaderPage()),
+				prefetchPages = emptyList(),
+			)
+
+			awaitPageDone(env.coordinator, page.id)
+			assertEquals(2, attempts.get())
+			env.coordinator.activeTranslatedPages.first { page.id in it }
+			Unit
+		}
+	}
+
 	private fun createCoordinator(
 		autoTranslate: Boolean,
 		prefetchNextPage: Boolean,
+		translationEnabled: Boolean = autoTranslate,
+		onPersistEnabled: ((Boolean) -> Unit)? = null,
 		bitmapLoadDelayMs: (MangaPage) -> Long = { 0L },
 	): TestEnv {
 		val settings = TranslationSettingsSnapshot(
@@ -351,6 +458,7 @@ class ReaderTranslationPipelineTest {
 			sourceLang = OcrSourceLanguage.JAPANESE,
 			targetLang = "tr",
 			apiKeys = emptyList(),
+			translationEnabled = translationEnabled,
 			autoTranslate = autoTranslate,
 			prefetchNextPage = prefetchNextPage,
 			skipPureSfx = true,
@@ -374,6 +482,7 @@ class ReaderTranslationPipelineTest {
 			translatePageUseCase = useCase,
 			ocrEngine = ocrEngine,
 			cacheStore = cacheStore,
+			onPersistEnabled = onPersistEnabled,
 		)
 		coordinator.attachPageBitmapProvider { page ->
 			val delayMs = bitmapLoadDelayMs(page)
@@ -440,6 +549,7 @@ class ReaderTranslationPipelineTest {
 		val enteredCallbacks = ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
 		val finishedCallbacks = ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
 		val releaseGates = ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
+		val cancelledSignals = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
 		val startedPages = CopyOnWriteArrayList<Long>()
 		val completedPages = CopyOnWriteArrayList<Long>()
 		val currentConcurrentOcr = AtomicInteger(0)
@@ -465,7 +575,12 @@ class ReaderTranslationPipelineTest {
 			try {
 				startedPages.add(pageId)
 				enteredCallbacks[pageId]?.complete(Unit)
-				releaseGates[pageId]?.await()
+				try {
+					releaseGates[pageId]?.await()
+				} catch (ce: CancellationException) {
+					cancelledSignals[pageId]?.complete(true)
+					throw ce
+				}
 				completedPages.add(pageId)
 				finishedCallbacks[pageId]?.complete(Unit)
 				return listOf(
@@ -486,6 +601,7 @@ class ReaderTranslationPipelineTest {
 		val enteredCallbacks = ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
 		val releaseGates = ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
 		val cancelledSignals = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
+		val transientFailOnce = ConcurrentHashMap<Long, AtomicInteger>()
 		val onEnterHook = ConcurrentHashMap<Long, () -> Unit>()
 		val onExitHook = ConcurrentHashMap<Long, () -> Unit>()
 		val currentConcurrentTranslate = AtomicInteger(0)
@@ -501,6 +617,11 @@ class ReaderTranslationPipelineTest {
 			try {
 				onEnterHook[pageId]?.invoke()
 				enteredCallbacks[pageId]?.complete(Unit)
+				transientFailOnce[pageId]?.let { counter ->
+					if (counter.incrementAndGet() == 1) {
+						throw java.io.IOException("Simulated transient network hiccup")
+					}
+				}
 				try {
 					releaseGates[pageId]?.await()
 				} catch (ce: CancellationException) {

@@ -93,6 +93,20 @@ class SmartTextLayoutTest {
 			listOf("AAAA BBBB", "CCCC DDDD EEEE", "FFFF GGGG"),
 			result.lines.map { it.text },
 		)
+		assertFalse(result.hasOverflow)
+
+		// Narrow oval tip contour (0.42) must flag overflow when a long word exceeds the row contour width
+		val tightOvalOverflow = SmartTextLayout.computeSmartWrappedLines(
+			text = "SUPERLONGWORD MIDDLE SUPERLONGWORD",
+			maxWidthPx = 150f,
+			fontPx = 20f,
+			lineWidthsPct = listOf(0.42f, 1.0f, 0.42f),
+			measureScaledWidth = proportionalMeasure,
+		)
+		assertTrue(
+			"Words wider than narrow oval tip contour must report overflow so font shrinks uniformly",
+			tightOvalOverflow.hasOverflow,
+		)
 	}
 
 	@Test

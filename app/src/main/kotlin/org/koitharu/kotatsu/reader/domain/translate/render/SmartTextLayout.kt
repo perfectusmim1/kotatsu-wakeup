@@ -659,12 +659,19 @@ class SmartTextLayout @Inject constructor(
 				)
 			}
 
+			val totalOutLines = combined.size
+			val hasExplicitOutWidths = lineWidthsPct.size == totalOutLines && totalOutLines > 0
 			var totalHeightPx = 0f
 			var maxLineWidthPx = 0f
 			var anyOverflow = false
-			val scaledLines = combined.map { line ->
-				val newScale = if (line.widthPx > maxWidthPx && line.widthPx > 0f) {
-					val rawScaled = (maxWidthPx / line.widthPx) * line.scale
+			val scaledLines = combined.mapIndexed { idx, line ->
+				val rowLimit = if (hasExplicitOutWidths) {
+					(maxWidthPx * getLineTargetRatio(idx, totalOutLines, lineWidthsPct, true).toFloat()).coerceAtLeast(12f)
+				} else {
+					maxWidthPx
+				}
+				val newScale = if (line.widthPx > rowLimit && line.widthPx > 0f) {
+					val rawScaled = (rowLimit / line.widthPx) * line.scale
 					val rounded = (max(0.88f, rawScaled) * 1000f).roundToInt() / 1000f
 					if (rawScaled < 0.88f) anyOverflow = true
 					rounded
@@ -673,7 +680,7 @@ class SmartTextLayout @Inject constructor(
 				}
 				val effW = if (line.scale > 0f) line.widthPx * (newScale / line.scale) else line.widthPx
 				if (effW > maxLineWidthPx) maxLineWidthPx = effW
-				if (effW > maxWidthPx * 1.01f) anyOverflow = true
+				if (effW > rowLimit * 1.01f) anyOverflow = true
 				totalHeightPx += fontPx * newScale * lineHeightRatio
 				if (newScale != line.scale) line.copy(scale = newScale) else line
 			}
@@ -696,11 +703,11 @@ class SmartTextLayout @Inject constructor(
 			if (hasExplicitWidths && lineIdx in lineWidthsPct.indices) {
 				val raw = lineWidthsPct[lineIdx]
 				val normalized = if (raw > 1.5f) raw / 100.0 else raw.toDouble()
-				return normalized.coerceIn(0.45, 1.0)
+				return normalized.coerceIn(0.32, 1.0)
 			}
 			if (totalLines <= 2) return 0.92
 			val normPos = (lineIdx + 0.5) / totalLines - 0.5
-			return max(0.76, 1.0 - normPos * normPos * 0.65)
+			return max(0.68, 1.0 - normPos * normPos * 0.92)
 		}
 
 		private fun resolveLocale(targetLang: String): Locale {

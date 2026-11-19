@@ -176,9 +176,14 @@ class PageViewModel(
 		val raw = rawUri ?: return
 		if (animatedUri != null || page.url.isAnimatedImage()) return
 		val current = state.value
-		if (current !is PageState.Shown && current !is PageState.Loaded) return
+		if (current !is PageState.Shown &&
+			current !is PageState.Loaded &&
+			!(current is PageState.Loading && job?.isActive == true)
+		) {
+			return
+		}
 		val desiredUri = resolveDisplayUri(page, raw, translatedFiles)
-		if (desiredUri == displayedUri) return
+		if (desiredUri == displayedUri && current !is PageState.Loading) return
 		val prevSwapJob = swapJob
 		swapJob = scope.launch(Dispatchers.Default) {
 			prevSwapJob?.cancelAndJoin()
@@ -310,6 +315,10 @@ class PageViewModel(
 			cachedVisibility = visibility as? PageVisibility.Show
 			val displayUri = resolveDisplayUri(data, shown)
 			present(displayUri, shown, visibility, isConverted = false, preserveViewState = false)
+			val refreshedUri = resolveDisplayUri(data, shown)
+			if (refreshedUri != displayedUri) {
+				present(refreshedUri, shown, visibility, isConverted = false, preserveViewState = true)
+			}
 		} catch (e: CancellationException) {
 			throw e
 		} catch (e: Throwable) {

@@ -318,6 +318,11 @@ class PageLoader @Inject constructor(
 				return task.await()
 			} catch (e: CancellationException) {
 				currentCoroutineContext().ensureActive()
+				val promotedToActive = translationCoordinator.isActivePage(page.id) ||
+					synchronized(tasks) { boundPages[page.id] != null }
+				if (promotedToActive) {
+					return loadPage(page, force = false)
+				}
 				if (!allowRetry || page.id !in latestPrefetchWantedIds) {
 					throw e
 				}

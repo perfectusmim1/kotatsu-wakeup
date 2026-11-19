@@ -625,6 +625,9 @@ class ReaderViewModel @Inject constructor(
         ) {
             return
         }
+        if (pages.isNotEmpty() && lowerPos in pages.indices && upperPos in pages.indices) {
+            updateTranslationWindow(pages, lowerPos, upperPos)
+        }
         stateChangeJob = launchJob(Dispatchers.Default) {
             prevJob?.cancelAndJoin()
             loadingJob?.join()
@@ -644,11 +647,14 @@ class ReaderViewModel @Inject constructor(
                 }
             }
             notifyStateChanged()
-            if (currentPages.isEmpty() || loadingJob?.isActive == true) {
+            if (currentPages.isEmpty()) {
                 return@launchJob
             }
             ensureActive()
             updateTranslationWindow(currentPages, resolved.lowerPos, resolved.upperPos)
+            if (loadingJob?.isActive == true) {
+                return@launchJob
+            }
             val autoLoadAllowed = readerMode.value != ReaderMode.WEBTOON || !isWebtoonPullGestureEnabled.value
             if (autoLoadAllowed) {
                 if (resolved.upperPos >= currentPages.lastIndex - BOUNDS_PAGE_OFFSET) {

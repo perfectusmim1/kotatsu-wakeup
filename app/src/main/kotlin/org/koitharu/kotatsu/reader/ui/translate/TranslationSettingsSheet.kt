@@ -324,6 +324,7 @@ class TranslationSettingsSheet : BaseAdaptiveSheet<SheetTranslationSettingsBindi
 		binding.switchAutoTranslate.setOnCheckedChangeListener { _, isChecked ->
 			clearApiKeysFocus(binding)
 			settings.isTranslationAutoEnabled = isChecked
+			settings.isTranslationEnabled = coordinator.isEnabled.value
 		}
 
 		binding.switchSkipSfx.isChecked = settings.isTranslationSkipPureSfx

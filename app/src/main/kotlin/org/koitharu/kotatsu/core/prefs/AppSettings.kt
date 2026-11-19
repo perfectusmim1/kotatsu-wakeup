@@ -620,6 +620,10 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		)
 		set(value) = prefs.edit { putString(KEY_TRANSLATION_GEMINI_THINKING_LEVEL, value.name) }
 
+	var isTranslationEnabled: Boolean
+		get() = prefs.getBoolean(KEY_TRANSLATION_ENABLED, isTranslationAutoEnabled)
+		set(value) = prefs.edit { putBoolean(KEY_TRANSLATION_ENABLED, value) }
+
 	var isTranslationAutoEnabled: Boolean
 		get() = prefs.getBoolean(KEY_TRANSLATION_AUTO, false)
 		set(value) = prefs.edit { putBoolean(KEY_TRANSLATION_AUTO, value) }
@@ -639,6 +643,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		apiKeys = translationApiKeys,
 		deeplApiKeys = translationDeeplApiKeys,
 		geminiThinkingLevel = translationGeminiThinkingLevel,
+		translationEnabled = isTranslationEnabled,
 		autoTranslate = isTranslationAutoEnabled,
 		skipPureSfx = isTranslationSkipPureSfx,
 		filterPromoAndCredits = isTranslationFilterPromo,
@@ -1086,6 +1091,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		const val KEY_TRANSLATION_API_KEYS = "reader_translation_api_keys"
 		const val KEY_TRANSLATION_DEEPL_API_KEYS = "reader_translation_deepl_api_keys"
 		const val KEY_TRANSLATION_GEMINI_THINKING_LEVEL = "reader_translation_gemini_thinking_level"
+		const val KEY_TRANSLATION_ENABLED = "reader_translation_enabled"
 		const val KEY_TRANSLATION_AUTO = "reader_translation_auto"
 		const val KEY_TRANSLATION_SKIP_SFX = "reader_translation_skip_sfx"
 		const val KEY_TRANSLATION_FILTER_PROMO = "reader_translation_filter_promo"
@@ -1097,6 +1103,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			KEY_TRANSLATION_API_KEYS,
 			KEY_TRANSLATION_DEEPL_API_KEYS,
 			KEY_TRANSLATION_GEMINI_THINKING_LEVEL,
+			KEY_TRANSLATION_ENABLED,
 			KEY_TRANSLATION_AUTO,
 			KEY_TRANSLATION_SKIP_SFX,
 			KEY_TRANSLATION_FILTER_PROMO,

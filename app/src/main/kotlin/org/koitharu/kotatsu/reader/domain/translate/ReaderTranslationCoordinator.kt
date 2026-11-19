@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,6 +37,7 @@ import org.koitharu.kotatsu.reader.domain.translate.api.InvalidDeeplApiKeyExcept
 import org.koitharu.kotatsu.reader.domain.translate.api.InvalidGeminiApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.api.MissingDeeplApiKeyException
 import org.koitharu.kotatsu.reader.domain.translate.api.MissingGeminiApiKeyException
+import org.koitharu.kotatsu.reader.domain.translate.api.TranslationServiceException
 import org.koitharu.kotatsu.reader.domain.translate.model.LocalOcrEngine
 import org.koitharu.kotatsu.reader.domain.translate.model.OcrSourceLanguage
 import org.koitharu.kotatsu.reader.domain.translate.model.PageTranslationState
@@ -45,7 +47,9 @@ import org.koitharu.kotatsu.reader.domain.translate.model.TranslationSettingsSna
 import org.koitharu.kotatsu.reader.domain.translate.model.TranslationStage
 import org.koitharu.kotatsu.reader.ui.pager.ReaderPage
 import java.io.File
+import java.io.IOException
 import java.util.PriorityQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
@@ -67,7 +71,7 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 
 	private class Waiter(
 		val key: Long,
-		val seq: Long,
+		@Volatile var seq: Long,
 		@Volatile var highPriority: Boolean,
 		val gate: CompletableDeferred<Unit> = CompletableDeferred(),
 		var cancelled: Boolean = false,
@@ -84,19 +88,36 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 	private val lock = Any()
 	private var availablePermits = maxPermits
 	private val seqCounter = AtomicLong(0L)
+	private val frontSeqCounter = AtomicLong(0L)
 	private val waiters = PriorityQueue<Waiter>()
 
 	fun pendingWaitersCount(): Int = synchronized(lock) {
 		waiters.count { !it.cancelled }
 	}
 
-	fun promote(key: Long) {
+	fun promote(key: Long, bumpToFront: Boolean = false) {
 		synchronized(lock) {
-			val toPromote = waiters.filter { it.key == key && !it.highPriority && !it.cancelled }
+			val toPromote = waiters.filter { it.key == key && !it.cancelled && (!it.highPriority || bumpToFront) }
 			if (toPromote.isEmpty()) return
 			for (waiter in toPromote) {
 				waiters.remove(waiter)
 				waiter.highPriority = true
+				if (bumpToFront) {
+					waiter.seq = frontSeqCounter.decrementAndGet()
+				}
+				waiters.add(waiter)
+			}
+		}
+	}
+
+	fun demote(key: Long) {
+		synchronized(lock) {
+			val toDemote = waiters.filter { it.key == key && it.highPriority && !it.cancelled }
+			if (toDemote.isEmpty()) return
+			for (waiter in toDemote) {
+				waiters.remove(waiter)
+				waiter.highPriority = false
+				waiter.seq = seqCounter.incrementAndGet()
 				waiters.add(waiter)
 			}
 		}
@@ -183,6 +204,7 @@ class ReaderTranslationCoordinator private constructor(
 	settingsFlow: Flow<TranslationSettingsSnapshot>,
 	initialSettings: TranslationSettingsSnapshot,
 	preboundSettingsState: StateFlow<TranslationSettingsSnapshot>?,
+	private val onPersistEnabled: ((Boolean) -> Unit)?,
 	private val translatePageUseCase: TranslatePageUseCase,
 	private val ocrEngine: LocalOcrEngine,
 	private val cacheStore: TranslationCacheStore,
@@ -200,6 +222,7 @@ class ReaderTranslationCoordinator private constructor(
 		settingsFlow = appSettings.observeTranslationSettings(),
 		initialSettings = appSettings.getTranslationSettingsSnapshot(),
 		preboundSettingsState = null,
+		onPersistEnabled = { enabled -> appSettings.isTranslationEnabled = enabled },
 		translatePageUseCase = translatePageUseCase,
 		ocrEngine = ocrEngine,
 		cacheStore = cacheStore,
@@ -211,11 +234,13 @@ class ReaderTranslationCoordinator private constructor(
 		translatePageUseCase: TranslatePageUseCase,
 		ocrEngine: LocalOcrEngine,
 		cacheStore: TranslationCacheStore,
+		onPersistEnabled: ((Boolean) -> Unit)? = null,
 	) : this(
 		lifecycle = lifecycle,
 		settingsFlow = settingsState,
 		initialSettings = settingsState.value,
 		preboundSettingsState = settingsState,
+		onPersistEnabled = onPersistEnabled,
 		translatePageUseCase = translatePageUseCase,
 		ocrEngine = ocrEngine,
 		cacheStore = cacheStore,
@@ -226,6 +251,7 @@ class ReaderTranslationCoordinator private constructor(
 		@Volatile var isPrefetch: Boolean,
 		@Volatile var isFromPreload: Boolean,
 		@Volatile var waitingOnPrefetchGate: Boolean = false,
+		@Volatile var ocrCompleted: Boolean = false,
 	) {
 		lateinit var job: Job
 	}
@@ -237,6 +263,7 @@ class ReaderTranslationCoordinator private constructor(
 	private val inFlightJobs = HashMap<Long, InFlightEntry>()
 	private val pendingActiveOcrIds = HashSet<Long>()
 	private val _hasPendingActiveOcr = MutableStateFlow(false)
+	private val lastErrorAttemptMs = ConcurrentHashMap<Long, Long>()
 	private val ocrGate = PrioritySemaphore(OCR_CONCURRENCY)
 	private val translateGate = PrioritySemaphore(TRANSLATE_CONCURRENCY)
 	private val prefetchGate = PrioritySemaphore(MAX_CONCURRENT_JOBS)
@@ -397,6 +424,10 @@ class ReaderTranslationCoordinator private constructor(
 			settingsSnapshot.value.prefetchNextPage
 	}
 
+	internal fun isActivePage(pageId: Long): Boolean = synchronized(windowLock) {
+		pageId in activePageIds
+	}
+
 	internal fun pendingOcrWaitersCount(): Int = ocrGate.pendingWaitersCount()
 
 	internal fun pendingTranslateWaitersCount(): Int = translateGate.pendingWaitersCount()
@@ -414,6 +445,8 @@ class ReaderTranslationCoordinator private constructor(
 			TranslatePipelineLog.i(LOG_TAG, "Translation disabled (fromUserTap=$fromUserTap)")
 			pendingRescheduleAfterSettings = false
 			_isEnabled.value = false
+			onPersistEnabled?.invoke(false)
+			lastErrorAttemptMs.clear()
 			generationCounter.incrementAndGet()
 			synchronized(windowLock) {
 				preloadedPages.clear()
@@ -427,6 +460,7 @@ class ReaderTranslationCoordinator private constructor(
 		if (!snapshot.hasRequiredCredentials()) {
 			TranslatePipelineLog.w(LOG_TAG, "Cannot enable ${snapshot.provider} translation: no API keys configured")
 			_isEnabled.value = false
+			onPersistEnabled?.invoke(false)
 			if (fromUserTap) {
 				_uiEvents.tryEmit(TranslationUiEvent.PromptMissingApiKey)
 			} else {
@@ -444,9 +478,11 @@ class ReaderTranslationCoordinator private constructor(
 			"Translation enabled (fromUserTap=$fromUserTap, source=${snapshot.sourceLang}, " +
 				"target=${snapshot.targetLang}, provider=${snapshot.provider})",
 		)
+		lastErrorAttemptMs.clear()
 		if (!_isEnabled.value) {
 			_isEnabled.value = true
 		}
+		onPersistEnabled?.invoke(true)
 		if (settingsSheetDepth.get() > 0) {
 			pendingRescheduleAfterSettings = true
 		} else {
@@ -492,12 +528,46 @@ class ReaderTranslationCoordinator private constructor(
 		}
 		_activePageIdsFlow.value = visibleIds
 
-		val staleEntries = synchronized(jobsLock) {
-			inFlightJobs.values.filter { entry ->
-				entry.isPrefetch &&
-					entry.pageId !in windowIds &&
-					(!entry.isFromPreload || isDisjointJump || entry.pageId in prevWindowIds)
+		val staleEntries = ArrayList<InFlightEntry>()
+		val demotedIds = ArrayList<Long>()
+		val promotedVisibleIds = ArrayList<Long>()
+		synchronized(jobsLock) {
+			for (entry in inFlightJobs.values) {
+				if (entry.pageId in visibleIds) {
+					promotedVisibleIds.add(entry.pageId)
+					continue
+				}
+				if (entry.isPrefetch) {
+					if (entry.pageId !in windowIds &&
+						(!entry.isFromPreload || isDisjointJump || entry.pageId in prevWindowIds)
+					) {
+						staleEntries.add(entry)
+					}
+				} else if (entry.pageId !in windowIds) {
+					if (!entry.ocrCompleted || isDisjointJump) {
+						// Scrolled past before OCR finished (or jumped far away): cancel so off-screen pages never starve visible OCR.
+						staleEntries.add(entry)
+					} else {
+						// OCR already completed on an adjacent scrolled-past page: demote priority so visible pages go first.
+						entry.isPrefetch = true
+						setActiveOcrPendingLocked(entry.pageId, false)
+						demotedIds.add(entry.pageId)
+					}
+				} else {
+					// Moved from visible window into prefetch window: demote priority.
+					entry.isPrefetch = true
+					setActiveOcrPendingLocked(entry.pageId, false)
+					demotedIds.add(entry.pageId)
+				}
 			}
+		}
+		for (id in demotedIds) {
+			ocrGate.demote(id)
+			translateGate.demote(id)
+		}
+		for (id in promotedVisibleIds) {
+			ocrGate.promote(id, bumpToFront = true)
+			translateGate.promote(id, bumpToFront = true)
 		}
 		cancelEntriesAndClearInProgress(staleEntries)
 
@@ -660,6 +730,12 @@ class ReaderTranslationCoordinator private constructor(
 			if (existingState?.stage == TranslationStage.DONE) {
 				return
 			}
+			if (existingState?.stage == TranslationStage.ERROR) {
+				val lastErrAt = lastErrorAttemptMs[page.id] ?: 0L
+				if (isPrefetch || (System.currentTimeMillis() - lastErrAt) < ERROR_RETRY_COOLDOWN_MS) {
+					return
+				}
+			}
 			val existingEntry = inFlightJobs[page.id]
 			if (existingEntry != null && existingEntry.job.isActive) {
 				if (!isPrefetch && existingEntry.isPrefetch) {
@@ -670,16 +746,19 @@ class ReaderTranslationCoordinator private constructor(
 					} else {
 						existingEntry.isPrefetch = false
 						existingEntry.isFromPreload = false
-						val stage = existingState?.stage
-						if (stage == null || stage == TranslationStage.IDLE || stage == TranslationStage.DOWNLOADING_MODELS || stage == TranslationStage.RUNNING_OCR) {
+						if (!existingEntry.ocrCompleted) {
 							setActiveOcrPendingLocked(page.id, true)
 						}
-						ocrGate.promote(page.id)
-						translateGate.promote(page.id)
+						ocrGate.promote(page.id, bumpToFront = true)
+						translateGate.promote(page.id, bumpToFront = true)
 						TranslatePipelineLog.d(LOG_TAG, "Promoted in-flight prefetch page=${page.id} to active priority")
 						return
 					}
 				} else {
+					if (!isPrefetch) {
+						ocrGate.promote(page.id, bumpToFront = true)
+						translateGate.promote(page.id, bumpToFront = true)
+					}
 					return
 				}
 			}
@@ -707,10 +786,10 @@ class ReaderTranslationCoordinator private constructor(
 						}
 						prefetchGate.withPermit(key = page.id, highPriority = false) {
 							entry.waitingOnPrefetchGate = false
-							executePageJob(entry, page, snapshot, generation)
+							executePageJobWithTransientRetry(entry, page, snapshot, generation)
 						}
 					} else {
-						executePageJob(entry, page, snapshot, generation)
+						executePageJobWithTransientRetry(entry, page, snapshot, generation)
 					}
 				} catch (ce: CancellationException) {
 					throw ce
@@ -746,6 +825,7 @@ class ReaderTranslationCoordinator private constructor(
 						"Translation failed on page=${page.id}: InvalidGeminiApiKeyException: ${e.message}",
 					)
 					if (generation == generationCounter.get()) {
+						lastErrorAttemptMs[page.id] = System.currentTimeMillis()
 						updatePageState(
 							PageTranslationState(
 								pageId = page.id,
@@ -765,6 +845,7 @@ class ReaderTranslationCoordinator private constructor(
 						"Translation failed on page=${page.id}: InvalidDeeplApiKeyException: ${e.message}",
 					)
 					if (generation == generationCounter.get()) {
+						lastErrorAttemptMs[page.id] = System.currentTimeMillis()
 						updatePageState(
 							PageTranslationState(
 								pageId = page.id,
@@ -781,6 +862,7 @@ class ReaderTranslationCoordinator private constructor(
 				} catch (t: Throwable) {
 					TranslatePipelineLog.e(LOG_TAG, "Translation failed on page=${page.id}", t)
 					if (generation == generationCounter.get() && _isEnabled.value) {
+						lastErrorAttemptMs[page.id] = System.currentTimeMillis()
 						updatePageState(
 							PageTranslationState(
 								pageId = page.id,
@@ -822,6 +904,54 @@ class ReaderTranslationCoordinator private constructor(
 		jobToCancelOnPromotion?.cancel()
 	}
 
+	private suspend fun executePageJobWithTransientRetry(
+		entry: InFlightEntry,
+		page: MangaPage,
+		snapshot: TranslationSettingsSnapshot,
+		generation: Long,
+	) {
+		var attempt = 0
+		while (true) {
+			try {
+				executePageJob(entry, page, snapshot, generation)
+				lastErrorAttemptMs.remove(page.id)
+				return
+			} catch (ce: CancellationException) {
+				// Only treat as real cancellation if OUR coroutine was cancelled;
+				// an external cancelled Deferred (e.g. evicted PageLoader prefetch download) must recover.
+				currentCoroutineContext().ensureActive()
+				val stillActiveTarget = (!entry.isPrefetch || isActivePage(page.id)) &&
+					_isEnabled.value &&
+					generation == generationCounter.get()
+				if (stillActiveTarget && attempt < MAX_TRANSIENT_RETRIES) {
+					attempt++
+					TranslatePipelineLog.w(
+						LOG_TAG,
+						"External cancellation on active page=${page.id}; retrying ($attempt/$MAX_TRANSIENT_RETRIES)",
+					)
+					delay(TRANSIENT_RETRY_DELAY_MS)
+					continue
+				}
+				throw ce
+			} catch (t: Throwable) {
+				val isTransient = t is IOException || (t is TranslationServiceException && t.isTransient)
+				val stillActiveTarget = (!entry.isPrefetch || isActivePage(page.id)) &&
+					_isEnabled.value &&
+					generation == generationCounter.get()
+				if (isTransient && stillActiveTarget && attempt < MAX_TRANSIENT_RETRIES) {
+					attempt++
+					TranslatePipelineLog.w(
+						LOG_TAG,
+						"Transient translation error on page=${page.id} (${t.javaClass.simpleName}: ${t.message}); retrying ($attempt/$MAX_TRANSIENT_RETRIES)",
+					)
+					delay(TRANSIENT_RETRY_DELAY_MS)
+					continue
+				}
+				throw t
+			}
+		}
+	}
+
 	private suspend fun executePageJob(
 		entry: InFlightEntry,
 		page: MangaPage,
@@ -835,6 +965,7 @@ class ReaderTranslationCoordinator private constructor(
 		val translatePermit = translateGate.asPipelinePermit(page.id) { !entry.isPrefetch }
 		val onProgress: suspend (TranslationStage, Int) -> Unit = { stage, percent ->
 			if (stage != TranslationStage.DOWNLOADING_MODELS && stage != TranslationStage.RUNNING_OCR) {
+				entry.ocrCompleted = true
 				markActiveOcrDone(page.id)
 			}
 			if (generation == generationCounter.get() &&
@@ -875,7 +1006,18 @@ class ReaderTranslationCoordinator private constructor(
 			translatePageUseCase(
 				page = page,
 				settings = snapshot,
-				loadSourceUri = { uriProvider(page, entry.isPrefetch) },
+				loadSourceUri = {
+					try {
+						uriProvider(page, entry.isPrefetch)
+					} catch (ce: CancellationException) {
+						currentCoroutineContext().ensureActive()
+						if (!entry.isPrefetch || isActivePage(page.id)) {
+							uriProvider(page, false)
+						} else {
+							throw ce
+						}
+					}
+				},
 				onProgress = onProgress,
 				ocrPermit = ocrPermit,
 				translatePermit = translatePermit,
@@ -883,6 +1025,7 @@ class ReaderTranslationCoordinator private constructor(
 		}
 
 		if (generation == generationCounter.get() && _isEnabled.value) {
+			entry.ocrCompleted = true
 			markActiveOcrDone(page.id)
 			val filePath = (result as? PageTranslationResult.Translated)?.file?.absolutePath
 			TranslatePipelineLog.d(
@@ -901,6 +1044,7 @@ class ReaderTranslationCoordinator private constructor(
 	}
 
 	private fun resetSessionState() {
+		lastErrorAttemptMs.clear()
 		generationCounter.incrementAndGet()
 		cancelAllJobs()
 		_pageStates.value = emptyMap()
@@ -993,7 +1137,7 @@ class ReaderTranslationCoordinator private constructor(
 	}
 
 	private fun shouldAutoEnable(snapshot: TranslationSettingsSnapshot): Boolean {
-		return snapshot.autoTranslate && snapshot.hasRequiredCredentials()
+		return snapshot.translationEnabled && snapshot.autoTranslate && snapshot.hasRequiredCredentials()
 	}
 
 	private fun TranslationStage.isInProgress(): Boolean = when (this) {
@@ -1014,5 +1158,8 @@ class ReaderTranslationCoordinator private constructor(
 		const val PREFETCH_PAGE_COUNT = 6
 		private const val MAX_PRELOADED_TRACKED = 10
 		private const val ERROR_DEBOUNCE_MS = 4_000L
+		private const val ERROR_RETRY_COOLDOWN_MS = 3_000L
+		private const val TRANSIENT_RETRY_DELAY_MS = 1_200L
+		private const val MAX_TRANSIENT_RETRIES = 1
 	}
 }

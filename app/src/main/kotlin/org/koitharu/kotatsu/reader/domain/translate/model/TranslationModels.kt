@@ -167,6 +167,7 @@ data class TranslationSettingsSnapshot(
 	val deeplApiKeys: List<String> = emptyList(),
 	val geminiThinkingLevel: GeminiThinkingLevel = GeminiThinkingLevel.MINIMAL,
 	val autoTranslate: Boolean = false,
+	val translationEnabled: Boolean = autoTranslate,
 	val prefetchNextPage: Boolean = true,
 	val skipPureSfx: Boolean = true,
 	val filterPromoAndCredits: Boolean = true,

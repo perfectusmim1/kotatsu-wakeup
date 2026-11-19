@@ -245,14 +245,20 @@ class PaddleOcrEngine @Inject constructor(
 				Log.i(LOG_TAG, "AUTO fast-accepted '$group' (no extra downloads)")
 				return group
 			}
-			// Source-locale hint match: don't trigger cross-script probes on SFX-heavy pages when hint is clearly legible
+			// Source-locale hint match: don't trigger cross-script probes on SFX-heavy or number-heavy pages when hint is clearly legible
 			if (
 				group == hintGroup &&
 				result.usableLines >= 1 &&
-				result.avgConfidence >= 56f &&
-				result.validCharRatio >= 0.72f &&
-				result.scriptPurity >= 0.70f &&
-				result.totalScriptLetters >= 4
+				(
+					(result.avgConfidence >= 56f &&
+						result.validCharRatio >= 0.72f &&
+						result.scriptPurity >= 0.70f &&
+						result.totalScriptLetters >= 4) ||
+						(result.avgConfidence >= 80f &&
+							result.validCharRatio >= 0.45f &&
+							result.scriptPurity >= 0.90f &&
+							result.totalScriptLetters >= 16)
+					)
 			) {
 				lastAutoGroup.set(group)
 				Log.i(LOG_TAG, "AUTO accepted source-hint '$group' (score=${"%.1f".format(result.combinedScore)})")
@@ -1925,30 +1931,117 @@ class PaddleOcrEngine @Inject constructor(
 			width: Int,
 			height: Int,
 			line: RawOcrLine,
+			allLines: List<RawOcrLine>? = null,
 		): Float {
 			val xStart = max(0, floor(line.x0).toInt())
 			val xEnd = min(width - 1, ceil(line.x1).toInt())
-			if (xEnd < xStart) return 255f
+			val yStart = max(0, floor(line.y0).toInt())
+			val yEnd = min(height - 1, ceil(line.y1).toInt())
+			if (xEnd < xStart || yEnd < yStart) return 255f
+
+			fun medianOf(list: ArrayList<Float>): Float? {
+				if (list.isEmpty()) return null
+				list.sort()
+				return list[list.size / 2]
+			}
+
+			fun isInsideOtherLine(px: Int, py: Int): Boolean {
+				val list = allLines ?: return false
+				for (other in list) {
+					if (other === line) continue
+					if (px >= other.x0 - 1f && px <= other.x1 + 1f && py >= other.y0 - 1f && py <= other.y1 + 1f) {
+						return true
+					}
+				}
+				return false
+			}
+
 			val stepX = max(1, (xEnd - xStart) / 14)
-			val lums = ArrayList<Float>(64)
-			val sampleYs = intArrayOf(
-				max(0, floor(line.y0).toInt() - 3),
-				max(0, floor(line.y0).toInt() - 1),
-				min(height - 1, ceil(line.y1).toInt() + 1),
-				min(height - 1, ceil(line.y1).toInt() + 3),
-			)
-			for (y in sampleYs) {
+			val stepY = max(1, (yEnd - yStart) / 6)
+			val topLums = ArrayList<Float>(32)
+			val botLums = ArrayList<Float>(32)
+			val leftLums = ArrayList<Float>(16)
+			val rightLums = ArrayList<Float>(16)
+
+			val topYs = intArrayOf(max(0, yStart - 3), max(0, yStart - 1))
+			for (y in topYs) {
 				val rowOff = y * width
 				var x = xStart
 				while (x <= xEnd) {
-					lums.add(argbLum(pixels[rowOff + x]))
+					if (!isInsideOtherLine(x, y)) topLums.add(argbLum(pixels[rowOff + x]))
 					x += stepX
 				}
 			}
-			if (lums.isEmpty()) return 255f
-			lums.sort()
-			val idx = (lums.size * 0.55f).toInt().coerceIn(0, lums.lastIndex)
-			return lums[idx]
+			val botYs = intArrayOf(min(height - 1, yEnd + 1), min(height - 1, yEnd + 3))
+			for (y in botYs) {
+				val rowOff = y * width
+				var x = xStart
+				while (x <= xEnd) {
+					if (!isInsideOtherLine(x, y)) botLums.add(argbLum(pixels[rowOff + x]))
+					x += stepX
+				}
+			}
+			val leftXs = intArrayOf(max(0, xStart - 3), max(0, xStart - 1))
+			for (x in leftXs) {
+				var y = yStart
+				while (y <= yEnd) {
+					if (!isInsideOtherLine(x, y)) leftLums.add(argbLum(pixels[y * width + x]))
+					y += stepY
+				}
+			}
+			val rightXs = intArrayOf(min(width - 1, xEnd + 1), min(width - 1, xEnd + 3))
+			for (x in rightXs) {
+				var y = yStart
+				while (y <= yEnd) {
+					if (!isInsideOtherLine(x, y)) rightLums.add(argbLum(pixels[y * width + x]))
+					y += stepY
+				}
+			}
+
+			// If all 4 sides were occluded by overlapping neighbor boxes, fall back to unmasked sampling.
+			if (allLines != null && topLums.isEmpty() && botLums.isEmpty() && leftLums.isEmpty() && rightLums.isEmpty()) {
+				return sampleLineCollarLum(pixels, width, height, line, null)
+			}
+
+			// If most sides agree tightly (e.g. a top word near the dark curved top border of a white oval bubble,
+			// or a dark-card line touching a bright frame edge), ignore the single outlier border side.
+			val sideMedians = ArrayList<Float>(4).apply {
+				medianOf(topLums)?.let { add(it) }
+				medianOf(botLums)?.let { add(it) }
+				medianOf(leftLums)?.let { add(it) }
+				medianOf(rightLums)?.let { add(it) }
+			}
+			if (sideMedians.size == 4) {
+				sideMedians.sort()
+				val lowSpread = sideMedians[2] - sideMedians[0]
+				val highSpread = sideMedians[3] - sideMedians[1]
+				if (highSpread <= 30f && lowSpread > highSpread + 20f) {
+					return sideMedians[2]
+				}
+				if (lowSpread <= 30f && highSpread > lowSpread + 20f) {
+					return sideMedians[1]
+				}
+			} else if (sideMedians.size == 3) {
+				sideMedians.sort()
+				val lowSpread = sideMedians[1] - sideMedians[0]
+				val highSpread = sideMedians[2] - sideMedians[1]
+				if ((highSpread <= 30f && lowSpread > highSpread + 20f) ||
+					(lowSpread <= 30f && highSpread > lowSpread + 20f)
+				) {
+					return sideMedians[1]
+				}
+			}
+
+			val allLums = ArrayList<Float>(topLums.size + botLums.size + leftLums.size + rightLums.size).apply {
+				addAll(topLums)
+				addAll(botLums)
+				addAll(leftLums)
+				addAll(rightLums)
+			}
+			if (allLums.isEmpty()) return 255f
+			allLums.sort()
+			val idx = (allLums.size * 0.55f).toInt().coerceIn(0, allLums.lastIndex)
+			return allLums[idx]
 		}
 
 		private fun isFaintGrayWatermarkOnWhite(
@@ -1991,12 +2084,13 @@ class PaddleOcrEngine @Inject constructor(
 			lineB: RawOcrLine,
 			collarLumA: Float? = null,
 			collarLumB: Float? = null,
+			allLines: List<RawOcrLine>? = null,
 		): Boolean {
 			val leftFirst = lineA.x0 <= lineB.x0
 			val left = if (leftFirst) lineA else lineB
 			val right = if (leftFirst) lineB else lineA
-			val bgL = (if (leftFirst) collarLumA else collarLumB) ?: sampleLineCollarLum(pixels, width, height, left)
-			val bgR = (if (leftFirst) collarLumB else collarLumA) ?: sampleLineCollarLum(pixels, width, height, right)
+			val bgL = (if (leftFirst) collarLumA else collarLumB) ?: sampleLineCollarLum(pixels, width, height, left, allLines)
+			val bgR = (if (leftFirst) collarLumB else collarLumA) ?: sampleLineCollarLum(pixels, width, height, right, allLines)
 			if (abs(bgL - bgR) >= 75f) return true
 
 			val hGapPx = right.x0 - left.x1
@@ -2009,6 +2103,17 @@ class PaddleOcrEngine @Inject constructor(
 			val ovY1 = min(height - 1, ceil(min(left.y1, right.y1)).toInt())
 			val spanY = ovY1 - ovY0 + 1
 			if (spanY < 4) return false
+
+			fun isInsideOtherOcrLine(px: Int, py: Int): Boolean {
+				val list = allLines ?: return false
+				for (other in list) {
+					if (other === lineA || other === lineB) continue
+					if (px >= other.x0 - 1f && px <= other.x1 + 1f && py >= other.y0 - 1f && py <= other.y1 + 1f) {
+						return true
+					}
+				}
+				return false
+			}
 
 			val bothLight = bgL >= 165f && bgR >= 165f
 			val bothDark = bgL <= 105f && bgR <= 105f
@@ -2033,7 +2138,7 @@ class PaddleOcrEngine @Inject constructor(
 					var botDark = false
 					val topEnd = min(height - 1, ovY0 + 2)
 					for (y in cuspTopY..topEnd) {
-						if (argbLum(pixels[y * width + x]) <= 135f) {
+						if (!isInsideOtherOcrLine(x, y) && argbLum(pixels[y * width + x]) <= 135f) {
 							topDark = true
 							break
 						}
@@ -2041,7 +2146,7 @@ class PaddleOcrEngine @Inject constructor(
 					if (topDark) {
 						val botStart = max(0, ovY1 - 2)
 						for (y in botStart..cuspBotY) {
-							if (argbLum(pixels[y * width + x]) <= 135f) {
+							if (!isInsideOtherOcrLine(x, y) && argbLum(pixels[y * width + x]) <= 135f) {
 								botDark = true
 								break
 							}
@@ -2059,7 +2164,7 @@ class PaddleOcrEngine @Inject constructor(
 					val clampedStart = startY.coerceIn(0, height - 1)
 					val stopY = max(0, clampedStart - scanMax)
 					for (y in clampedStart downTo stopY) {
-						if (argbLum(pixels[y * width + cx]) <= 120f) return y
+						if (!isInsideOtherOcrLine(cx, y) && argbLum(pixels[y * width + cx]) <= 120f) return y
 					}
 					return null
 				}
@@ -2069,7 +2174,7 @@ class PaddleOcrEngine @Inject constructor(
 					val clampedStart = startY.coerceIn(0, height - 1)
 					val stopY = min(height - 1, clampedStart + scanMax)
 					for (y in clampedStart..stopY) {
-						if (argbLum(pixels[y * width + cx]) <= 120f) return y
+						if (!isInsideOtherOcrLine(cx, y) && argbLum(pixels[y * width + cx]) <= 120f) return y
 					}
 					return null
 				}
@@ -2099,13 +2204,14 @@ class PaddleOcrEngine @Inject constructor(
 			lineB: RawOcrLine,
 			collarLumA: Float? = null,
 			collarLumB: Float? = null,
+			allLines: List<RawOcrLine>? = null,
 		): Boolean {
 			val topFirst = lineA.y0 <= lineB.y0
 			val top = if (topFirst) lineA else lineB
 			val bot = if (topFirst) lineB else lineA
 			val vGapPx = bot.y0 - top.y1
-			val bgT = (if (topFirst) collarLumA else collarLumB) ?: sampleLineCollarLum(pixels, width, height, top)
-			val bgB = (if (topFirst) collarLumB else collarLumA) ?: sampleLineCollarLum(pixels, width, height, bot)
+			val bgT = (if (topFirst) collarLumA else collarLumB) ?: sampleLineCollarLum(pixels, width, height, top, allLines)
+			val bgB = (if (topFirst) collarLumB else collarLumA) ?: sampleLineCollarLum(pixels, width, height, bot, allLines)
 			// Kalın siyah konturlu orta ton sahne/anlatım yazılarında sıkı dikey yaka pikselinin biri siyah kontura denk gelebilir
 			val fakeOutlineCollar = vGapPx <= 6f &&
 				min(bgT, bgB) <= 28f &&
@@ -2126,10 +2232,16 @@ class PaddleOcrEngine @Inject constructor(
 			val bothDark = bgT <= 105f && bgB <= 105f
 			val bothNearWhite = bgT >= 232f && bgB >= 232f
 			if (vGapPx <= 1.5f) {
-				if (bothNearWhite && spanX >= 12) {
+				// Only probe for a tilted UI/forum divider when both boxes are genuinely tall tilted regions
+				// (not normal unclipped horizontal speech-bubble lines whose own glyph strokes lie between centerY's).
+				val looksLikeTiltedRows = top.height >= 55f &&
+					bot.height >= 55f &&
+					abs(bot.centerY - top.centerY) >= 42f &&
+					spanX >= 90
+				if (bothNearWhite && looksLikeTiltedRows) {
 					val scanY0 = max(0, floor(min(top.centerY, bot.centerY)).toInt())
 					val scanY1 = min(height - 1, ceil(max(top.centerY, bot.centerY)).toInt())
-					if (scanY1 > scanY0 && hasContinuousTiltedDivider(pixels, width, ovX0, ovX1, scanY0, scanY1, max(24, (spanX * 0.55f).toInt()))) {
+					if (scanY1 > scanY0 && hasContinuousTiltedDivider(pixels, width, ovX0, ovX1, scanY0, scanY1, max(64, (spanX * 0.62f).toInt()))) {
 						return true
 					}
 				}
@@ -2138,15 +2250,19 @@ class PaddleOcrEngine @Inject constructor(
 			val gapY0 = max(0, floor(top.y1).toInt() + 1)
 			val gapY1 = min(height - 1, ceil(bot.y0).toInt() - 1)
 			if (gapY1 < gapY0) return false
-			var colsWithDividerStroke = 0
-			for (y in gapY0..gapY1) {
+			// For narrow short top words (e.g. "I", "OH", "WAIT"), avoid treating 1px descender/ascender anti-aliasing
+			// right at gapY0 or gapY1 as a solid horizontal bubble wall.
+			val scanGapY0 = if (gapY1 - gapY0 >= 3 && spanX < 44) gapY0 + 1 else gapY0
+			val scanGapY1 = if (gapY1 - gapY0 >= 3 && spanX < 44) gapY1 - 1 else gapY1
+			val darkWallThresh = if (gapY1 - gapY0 <= 2 && spanX < 28) 115f else 145f
+			for (y in scanGapY0..scanGapY1) {
 				var darkCount = 0
 				var brightCount = 0
 				var contrastWallCount = 0
 				val rowOff = y * width
 				for (x in ovX0..ovX1) {
 					val lum = argbLum(pixels[rowOff + x])
-					if (lum <= 145f) darkCount += 1
+					if (lum <= darkWallThresh) darkCount += 1
 					if (lum >= 180f) brightCount += 1
 					if (abs(lum - bgT) >= 42f && abs(lum - bgB) >= 42f) contrastWallCount += 1
 				}
@@ -2154,17 +2270,16 @@ class PaddleOcrEngine @Inject constructor(
 				if (bothDark && brightCount.toFloat() / spanX >= 0.45f) return true
 				if (!fakeOutlineCollar && contrastWallCount.toFloat() / spanX >= 0.55f) return true
 			}
-			if (bothNearWhite && gapY1 > gapY0) {
-				for (x in ovX0..ovX1) {
-					for (y in gapY0..gapY1) {
-						val lum = argbLum(pixels[y * width + x])
-						if (lum <= 215f) {
-							colsWithDividerStroke += 1
-							break
-						}
-					}
+			// Faint continuous gray divider (e.g. forum/table rule): require a continuous stroke across wide rows
+			// rather than disconnected glyph anti-aliasing touching top/bottom edges of a narrow top word.
+			if (bothNearWhite && gapY1 > gapY0 && spanX >= 36) {
+				val innerY0 = if (gapY1 - gapY0 >= 2) gapY0 + 1 else gapY0
+				val innerY1 = if (gapY1 - gapY0 >= 2) gapY1 - 1 else gapY1
+				if (innerY1 >= innerY0 &&
+					hasContinuousTiltedDivider(pixels, width, ovX0, ovX1, innerY0, innerY1, max(32, (spanX * 0.65f).toInt()))
+				) {
+					return true
 				}
-				if (colsWithDividerStroke.toFloat() / spanX >= 0.65f) return true
 			}
 			return false
 		}
@@ -2179,7 +2294,7 @@ class PaddleOcrEngine @Inject constructor(
 			minRun: Int,
 		): Boolean {
 			val scanH = y1 - y0 + 1
-			if (scanH <= 1) return false
+			if (scanH <= 0) return false
 			var prev = IntArray(scanH)
 			var curr = IntArray(scanH)
 			for (x in x0..x1) {
@@ -2230,8 +2345,10 @@ class PaddleOcrEngine @Inject constructor(
 				if (cand.confidence < 34f) return@filter false
 				if (validPixels != null && isFaintGrayWatermarkOnWhite(validPixels, imgWidth, imgHeight, cand)) return@filter false
 				val letters = TextBlockFilters.countLetters(cand.text)
+				val digits = cand.text.count { it.isDigit() }
 				val junk = TextBlockFilters.countJunk(cand.text)
-				if (letters < 1) return@filter false
+				val isNumericContinuation = letters == 0 && digits >= 1 && junk <= 1 && cand.confidence >= 60f
+				if (letters < 1 && !isNumericContinuation) return@filter false
 				val ch = cand.height
 				val cw = cand.width
 				val centerXc = cand.centerX
@@ -2260,7 +2377,7 @@ class PaddleOcrEngine @Inject constructor(
 					val reqConf = if (isEdgeTruncated) 34f else 36f
 					val maxJunk = if (isEdgeTruncated) 2 else 1
 					val minOverlapRatio = if (isEdgeTruncated) 0.25f else 0.32f
-					if (letters >= 2 && junk <= maxJunk && cand.confidence >= reqConf) {
+					if ((letters >= 2 || isNumericContinuation) && junk <= maxJunk && cand.confidence >= reqConf) {
 						val vGap = max(cand.y0, s.y0) - min(cand.y1, s.y1)
 						val hOverlap = min(cand.x1, s.x1) - max(cand.x0, s.x0)
 						val narrow = min(cw, sw)
@@ -2271,7 +2388,8 @@ class PaddleOcrEngine @Inject constructor(
 							centerYDist >= minH * 0.45f &&
 							vGap <= maxH * 1.55f &&
 							hOverlap > narrow * minOverlapRatio &&
-							centerDist < maxH * 2.1f
+							centerDist < maxH * 2.1f &&
+							(!isNumericContinuation || validPixels == null || !hasVerticalBubbleBarrier(validPixels, imgWidth, imgHeight, cand, s, allLines = cleanedAll))
 						) {
 							return@any true
 						}
@@ -2286,7 +2404,7 @@ class PaddleOcrEngine @Inject constructor(
 			if (lines.isEmpty()) return emptyList()
 
 			val collarLums = validPixels?.let { px ->
-				FloatArray(lines.size) { idx -> sampleLineCollarLum(px, imgWidth, imgHeight, lines[idx]) }
+				FloatArray(lines.size) { idx -> sampleLineCollarLum(px, imgWidth, imgHeight, lines[idx], lines) }
 			}
 
 			fun hasIndependentVerticalPartner(targetIdx: Int, otherIdx: Int): Boolean {
@@ -2309,6 +2427,15 @@ class PaddleOcrEngine @Inject constructor(
 				return false
 			}
 
+			val rowParent = IntArray(lines.size) { it }
+			fun findRow(index: Int): Int {
+				var cur = index
+				while (rowParent[cur] != cur) {
+					rowParent[cur] = rowParent[rowParent[cur]]
+					cur = rowParent[cur]
+				}
+				return cur
+			}
 			val rowX0 = FloatArray(lines.size) { lines[it].x0 }
 			val rowX1 = FloatArray(lines.size) { lines[it].x1 }
 			for (i in lines.indices) {
@@ -2327,14 +2454,23 @@ class PaddleOcrEngine @Inject constructor(
 						(hGap <= maxH * 0.45f ||
 							(validPixels != null && collarLums != null && hGap <= maxH * 0.95f && abs(collarLums[i] - collarLums[j]) < 22f)) &&
 						maxH / max(1f, minH) <= 1.65f &&
-						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
+						(hGap <= 0f || !(hasIndependentVerticalPartner(i, j) && hasIndependentVerticalPartner(j, i))) &&
+						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j], lines))
 					) {
-						val u0 = min(rowX0[i], rowX0[j])
-						val u1 = max(rowX1[i], rowX1[j])
-						rowX0[i] = u0; rowX0[j] = u0
-						rowX1[i] = u1; rowX1[j] = u1
+						val ri = findRow(i)
+						val rj = findRow(j)
+						if (ri != rj) {
+							rowParent[rj] = ri
+							rowX0[ri] = min(rowX0[ri], rowX0[rj])
+							rowX1[ri] = max(rowX1[ri], rowX1[rj])
+						}
 					}
 				}
+			}
+			for (i in lines.indices) {
+				val root = findRow(i)
+				rowX0[i] = rowX0[root]
+				rowX1[i] = rowX1[root]
 			}
 
 			fun hasCentralDarkOcclusionBetween(left: RawOcrLine, right: RawOcrLine, colL: Float, colR: Float): Boolean {
@@ -2374,8 +2510,11 @@ class PaddleOcrEngine @Inject constructor(
 				val ch = cBox.height
 				val wX0 = rowX0[wideIdx]
 				val wX1 = rowX1[wideIdx]
+				val colRowRoot = findRow(colIdx)
 				for (k in lines.indices) {
 					if (k == wideIdx || k == colIdx) continue
+					// Words already proven to belong to the same horizontal line inside one bubble are NOT separate columns.
+					if (findRow(k) == colRowRoot) continue
 					val oBox = lines[k]
 					val oh = oBox.height
 					val vOv = min(cBox.y1, oBox.y1) - max(cBox.y0, oBox.y0)
@@ -2387,6 +2526,54 @@ class PaddleOcrEngine @Inject constructor(
 					}
 				}
 				return false
+			}
+
+			fun hasVerticalBubblePinch(top: RawOcrLine, bot: RawOcrLine, bgLum: Float): Boolean {
+				val px = validPixels ?: return false
+				if (bgLum < 215f) return false
+				val gapY = (((top.y1 + bot.y0) * 0.5f).roundToInt()).coerceIn(0, imgHeight - 1)
+				val topY = top.centerY.roundToInt().coerceIn(0, imgHeight - 1)
+				val botY = bot.centerY.roundToInt().coerceIn(0, imgHeight - 1)
+				val ovLeft = max(top.x0, bot.x0)
+				val ovRight = min(top.x1, bot.x1)
+				val midX = if (ovRight > ovLeft) {
+					((ovLeft + ovRight) * 0.5f).roundToInt()
+				} else {
+					((top.centerX + bot.centerX) * 0.5f).roundToInt()
+				}.coerceIn(0, imgWidth - 1)
+				val maxScan = max(140, (max(top.width, bot.width) * 1.35f).roundToInt())
+
+				fun findWallSpan(y: Int, skipMinX: Int, skipMaxX: Int): Pair<Int, Int>? {
+					val rowOff = y * imgWidth
+					var leftW = -1
+					val minX = max(0, midX - maxScan)
+					for (x in min(midX, skipMinX) downTo minX) {
+						if (argbLum(px[rowOff + x]) <= 135f) {
+							leftW = x
+							break
+						}
+					}
+					var rightW = -1
+					val maxX = min(imgWidth - 1, midX + maxScan)
+					for (x in max(midX, skipMaxX) until maxX + 1) {
+						if (argbLum(px[rowOff + x]) <= 135f) {
+							rightW = x
+							break
+						}
+					}
+					return if (leftW >= 0 && rightW >= 0 && rightW > leftW) leftW to rightW else null
+				}
+
+				val gapSpan = findWallSpan(gapY, midX, midX) ?: return false
+				val topSpan = findWallSpan(topY, floor(top.x0).toInt().coerceIn(0, imgWidth - 1), ceil(top.x1).toInt().coerceIn(0, imgWidth - 1)) ?: return false
+				val botSpan = findWallSpan(botY, floor(bot.x0).toInt().coerceIn(0, imgWidth - 1), ceil(bot.x1).toInt().coerceIn(0, imgWidth - 1)) ?: return false
+				val wGap = gapSpan.second - gapSpan.first
+				val wTop = topSpan.second - topSpan.first
+				val wBot = botSpan.second - botSpan.first
+				val pinchedNarrow = wGap < min(wTop, wBot) * 0.72f
+				val pinchedBothSides = gapSpan.first > max(topSpan.first, botSpan.first) + 8 &&
+					gapSpan.second < min(topSpan.second, botSpan.second) - 8
+				return pinchedNarrow || pinchedBothSides
 			}
 
 			val occludedSideIndices = HashSet<Int>()
@@ -2469,7 +2656,7 @@ class PaddleOcrEngine @Inject constructor(
 							hGap >= -minW * 0.45f &&
 							hGap <= maxW * 1.25f &&
 							maxW / max(1f, minW) <= 1.75f &&
-							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
+							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j], lines))
 						) {
 							parent[find(j)] = find(i)
 							continue
@@ -2486,7 +2673,7 @@ class PaddleOcrEngine @Inject constructor(
 								abs(collarLums[i] - collarLums[j]) < 22f)) &&
 						maxH / max(1f, minH) <= 1.65f &&
 						!(hasIndependentVerticalPartner(i, j) && hasIndependentVerticalPartner(j, i)) &&
-						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j]))
+						(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, a, b, collarLums!![i], collarLums[j], lines))
 					) {
 						parent[find(j)] = find(i)
 						continue
@@ -2541,18 +2728,36 @@ class PaddleOcrEngine @Inject constructor(
 						continue
 					}
 
-					val overlap = min(a.x1, b.x1) - max(a.x0, b.x0)
-					val narrow = min(wa, wb)
-					val centerDist = abs(centerXa - centerXb)
+					val effAx0 = rowX0[i]
+					val effAx1 = rowX1[i]
+					val effBx0 = rowX0[j]
+					val effBx1 = rowX1[j]
+					val effWa = (effAx1 - effAx0).coerceAtLeast(1f)
+					val effWb = (effBx1 - effBx0).coerceAtLeast(1f)
+					val effCenterXa = (effAx0 + effAx1) * 0.5f
+					val effCenterXb = (effBx0 + effBx1) * 0.5f
+					val overlap = min(effAx1, effBx1) - max(effAx0, effBx0)
+					val narrow = min(effWa, effWb)
+					val wide = max(effWa, effWb)
+					val centerDist = abs(effCenterXa - effCenterXb)
 					val heightRatio = maxH / max(1f, minH)
 
 					val uniformCollarForWideNarration = collarLums == null || abs(collarLums[i] - collarLums[j]) < 28f
+					val sameUniformBubble = validPixels != null &&
+						collarLums != null &&
+						abs(collarLums[i] - collarLums[j]) < 24f &&
+						(min(collarLums[i], collarLums[j]) >= 220f || max(collarLums[i], collarLums[j]) <= 55f) &&
+						!hasVerticalBubblePinch(a, b, min(collarLums[i], collarLums[j]))
+
 					if (heightRatio <= 1.35f && vGap > maxH * 1.5f) {
-						if (
-							uniformCollarForWideNarration &&
-							overlap > narrow * 0.60f &&
-							centerDist < max(maxH * 1.8f, max(wa, wb) * 0.30f)
-						) {
+						val wideGapAligned =
+							(overlap > narrow * 0.60f && centerDist < max(maxH * 1.8f, wide * 0.30f)) ||
+								(sameUniformBubble &&
+									overlap >= narrow * 0.50f &&
+									(centerDist < max(maxH * 2.4f, wide * 0.38f) ||
+										abs(effAx0 - effBx0) <= maxH * 0.90f ||
+										abs(effAx1 - effBx1) <= maxH * 0.90f))
+						if (uniformCollarForWideNarration && wideGapAligned) {
 							parent[find(j)] = find(i)
 						}
 						continue
@@ -2560,9 +2765,19 @@ class PaddleOcrEngine @Inject constructor(
 
 					if (heightRatio <= 1.65f) {
 						val aligned =
-							(overlap > narrow * 0.35f && centerDist < max(maxH * 2.2f, max(wa, wb) * 0.32f)) ||
-								(overlap > 0f && centerDist < maxH * 1.8f)
-						if (aligned && vGap <= minH * 1.35f) {
+							(overlap > narrow * 0.35f && centerDist < max(maxH * 2.2f, wide * 0.32f)) ||
+								(overlap > 0f && centerDist < maxH * 1.8f) ||
+								(sameUniformBubble &&
+									overlap >= narrow * 0.65f &&
+									(centerDist < max(maxH * 2.6f, wide * 0.42f) ||
+										abs(effAx0 - effBx0) <= maxH * 0.90f ||
+										abs(effAx1 - effBx1) <= maxH * 0.90f))
+						val maxAllowedGap = if (sameUniformBubble) {
+							maxH * 1.75f
+						} else {
+							max(minH * 1.45f, maxH * 1.25f)
+						}
+						if (aligned && vGap <= maxAllowedGap) {
 							parent[find(j)] = find(i)
 							continue
 						}
@@ -2570,14 +2785,21 @@ class PaddleOcrEngine @Inject constructor(
 
 					if (heightRatio <= 2.85f) {
 						val narrowUnderWideOffset =
-							min(wa, wb) < max(wa, wb) * 0.55f &&
-								centerDist > max(wa, wb) * 0.20f
+							min(effWa, effWb) < wide * 0.55f &&
+								centerDist > wide * 0.20f
+						val containedInSameBubble = sameUniformBubble &&
+							overlap >= narrow * 0.72f &&
+							(centerDist < max(maxH * 2.4f, wide * 0.42f) ||
+								abs(effAx0 - effBx0) <= maxH * 0.90f ||
+								abs(effAx1 - effBx1) <= maxH * 0.90f)
 						val stronglyAligned =
-							!narrowUnderWideOffset && (
-								(overlap > narrow * 0.36f && centerDist < maxH * 1.55f) ||
-									(overlap > narrow * 0.6f && centerDist < max(wa, wb) * 0.45f)
-								)
-						if (stronglyAligned && vGap >= -minH * 0.55f && vGap <= maxH * 1.45f) {
+							containedInSameBubble ||
+								(!narrowUnderWideOffset && (
+									(overlap > narrow * 0.36f && centerDist < maxH * 1.55f) ||
+										(overlap > narrow * 0.6f && centerDist < wide * 0.45f)
+									))
+						val maxGapTall = if (sameUniformBubble) maxH * 1.75f else maxH * 1.45f
+						if (stronglyAligned && vGap >= -minH * 0.55f && vGap <= maxGapTall) {
 							parent[find(j)] = find(i)
 						}
 					}
@@ -2643,7 +2865,7 @@ class PaddleOcrEngine @Inject constructor(
 							abs(prev.centerY - item.centerY) < minH * 0.45f &&
 							sameRowOverlapOk &&
 							hGap <= max(hp, hi) * 0.95f &&
-							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, prev, item))
+							(validPixels == null || !hasHorizontalBubbleBarrier(validPixels, imgWidth, imgHeight, prev, item, allLines = lines))
 						) {
 							val prevTrim = prev.text.trim()
 							var itemTrim = item.text.trim()
@@ -2714,8 +2936,10 @@ class PaddleOcrEngine @Inject constructor(
 						sumOtherH += mergedRows[idx].height
 					}
 					val avgOtherH = sumOtherH / mergedRows.lastIndex
-					if (avgOtherH > 0f && lastH / avgOtherH >= 1.32f) {
-						val clamped = (lastH / avgOtherH).coerceIn(1.25f, 1.65f)
+					val ratio = if (avgOtherH > 0f) lastH / avgOtherH else 1f
+					val minRatio = if (mergedRows.size >= 3) 1.32f else 1.48f
+					if (avgOtherH > 0f && ratio >= minRatio && (lastH - avgOtherH) >= 7f) {
+						val clamped = ratio.coerceIn(1.25f, 1.65f)
 						emphasisLastLineScale = (clamped * 100f).roundToInt() / 100f
 					}
 				}
