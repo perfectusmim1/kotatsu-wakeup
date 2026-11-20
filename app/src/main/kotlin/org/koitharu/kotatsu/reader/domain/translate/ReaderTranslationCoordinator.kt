@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -87,15 +86,31 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 
 	private val lock = Any()
 	private var availablePermits = maxPermits
+	private var lowPriorityPaused = false
 	private val seqCounter = AtomicLong(0L)
 	private val frontSeqCounter = AtomicLong(0L)
 	private val waiters = PriorityQueue<Waiter>()
 
 	fun pendingWaitersCount(): Int = synchronized(lock) {
-		waiters.count { !it.cancelled }
+		waiters.count { !it.cancelled && (it.highPriority || !lowPriorityPaused) }
+	}
+
+	fun setLowPriorityPaused(paused: Boolean) {
+		val toWake = ArrayList<Waiter>()
+		synchronized(lock) {
+			if (lowPriorityPaused == paused) return
+			lowPriorityPaused = paused
+			if (!paused) {
+				drainEligibleWaitersLocked(toWake)
+			}
+		}
+		for (waiter in toWake) {
+			waiter.gate.complete(Unit)
+		}
 	}
 
 	fun promote(key: Long, bumpToFront: Boolean = false) {
+		val toWake = ArrayList<Waiter>()
 		synchronized(lock) {
 			val toPromote = waiters.filter { it.key == key && !it.cancelled && (!it.highPriority || bumpToFront) }
 			if (toPromote.isEmpty()) return
@@ -107,6 +122,10 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 				}
 				waiters.add(waiter)
 			}
+			drainEligibleWaitersLocked(toWake)
+		}
+		for (waiter in toWake) {
+			waiter.gate.complete(Unit)
 		}
 	}
 
@@ -166,7 +185,8 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 	private suspend fun acquire(key: Long, highPriority: Boolean, orderSeq: Long = 0L) {
 		currentCoroutineContext().ensureActive()
 		val waiter: Waiter? = synchronized(lock) {
-			if (availablePermits > 0) {
+			val canAcquireImmediately = availablePermits > 0 && (highPriority || !lowPriorityPaused)
+			if (canAcquireImmediately) {
 				availablePermits--
 				null
 			} else {
@@ -196,25 +216,38 @@ internal class PrioritySemaphore(private val maxPermits: Int) {
 	}
 
 	private fun release() {
-		var nextWaiter: Waiter? = null
+		val toWake = ArrayList<Waiter>(1)
 		synchronized(lock) {
+			availablePermits++
+			check(availablePermits <= maxPermits) {
+				"PrioritySemaphore permit overflow ($availablePermits > $maxPermits)"
+			}
+			drainEligibleWaitersLocked(toWake)
+		}
+		for (waiter in toWake) {
+			waiter.gate.complete(Unit)
+		}
+	}
+
+	private fun drainEligibleWaitersLocked(out: MutableList<Waiter>) {
+		while (availablePermits > 0) {
 			while (true) {
-				val candidate = waiters.poll()
-				if (candidate == null) {
-					availablePermits++
-					check(availablePermits <= maxPermits) {
-						"PrioritySemaphore permit overflow ($availablePermits > $maxPermits)"
-					}
-					break
-				}
-				if (!candidate.cancelled) {
-					candidate.granted = true
-					nextWaiter = candidate
+				val head = waiters.peek() ?: return
+				if (head.cancelled) {
+					waiters.poll()
+				} else {
 					break
 				}
 			}
+			val head = waiters.peek() ?: return
+			if (lowPriorityPaused && !head.highPriority) {
+				return
+			}
+			waiters.poll()
+			availablePermits--
+			head.granted = true
+			out.add(head)
 		}
-		nextWaiter?.gate?.complete(Unit)
 	}
 }
 
@@ -284,11 +317,13 @@ class ReaderTranslationCoordinator private constructor(
 	private val jobsLock = Any()
 	private val inFlightJobs = HashMap<Long, InFlightEntry>()
 	private val pendingActiveOcrIds = HashSet<Long>()
-	private val _hasPendingActiveOcr = MutableStateFlow(false)
 	private val lastErrorAttemptMs = ConcurrentHashMap<Long, Long>()
+	private val errorFromPrefetch = ConcurrentHashMap<Long, Boolean>()
+	private val prefetchErrorCount = ConcurrentHashMap<Long, Int>()
 	private val ocrGate = PrioritySemaphore(OCR_CONCURRENCY)
 	private val translateGate = PrioritySemaphore(TRANSLATE_CONCURRENCY)
-	private val prefetchGate = PrioritySemaphore(MAX_CONCURRENT_JOBS)
+	private val renderGate = PrioritySemaphore(RENDER_CONCURRENCY)
+	private val prefetchGate = PrioritySemaphore(MAX_PREFETCH_IN_FLIGHT)
 
 	@Volatile
 	private var pendingRescheduleAfterSettings = false
@@ -474,7 +509,7 @@ class ReaderTranslationCoordinator private constructor(
 			pendingRescheduleAfterSettings = false
 			_isEnabled.value = false
 			onPersistEnabled?.invoke(false)
-			lastErrorAttemptMs.clear()
+			clearErrorTracking()
 			generationCounter.incrementAndGet()
 			synchronized(windowLock) {
 				preloadedPages.clear()
@@ -506,7 +541,7 @@ class ReaderTranslationCoordinator private constructor(
 			"Translation enabled (fromUserTap=$fromUserTap, source=${snapshot.sourceLang}, " +
 				"target=${snapshot.targetLang}, provider=${snapshot.provider})",
 		)
-		lastErrorAttemptMs.clear()
+		clearErrorTracking()
 		if (!_isEnabled.value) {
 			_isEnabled.value = true
 		}
@@ -524,7 +559,7 @@ class ReaderTranslationCoordinator private constructor(
 		prefetchPages: List<ReaderPage>,
 	) {
 		val activeMangaPages = activePages.map { it.toMangaPage() }
-		val prefetchMangaPages = prefetchPages.take(PREFETCH_PAGE_COUNT).map { it.toMangaPage() }
+		val prefetchMangaPages = prefetchPages.take(MAX_CHAPTER_PREFETCH_PAGES).map { it.toMangaPage() }
 		val visibleIds = activeMangaPages.mapTo(HashSet(activeMangaPages.size)) { it.id }
 		val windowIds = HashSet<Long>(activeMangaPages.size + prefetchMangaPages.size).apply {
 			addAll(visibleIds)
@@ -559,6 +594,7 @@ class ReaderTranslationCoordinator private constructor(
 		val staleEntries = ArrayList<InFlightEntry>()
 		val demotedIds = ArrayList<Long>()
 		val promotedVisibleIds = ArrayList<Long>()
+		var activeOcrPausedUpdate: Boolean? = null
 		synchronized(jobsLock) {
 			for (entry in inFlightJobs.values) {
 				if (entry.pageId in visibleIds) {
@@ -578,24 +614,27 @@ class ReaderTranslationCoordinator private constructor(
 					} else {
 						// OCR already completed on an adjacent scrolled-past page: demote priority so visible pages go first.
 						entry.isPrefetch = true
-						setActiveOcrPendingLocked(entry.pageId, false)
+						setActiveOcrPendingLocked(entry.pageId, false)?.let { activeOcrPausedUpdate = it }
 						demotedIds.add(entry.pageId)
 					}
 				} else {
 					// Moved from visible window into prefetch window: demote priority.
 					entry.isPrefetch = true
-					setActiveOcrPendingLocked(entry.pageId, false)
+					setActiveOcrPendingLocked(entry.pageId, false)?.let { activeOcrPausedUpdate = it }
 					demotedIds.add(entry.pageId)
 				}
 			}
 		}
+		activeOcrPausedUpdate?.let { ocrGate.setLowPriorityPaused(it) }
 		for (id in demotedIds) {
 			ocrGate.demote(id)
 			translateGate.demote(id)
+			renderGate.demote(id)
 		}
 		for (id in promotedVisibleIds) {
 			ocrGate.promote(id, bumpToFront = true)
 			translateGate.promote(id, bumpToFront = true)
+			renderGate.promote(id, bumpToFront = true)
 		}
 		cancelEntriesAndClearInProgress(staleEntries)
 
@@ -610,12 +649,15 @@ class ReaderTranslationCoordinator private constructor(
 		val snapshot = settingsSnapshot.value
 		val generation = generationCounter.get()
 		var launchAsPrefetch = true
+		var alreadyInPrefetchWindow = false
 		var evictedPreloadId: Long? = null
 		var keepEvictedInWindow = false
 
 		synchronized(windowLock) {
 			if (page.id in activePageIds) {
 				launchAsPrefetch = false
+			} else if (prefetchPagesWindow.any { it.id == page.id }) {
+				alreadyInPrefetchWindow = true
 			} else if (preloadedPages.none { it.id == page.id }) {
 				preloadedPages.addLast(page)
 				while (preloadedPages.size > MAX_PRELOADED_TRACKED) {
@@ -639,14 +681,15 @@ class ReaderTranslationCoordinator private constructor(
 
 		TranslatePipelineLog.d(
 			LOG_TAG,
-			"Preloaded page=${page.id} queued for auto-translation (prefetch=$launchAsPrefetch)",
+			"Preloaded page=${page.id} queued for auto-translation (prefetch=$launchAsPrefetch, inWindow=$alreadyInPrefetchWindow)",
 		)
 		launchPageTranslation(
 			page = page,
 			snapshot = snapshot,
 			generation = generation,
 			isPrefetch = launchAsPrefetch,
-			isFromPreload = launchAsPrefetch,
+			isFromPreload = launchAsPrefetch && !alreadyInPrefetchWindow,
+			preserveExistingOrder = alreadyInPrefetchWindow || launchAsPrefetch,
 		)
 	}
 
@@ -759,8 +802,13 @@ class ReaderTranslationCoordinator private constructor(
 		generation: Long,
 		isPrefetch: Boolean,
 		isFromPreload: Boolean,
+		preserveExistingOrder: Boolean = false,
 	) {
 		var jobToCancelOnPromotion: Job? = null
+		var activeOcrPausedUpdate: Boolean? = null
+		var promoteExistingInPlace = false
+		var reorderExistingSeq: Long? = null
+		var jobToStart: Job? = null
 		synchronized(jobsLock) {
 			val existingState = _pageStates.value[page.id]
 			if (existingState?.stage == TranslationStage.DONE) {
@@ -768,186 +816,212 @@ class ReaderTranslationCoordinator private constructor(
 			}
 			if (existingState?.stage == TranslationStage.ERROR) {
 				val lastErrAt = lastErrorAttemptMs[page.id] ?: 0L
-				if (isPrefetch || (System.currentTimeMillis() - lastErrAt) < ERROR_RETRY_COOLDOWN_MS) {
-					return
+				val elapsed = System.currentTimeMillis() - lastErrAt
+				if (isPrefetch) {
+					val cycles = prefetchErrorCount[page.id] ?: 0
+					if (cycles >= MAX_PREFETCH_ERROR_CYCLES || elapsed < PREFETCH_ERROR_RETRY_COOLDOWN_MS) {
+						return
+					}
+				} else {
+					val failedOnlyAsPrefetch = errorFromPrefetch[page.id] == true
+					if (!failedOnlyAsPrefetch && elapsed < ERROR_RETRY_COOLDOWN_MS) {
+						return
+					}
 				}
 			}
-			val assignedOrderSeq = orderSeqCounter.incrementAndGet()
 			val existingEntry = inFlightJobs[page.id]
 			if (existingEntry != null && existingEntry.job.isActive) {
-				existingEntry.orderSeq = assignedOrderSeq
 				if (!isPrefetch && existingEntry.isPrefetch) {
+					val assignedOrderSeq = orderSeqCounter.incrementAndGet()
+					existingEntry.orderSeq = assignedOrderSeq
 					if (existingEntry.waitingOnPrefetchGate) {
-						// Has not entered OCR or emitted progress yet: replace immediately without blocking on prefetchGate
+						// Still queued outside prefetchGate: replace immediately without waiting on prefetchGate.
 						inFlightJobs.remove(page.id)
 						jobToCancelOnPromotion = existingEntry.job
 					} else {
 						existingEntry.isPrefetch = false
 						existingEntry.isFromPreload = false
 						if (!existingEntry.ocrCompleted) {
-							setActiveOcrPendingLocked(page.id, true)
+							setActiveOcrPendingLocked(page.id, true)?.let { activeOcrPausedUpdate = it }
 						}
-						ocrGate.promote(page.id, bumpToFront = true)
-						translateGate.promote(page.id, bumpToFront = true)
+						promoteExistingInPlace = true
 						TranslatePipelineLog.d(LOG_TAG, "Promoted in-flight prefetch page=${page.id} to active priority")
-						return
 					}
 				} else {
 					if (!isPrefetch) {
-						ocrGate.promote(page.id, bumpToFront = true)
-						translateGate.promote(page.id, bumpToFront = true)
-					} else {
-						prefetchGate.setOrder(page.id, assignedOrderSeq)
-						ocrGate.setOrder(page.id, assignedOrderSeq)
-						translateGate.setOrder(page.id, assignedOrderSeq)
+						promoteExistingInPlace = true
+					} else if (!preserveExistingOrder) {
+						val assignedOrderSeq = orderSeqCounter.incrementAndGet()
+						existingEntry.orderSeq = assignedOrderSeq
+						reorderExistingSeq = assignedOrderSeq
 					}
-					return
+					// Existing job stays active; perform gate updates outside jobsLock below.
+					jobToStart = null
 				}
 			}
 
-			val entry = InFlightEntry(
-				pageId = page.id,
-				isPrefetch = isPrefetch,
-				isFromPreload = isFromPreload,
-				orderSeq = assignedOrderSeq,
-			)
-			val job = scope.launch(start = CoroutineStart.LAZY) {
-				try {
-					if (!_isEnabled.value || generation != generationCounter.get()) {
-						return@launch
-					}
-					if (entry.isPrefetch) {
-						if (!settingsSnapshot.value.prefetchNextPage) {
+			if (promoteExistingInPlace || reorderExistingSeq != null ||
+				(existingEntry != null && existingEntry.job.isActive && jobToCancelOnPromotion == null)
+			) {
+				// Handled after exiting jobsLock.
+			} else {
+				val assignedOrderSeq = orderSeqCounter.incrementAndGet()
+				val entry = InFlightEntry(
+					pageId = page.id,
+					isPrefetch = isPrefetch,
+					isFromPreload = isFromPreload,
+					orderSeq = assignedOrderSeq,
+				)
+				val job = scope.launch(start = CoroutineStart.LAZY) {
+					try {
+						if (!_isEnabled.value || generation != generationCounter.get()) {
 							return@launch
 						}
-						entry.waitingOnPrefetchGate = true
-						prefetchGate.withPermit(
-							key = page.id,
-							highPriority = false,
-							orderSeq = entry.orderSeq,
-						) {
-							_hasPendingActiveOcr.first {
-								!it || !entry.isPrefetch || !_isEnabled.value || generation != generationCounter.get()
+						if (entry.isPrefetch) {
+							if (!settingsSnapshot.value.prefetchNextPage) {
+								return@launch
 							}
-							entry.waitingOnPrefetchGate = false
-							if (!_isEnabled.value || generation != generationCounter.get()) {
-								return@withPermit
+							entry.waitingOnPrefetchGate = true
+							prefetchGate.withPermit(
+								key = page.id,
+								highPriority = false,
+								orderSeq = entry.orderSeq,
+							) {
+								entry.waitingOnPrefetchGate = false
+								if (!_isEnabled.value || generation != generationCounter.get()) {
+									return@withPermit
+								}
+								executePageJobWithTransientRetry(entry, page, snapshot, generation)
 							}
+						} else {
 							executePageJobWithTransientRetry(entry, page, snapshot, generation)
 						}
-					} else {
-						executePageJobWithTransientRetry(entry, page, snapshot, generation)
-					}
-				} catch (ce: CancellationException) {
-					throw ce
-				} catch (e: MissingGeminiApiKeyException) {
-					TranslatePipelineLog.w(LOG_TAG, "Translation stopped on page=${page.id}: MissingGeminiApiKeyException")
-					if (generation == generationCounter.get()) {
-						_isEnabled.value = false
-						generationCounter.incrementAndGet()
-						cancelAllJobs()
-						clearInProgressStates()
-						emitErrorOnce(
-							key = "missing_api_key",
-							message = null,
-							openSettingsAction = true,
-						)
-					}
-				} catch (e: MissingDeeplApiKeyException) {
-					TranslatePipelineLog.w(LOG_TAG, "Translation stopped on page=${page.id}: MissingDeeplApiKeyException")
-					if (generation == generationCounter.get()) {
-						_isEnabled.value = false
-						generationCounter.incrementAndGet()
-						cancelAllJobs()
-						clearInProgressStates()
-						emitErrorOnce(
-							key = "missing_api_key",
-							message = null,
-							openSettingsAction = true,
-						)
-					}
-				} catch (e: InvalidGeminiApiKeyException) {
-					TranslatePipelineLog.w(
-						LOG_TAG,
-						"Translation failed on page=${page.id}: InvalidGeminiApiKeyException: ${e.message}",
-					)
-					if (generation == generationCounter.get()) {
-						lastErrorAttemptMs[page.id] = System.currentTimeMillis()
-						updatePageState(
-							PageTranslationState(
-								pageId = page.id,
-								stage = TranslationStage.ERROR,
-								errorMessage = e.message,
-							),
-						)
-						emitErrorOnce(
-							key = "invalid_api_key",
-							message = e.message,
-							openSettingsAction = true,
-						)
-					}
-				} catch (e: InvalidDeeplApiKeyException) {
-					TranslatePipelineLog.w(
-						LOG_TAG,
-						"Translation failed on page=${page.id}: InvalidDeeplApiKeyException: ${e.message}",
-					)
-					if (generation == generationCounter.get()) {
-						lastErrorAttemptMs[page.id] = System.currentTimeMillis()
-						updatePageState(
-							PageTranslationState(
-								pageId = page.id,
-								stage = TranslationStage.ERROR,
-								errorMessage = e.message,
-							),
-						)
-						emitErrorOnce(
-							key = "invalid_api_key",
-							message = e.message,
-							openSettingsAction = true,
-						)
-					}
-				} catch (t: Throwable) {
-					TranslatePipelineLog.e(LOG_TAG, "Translation failed on page=${page.id}", t)
-					if (generation == generationCounter.get() && _isEnabled.value) {
-						lastErrorAttemptMs[page.id] = System.currentTimeMillis()
-						updatePageState(
-							PageTranslationState(
-								pageId = page.id,
-								stage = TranslationStage.ERROR,
-								errorMessage = t.message,
-							),
-						)
-						if (!entry.isPrefetch || page.id in activePageIds) {
+					} catch (ce: CancellationException) {
+						throw ce
+					} catch (e: MissingGeminiApiKeyException) {
+						TranslatePipelineLog.w(LOG_TAG, "Translation stopped on page=${page.id}: MissingGeminiApiKeyException")
+						if (generation == generationCounter.get()) {
+							_isEnabled.value = false
+							generationCounter.incrementAndGet()
+							cancelAllJobs()
+							clearInProgressStates()
 							emitErrorOnce(
-								key = "err:${t.javaClass.simpleName}:${t.message}",
-								message = t.message,
-								openSettingsAction = false,
+								key = "missing_api_key",
+								message = null,
+								openSettingsAction = true,
 							)
 						}
-					}
-				} finally {
-					val wasCancelled = !isActive
-					val removedOwnEntry = synchronized(jobsLock) {
-						setActiveOcrPendingLocked(page.id, false)
-						if (inFlightJobs[page.id] === entry) {
-							inFlightJobs.remove(page.id)
-							true
-						} else {
-							false
+					} catch (e: MissingDeeplApiKeyException) {
+						TranslatePipelineLog.w(LOG_TAG, "Translation stopped on page=${page.id}: MissingDeeplApiKeyException")
+						if (generation == generationCounter.get()) {
+							_isEnabled.value = false
+							generationCounter.incrementAndGet()
+							cancelAllJobs()
+							clearInProgressStates()
+							emitErrorOnce(
+								key = "missing_api_key",
+								message = null,
+								openSettingsAction = true,
+							)
+						}
+					} catch (e: InvalidGeminiApiKeyException) {
+						TranslatePipelineLog.w(
+							LOG_TAG,
+							"Translation failed on page=${page.id}: InvalidGeminiApiKeyException: ${e.message}",
+						)
+						if (generation == generationCounter.get()) {
+							recordPageError(page.id, fromPrefetch = entry.isPrefetch)
+							updatePageState(
+								PageTranslationState(
+									pageId = page.id,
+									stage = TranslationStage.ERROR,
+									errorMessage = e.message,
+								),
+							)
+							emitErrorOnce(
+								key = "invalid_api_key",
+								message = e.message,
+								openSettingsAction = true,
+							)
+						}
+					} catch (e: InvalidDeeplApiKeyException) {
+						TranslatePipelineLog.w(
+							LOG_TAG,
+							"Translation failed on page=${page.id}: InvalidDeeplApiKeyException: ${e.message}",
+						)
+						if (generation == generationCounter.get()) {
+							recordPageError(page.id, fromPrefetch = entry.isPrefetch)
+							updatePageState(
+								PageTranslationState(
+									pageId = page.id,
+									stage = TranslationStage.ERROR,
+									errorMessage = e.message,
+								),
+							)
+							emitErrorOnce(
+								key = "invalid_api_key",
+								message = e.message,
+								openSettingsAction = true,
+							)
+						}
+					} catch (t: Throwable) {
+						TranslatePipelineLog.e(LOG_TAG, "Translation failed on page=${page.id}", t)
+						if (generation == generationCounter.get() && _isEnabled.value) {
+							recordPageError(page.id, fromPrefetch = entry.isPrefetch)
+							updatePageState(
+								PageTranslationState(
+									pageId = page.id,
+									stage = TranslationStage.ERROR,
+									errorMessage = t.message,
+								),
+							)
+							if (!entry.isPrefetch || page.id in activePageIds) {
+								emitErrorOnce(
+									key = "err:${t.javaClass.simpleName}:${t.message}",
+									message = t.message,
+									openSettingsAction = false,
+								)
+							}
+						}
+					} finally {
+						val wasCancelled = !isActive
+						var pausedUpdate: Boolean? = null
+						val removedOwnEntry = synchronized(jobsLock) {
+							pausedUpdate = setActiveOcrPendingLocked(page.id, false)
+							if (inFlightJobs[page.id] === entry) {
+								inFlightJobs.remove(page.id)
+								true
+							} else {
+								false
+							}
+						}
+						pausedUpdate?.let { ocrGate.setLowPriorityPaused(it) }
+						if (removedOwnEntry && wasCancelled) {
+							clearInProgressStateForPage(page.id)
 						}
 					}
-					if (removedOwnEntry && wasCancelled) {
-						clearInProgressStateForPage(page.id)
-					}
 				}
+				entry.job = job
+				inFlightJobs[page.id] = entry
+				if (!entry.isPrefetch) {
+					setActiveOcrPendingLocked(page.id, true)?.let { activeOcrPausedUpdate = it }
+				}
+				jobToStart = job
 			}
-			entry.job = job
-			inFlightJobs[page.id] = entry
-			if (!entry.isPrefetch) {
-				setActiveOcrPendingLocked(page.id, true)
-			}
-			job.start()
 		}
+		activeOcrPausedUpdate?.let { ocrGate.setLowPriorityPaused(it) }
+		if (promoteExistingInPlace) {
+			ocrGate.promote(page.id, bumpToFront = true)
+			translateGate.promote(page.id, bumpToFront = true)
+			renderGate.promote(page.id, bumpToFront = true)
+		} else if (reorderExistingSeq != null) {
+			val seq = reorderExistingSeq!!
+			prefetchGate.setOrder(page.id, seq)
+			ocrGate.setOrder(page.id, seq)
+			translateGate.setOrder(page.id, seq)
+			renderGate.setOrder(page.id, seq)
+		}
+		jobToStart?.start()
 		jobToCancelOnPromotion?.cancel()
 	}
 
@@ -961,7 +1035,7 @@ class ReaderTranslationCoordinator private constructor(
 		while (true) {
 			try {
 				executePageJob(entry, page, snapshot, generation)
-				lastErrorAttemptMs.remove(page.id)
+				clearErrorTrackingForPage(page.id)
 				return
 			} catch (ce: CancellationException) {
 				// Only treat as real cancellation if OUR coroutine was cancelled;
@@ -971,27 +1045,43 @@ class ReaderTranslationCoordinator private constructor(
 					_isEnabled.value &&
 					generation == generationCounter.get()
 				if (stillWantedTarget && attempt < MAX_TRANSIENT_RETRIES) {
+					val delayMs = transientRetryDelayMs(attempt)
 					attempt++
 					TranslatePipelineLog.w(
 						LOG_TAG,
 						"External cancellation on page=${page.id} (prefetch=${entry.isPrefetch}); retrying ($attempt/$MAX_TRANSIENT_RETRIES)",
 					)
-					delay(TRANSIENT_RETRY_DELAY_MS)
+					delay(delayMs)
 					continue
 				}
 				throw ce
 			} catch (t: Throwable) {
-				val isTransient = t is IOException || (t is TranslationServiceException && t.isTransient)
+				val isTransient = when (t) {
+					is MissingGeminiApiKeyException,
+					is MissingDeeplApiKeyException,
+					is InvalidGeminiApiKeyException,
+					is InvalidDeeplApiKeyException,
+					-> false
+
+					is TranslationServiceException -> t.isTransient ||
+						t.statusCode == 429 ||
+						t.statusCode == 408 ||
+						t.statusCode in 500..599
+
+					is IOException -> true
+					else -> false
+				}
 				val stillWantedTarget = (!entry.isPrefetch || isInTranslationWindow(page.id)) &&
 					_isEnabled.value &&
 					generation == generationCounter.get()
 				if (isTransient && stillWantedTarget && attempt < MAX_TRANSIENT_RETRIES) {
+					val delayMs = transientRetryDelayMs(attempt)
 					attempt++
 					TranslatePipelineLog.w(
 						LOG_TAG,
 						"Transient translation error on page=${page.id} (${t.javaClass.simpleName}: ${t.message}); retrying ($attempt/$MAX_TRANSIENT_RETRIES)",
 					)
-					delay(TRANSIENT_RETRY_DELAY_MS)
+					delay(delayMs)
 					continue
 				}
 				throw t
@@ -1010,6 +1100,7 @@ class ReaderTranslationCoordinator private constructor(
 		}
 		val ocrPermit = ocrGate.asPipelinePermit(page.id, { !entry.isPrefetch }, { entry.orderSeq })
 		val translatePermit = translateGate.asPipelinePermit(page.id, { !entry.isPrefetch }, { entry.orderSeq })
+		val renderPermit = renderGate.asPipelinePermit(page.id, { !entry.isPrefetch }, { entry.orderSeq })
 		val onProgress: suspend (TranslationStage, Int) -> Unit = { stage, percent ->
 			if (stage != TranslationStage.DOWNLOADING_MODELS && stage != TranslationStage.RUNNING_OCR) {
 				entry.ocrCompleted = true
@@ -1043,6 +1134,7 @@ class ReaderTranslationCoordinator private constructor(
 				onProgress = onProgress,
 				ocrPermit = ocrPermit,
 				translatePermit = translatePermit,
+				renderPermit = renderPermit,
 			)
 		} else {
 			val uriProvider = pageUriProvider
@@ -1068,6 +1160,7 @@ class ReaderTranslationCoordinator private constructor(
 				onProgress = onProgress,
 				ocrPermit = ocrPermit,
 				translatePermit = translatePermit,
+				renderPermit = renderPermit,
 			)
 		}
 
@@ -1091,7 +1184,7 @@ class ReaderTranslationCoordinator private constructor(
 	}
 
 	private fun resetSessionState() {
-		lastErrorAttemptMs.clear()
+		clearErrorTracking()
 		generationCounter.incrementAndGet()
 		cancelAllJobs()
 		_pageStates.value = emptyMap()
@@ -1107,15 +1200,17 @@ class ReaderTranslationCoordinator private constructor(
 	private fun cancelEntriesAndClearInProgress(entries: List<InFlightEntry>) {
 		if (entries.isEmpty()) return
 		val cancelledIds = HashSet<Long>(entries.size)
+		var pausedUpdate: Boolean? = null
 		synchronized(jobsLock) {
 			for (entry in entries) {
-				setActiveOcrPendingLocked(entry.pageId, false)
+				setActiveOcrPendingLocked(entry.pageId, false)?.let { pausedUpdate = it }
 				if (inFlightJobs[entry.pageId] === entry) {
 					inFlightJobs.remove(entry.pageId)
 				}
 				cancelledIds.add(entry.pageId)
 			}
 		}
+		pausedUpdate?.let { ocrGate.setLowPriorityPaused(it) }
 		for (entry in entries) {
 			entry.job.cancel()
 		}
@@ -1129,25 +1224,51 @@ class ReaderTranslationCoordinator private constructor(
 	private fun cancelAllJobs() {
 		val entries = synchronized(jobsLock) {
 			pendingActiveOcrIds.clear()
-			_hasPendingActiveOcr.value = false
 			inFlightJobs.values.toList().also { inFlightJobs.clear() }
 		}
+		ocrGate.setLowPriorityPaused(false)
 		for (entry in entries) {
 			entry.job.cancel()
 		}
 	}
 
-	private fun setActiveOcrPendingLocked(pageId: Long, pending: Boolean) {
+	private fun setActiveOcrPendingLocked(pageId: Long, pending: Boolean): Boolean? {
+		val wasPending = pendingActiveOcrIds.isNotEmpty()
 		val changed = if (pending) pendingActiveOcrIds.add(pageId) else pendingActiveOcrIds.remove(pageId)
-		if (changed) {
-			_hasPendingActiveOcr.value = pendingActiveOcrIds.isNotEmpty()
-		}
+		if (!changed) return null
+		val nowPending = pendingActiveOcrIds.isNotEmpty()
+		return if (wasPending != nowPending) nowPending else null
 	}
 
 	private fun markActiveOcrDone(pageId: Long) {
-		synchronized(jobsLock) {
+		val pausedUpdate = synchronized(jobsLock) {
 			setActiveOcrPendingLocked(pageId, false)
 		}
+		pausedUpdate?.let { ocrGate.setLowPriorityPaused(it) }
+	}
+
+	private fun recordPageError(pageId: Long, fromPrefetch: Boolean) {
+		lastErrorAttemptMs[pageId] = System.currentTimeMillis()
+		errorFromPrefetch[pageId] = fromPrefetch
+		if (fromPrefetch) {
+			prefetchErrorCount.merge(pageId, 1, Int::plus)
+		}
+	}
+
+	private fun clearErrorTrackingForPage(pageId: Long) {
+		lastErrorAttemptMs.remove(pageId)
+		errorFromPrefetch.remove(pageId)
+		prefetchErrorCount.remove(pageId)
+	}
+
+	private fun clearErrorTracking() {
+		lastErrorAttemptMs.clear()
+		errorFromPrefetch.clear()
+		prefetchErrorCount.clear()
+	}
+
+	private fun transientRetryDelayMs(attempt: Int): Long {
+		return TRANSIENT_RETRY_DELAYS_MS.getOrElse(attempt) { TRANSIENT_RETRY_DELAYS_MS.last() }
 	}
 
 	private fun clearInProgressStates() {
@@ -1201,12 +1322,17 @@ class ReaderTranslationCoordinator private constructor(
 		private const val LOG_TAG = "KotatsuTranslate"
 		private const val OCR_CONCURRENCY = 1
 		private const val TRANSLATE_CONCURRENCY = 4
-		private const val MAX_CONCURRENT_JOBS = 6
-		const val PREFETCH_PAGE_COUNT = 24
-		private const val MAX_PRELOADED_TRACKED = 28
+		private const val RENDER_CONCURRENCY = 1
+		private const val MAX_PREFETCH_IN_FLIGHT = 4
+		const val MAX_CHAPTER_PREFETCH_PAGES = 300
+		const val NEXT_CHAPTER_PREFETCH_THRESHOLD = 6
+		const val NEXT_CHAPTER_PREFETCH_TAIL = 6
+		private const val MAX_PRELOADED_TRACKED = 32
 		private const val ERROR_DEBOUNCE_MS = 4_000L
-		private const val ERROR_RETRY_COOLDOWN_MS = 3_000L
-		private const val TRANSIENT_RETRY_DELAY_MS = 1_200L
-		private const val MAX_TRANSIENT_RETRIES = 1
+		private const val ERROR_RETRY_COOLDOWN_MS = 2_000L
+		private const val PREFETCH_ERROR_RETRY_COOLDOWN_MS = 10_000L
+		private const val MAX_PREFETCH_ERROR_CYCLES = 2
+		private const val MAX_TRANSIENT_RETRIES = 3
+		private val TRANSIENT_RETRY_DELAYS_MS = longArrayOf(1_000L, 2_500L, 5_000L)
 	}
 }

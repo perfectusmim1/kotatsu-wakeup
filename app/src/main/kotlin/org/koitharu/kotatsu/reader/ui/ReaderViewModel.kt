@@ -693,8 +693,21 @@ class ReaderViewModel @Inject constructor(
         val safeUpper = upperPos.coerceIn(safeLower, pages.lastIndex)
         val activePages = pages.subList(safeLower, safeUpper + 1).toList()
         lastActivePageIds = activePages.mapTo(HashSet(activePages.size)) { it.id }
+        val activeChapterId = pages[safeUpper].chapterId
         val prefetchStart = (safeUpper + 1).coerceAtMost(pages.size)
-        val prefetchEnd = (safeUpper + 1 + ReaderTranslationCoordinator.PREFETCH_PAGE_COUNT).coerceAtMost(pages.size)
+        var chapterEnd = prefetchStart
+        while (chapterEnd < pages.size && pages[chapterEnd].chapterId == activeChapterId) {
+            chapterEnd++
+        }
+        val remainingInChapter = chapterEnd - prefetchStart
+        val targetEnd = if (chapterEnd < pages.size && remainingInChapter < ReaderTranslationCoordinator.NEXT_CHAPTER_PREFETCH_THRESHOLD) {
+            (chapterEnd + ReaderTranslationCoordinator.NEXT_CHAPTER_PREFETCH_TAIL).coerceAtMost(pages.size)
+        } else {
+            chapterEnd
+        }
+        val prefetchEnd = targetEnd.coerceAtMost(
+            prefetchStart + ReaderTranslationCoordinator.MAX_CHAPTER_PREFETCH_PAGES,
+        )
         val prefetchPages = if (prefetchStart < prefetchEnd) {
             pages.subList(prefetchStart, prefetchEnd).toList()
         } else {

@@ -446,6 +446,136 @@ class ReaderTranslationPipelineTest {
 		}
 	}
 
+	@Test
+	fun fullChapterPrefetch_translatesAllFortyPagesSequentiallyWhileReadingPageZero(): Unit = runBlocking {
+		withTimeout(15_000L) {
+			val env = createCoordinator(autoTranslate = true, prefetchNextPage = true)
+			val pages = (1000L until 1040L).mapIndexed { idx, id -> createPage(id, index = idx) }
+			val activePage = pages.first()
+			val prefetchPages = pages.drop(1)
+
+			env.coordinator.updateReadingWindow(
+				activePages = listOf(activePage.toReaderPage()),
+				prefetchPages = prefetchPages.map { it.toReaderPage() },
+			)
+
+			for (page in pages) {
+				awaitPageDone(env.coordinator, page.id)
+			}
+			val translatedMap = env.coordinator.activeTranslatedPages.first { it.size == pages.size }
+			assertEquals(pages.size, translatedMap.size)
+			assertEquals(1, env.ocrEngine.maxConcurrentOcr.get())
+			assertEquals(activePage.id, env.ocrEngine.startedPages.first())
+			Unit
+		}
+	}
+
+	@Test
+	fun onPagePreloaded_doesNotDemoteNearestPrefetchPageBehindFurtherPages(): Unit = runBlocking {
+		withTimeout(10_000L) {
+			val env = createCoordinator(autoTranslate = true, prefetchNextPage = true)
+			val page0 = createPage(1100L, index = 0)
+			val page1 = createPage(1101L, index = 1)
+			val page2 = createPage(1102L, index = 2)
+			val page3 = createPage(1103L, index = 3)
+
+			val page0OcrEntered = CompletableDeferred<Unit>()
+			val page0OcrRelease = CompletableDeferred<Unit>()
+			env.ocrEngine.enteredCallbacks[page0.id] = page0OcrEntered
+			env.ocrEngine.releaseGates[page0.id] = page0OcrRelease
+
+			env.coordinator.updateReadingWindow(
+				activePages = listOf(page0.toReaderPage()),
+				prefetchPages = listOf(page1.toReaderPage(), page2.toReaderPage(), page3.toReaderPage()),
+			)
+			page0OcrEntered.await()
+			delay(50)
+
+			// Simulate PageLoader / ViewHolder reporting page1 preloaded after pages 1..3 were already queued.
+			env.coordinator.onPagePreloaded(page1)
+			delay(50)
+
+			// None of the prefetch pages should have started OCR while page0 is still in OCR.
+			assertEquals(listOf(page0.id), env.ocrEngine.startedPages.toList())
+
+			page0OcrRelease.complete(Unit)
+			for (p in listOf(page0, page1, page2, page3)) {
+				awaitPageDone(env.coordinator, p.id)
+			}
+
+			assertEquals(
+				listOf(page0.id, page1.id, page2.id, page3.id),
+				env.ocrEngine.startedPages.toList(),
+			)
+			Unit
+		}
+	}
+
+	@Test
+	fun prefetchNextPage_startsOcrImmediatelyWhileActivePageAwaitsTranslationNetwork(): Unit = runBlocking {
+		withTimeout(10_000L) {
+			val env = createCoordinator(autoTranslate = true, prefetchNextPage = true)
+			val page0 = createPage(1200L, index = 0)
+			val page1 = createPage(1201L, index = 1)
+			val page2 = createPage(1202L, index = 2)
+
+			val page0TranslateStarted = CompletableDeferred<Unit>()
+			val page0TranslateRelease = CompletableDeferred<Unit>()
+			val page1OcrFinished = CompletableDeferred<Unit>()
+			val page2OcrFinished = CompletableDeferred<Unit>()
+
+			env.translator.enteredCallbacks[page0.id] = page0TranslateStarted
+			env.translator.releaseGates[page0.id] = page0TranslateRelease
+			env.ocrEngine.finishedCallbacks[page1.id] = page1OcrFinished
+			env.ocrEngine.finishedCallbacks[page2.id] = page2OcrFinished
+
+			env.coordinator.updateReadingWindow(
+				activePages = listOf(page0.toReaderPage()),
+				prefetchPages = listOf(page1.toReaderPage(), page2.toReaderPage()),
+			)
+
+			// Page 0 finishes OCR and blocks on network translation; prefetch pages 1 & 2 must run OCR immediately without waiting for page 0's network call.
+			page0TranslateStarted.await()
+			page1OcrFinished.await()
+			page2OcrFinished.await()
+			assertFalse(page0TranslateRelease.isCompleted)
+
+			page0TranslateRelease.complete(Unit)
+			awaitPageDone(env.coordinator, page0.id)
+			awaitPageDone(env.coordinator, page1.id)
+			awaitPageDone(env.coordinator, page2.id)
+			assertEquals(listOf(page0.id, page1.id, page2.id), env.ocrEngine.startedPages.toList())
+			Unit
+		}
+	}
+
+	@Test
+	fun prefetchFailure_retriesImmediatelyWhenPromotedToActive(): Unit = runBlocking {
+		withTimeout(10_000L) {
+			val env = createCoordinator(autoTranslate = true, prefetchNextPage = true)
+			val page0 = createPage(1300L, index = 0)
+			val page1 = createPage(1301L, index = 1)
+			val failNext = AtomicInteger(1)
+			env.translator.nonTransientFailCount[page1.id] = failNext
+
+			env.coordinator.updateReadingWindow(
+				activePages = listOf(page0.toReaderPage()),
+				prefetchPages = listOf(page1.toReaderPage()),
+			)
+			awaitPageDone(env.coordinator, page0.id)
+			env.coordinator.pageStates.first { it[page1.id]?.stage == TranslationStage.ERROR }
+
+			// User scrolls down immediately (< cooldown) to page1: must retry immediately and succeed.
+			env.coordinator.updateReadingWindow(
+				activePages = listOf(page1.toReaderPage()),
+				prefetchPages = emptyList(),
+			)
+			awaitPageDone(env.coordinator, page1.id)
+			env.coordinator.activeTranslatedPages.first { page1.id in it }
+			Unit
+		}
+	}
+
 	private fun createCoordinator(
 		autoTranslate: Boolean,
 		prefetchNextPage: Boolean,
@@ -602,6 +732,7 @@ class ReaderTranslationPipelineTest {
 		val releaseGates = ConcurrentHashMap<Long, CompletableDeferred<Unit>>()
 		val cancelledSignals = ConcurrentHashMap<Long, CompletableDeferred<Boolean>>()
 		val transientFailOnce = ConcurrentHashMap<Long, AtomicInteger>()
+		val nonTransientFailCount = ConcurrentHashMap<Long, AtomicInteger>()
 		val onEnterHook = ConcurrentHashMap<Long, () -> Unit>()
 		val onExitHook = ConcurrentHashMap<Long, () -> Unit>()
 		val currentConcurrentTranslate = AtomicInteger(0)
@@ -620,6 +751,11 @@ class ReaderTranslationPipelineTest {
 				transientFailOnce[pageId]?.let { counter ->
 					if (counter.incrementAndGet() == 1) {
 						throw java.io.IOException("Simulated transient network hiccup")
+					}
+				}
+				nonTransientFailCount[pageId]?.let { remaining ->
+					if (remaining.getAndDecrement() > 0) {
+						throw IllegalStateException("Simulated prefetch-only failure")
 					}
 				}
 				try {

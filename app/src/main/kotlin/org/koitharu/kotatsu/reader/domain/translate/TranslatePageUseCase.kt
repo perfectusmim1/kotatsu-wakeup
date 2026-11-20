@@ -148,6 +148,7 @@ class TranslatePageUseCase private constructor(
 		onProgress: suspend (stage: TranslationStage, progressPercent: Int) -> Unit,
 		ocrPermit: PipelinePermit? = null,
 		translatePermit: PipelinePermit? = null,
+		renderPermit: PipelinePermit? = null,
 	): PageTranslationResult = executePipeline(
 		page = page,
 		settings = settings,
@@ -157,6 +158,7 @@ class TranslatePageUseCase private constructor(
 		onProgress = onProgress,
 		ocrPermit = ocrPermit,
 		translatePermit = translatePermit,
+		renderPermit = renderPermit,
 	)
 
 	internal suspend fun invokeWithBitmap(
@@ -166,6 +168,7 @@ class TranslatePageUseCase private constructor(
 		onProgress: suspend (stage: TranslationStage, progressPercent: Int) -> Unit,
 		ocrPermit: PipelinePermit? = null,
 		translatePermit: PipelinePermit? = null,
+		renderPermit: PipelinePermit? = null,
 	): PageTranslationResult = executePipeline(
 		page = page,
 		settings = settings,
@@ -175,6 +178,7 @@ class TranslatePageUseCase private constructor(
 		onProgress = onProgress,
 		ocrPermit = ocrPermit,
 		translatePermit = translatePermit,
+		renderPermit = renderPermit,
 	)
 
 	private suspend fun <S> executePipeline(
@@ -186,6 +190,7 @@ class TranslatePageUseCase private constructor(
 		onProgress: suspend (stage: TranslationStage, progressPercent: Int) -> Unit,
 		ocrPermit: PipelinePermit?,
 		translatePermit: PipelinePermit?,
+		renderPermit: PipelinePermit?,
 	): PageTranslationResult {
 		val totalStartNs = System.nanoTime()
 		if (page.url.isAnimatedImage()) {
@@ -283,6 +288,13 @@ class TranslatePageUseCase private constructor(
 				return PageTranslationResult.NoText
 			}
 
+			// Release full ARGB_8888 bitmap before network translation so parallel background pages
+			// hold zero bitmap RAM while waiting on API responses; re-decoded cheaply from local cache at render time.
+			if (!isTestBitmapMode) {
+				recycleSourceBitmap(sourceBitmap)
+				sourceBitmap = null
+			}
+
 			onProgress(TranslationStage.TRANSLATING_TEXT, -1)
 			val transStartNs = System.nanoTime()
 			val translations = translatePermit.runWithPermit {
@@ -309,52 +321,55 @@ class TranslatePageUseCase private constructor(
 				return PageTranslationResult.NoText
 			}
 
-			onProgress(TranslationStage.RENDERING_PAGE, -1)
-			val targetFile = cacheStore.getOrCreateTargetFile(cacheKey)
-			val renderStartNs = System.nanoTime()
-			return try {
-				val bitmapToRender = checkNotNull(sourceBitmap)
-				val rendered = withContext(Dispatchers.Default) {
-					pageRenderer.renderTranslatedPage(
-						sourceBitmap = bitmapToRender,
-						bubbles = bubbles,
-						translations = translations,
-						outputFile = targetFile,
-						targetLang = settings.targetLang,
-					)
-				}
-				val renderMs = (System.nanoTime() - renderStartNs) / 1_000_000L
-				val totalMs = (System.nanoTime() - totalStartNs) / 1_000_000L
-				if (!rendered.isFile || rendered.length() <= 0L) {
-					TranslatePipelineLog.w(
-						LOG_TAG,
-						"Rendered output missing/empty for page=${page.id}: ${rendered.absolutePath} " +
-							"(ocrMs=${ocrMs}ms, transMs=${transMs}ms, renderMs=${renderMs}ms, totalMs=${totalMs}ms)",
-					)
+			return renderPermit.runWithPermit {
+				currentCoroutineContext().ensureActive()
+				onProgress(TranslationStage.RENDERING_PAGE, -1)
+				val targetFile = cacheStore.getOrCreateTargetFile(cacheKey)
+				val renderStartNs = System.nanoTime()
+				try {
+					val bitmapToRender = sourceBitmap ?: decodeBitmap(source).also { sourceBitmap = it }
+					val rendered = withContext(Dispatchers.Default) {
+						pageRenderer.renderTranslatedPage(
+							sourceBitmap = bitmapToRender,
+							bubbles = bubbles,
+							translations = translations,
+							outputFile = targetFile,
+							targetLang = settings.targetLang,
+						)
+					}
+					val renderMs = (System.nanoTime() - renderStartNs) / 1_000_000L
+					val totalMs = (System.nanoTime() - totalStartNs) / 1_000_000L
+					if (!rendered.isFile || rendered.length() <= 0L) {
+						TranslatePipelineLog.w(
+							LOG_TAG,
+							"Rendered output missing/empty for page=${page.id}: ${rendered.absolutePath} " +
+								"(ocrMs=${ocrMs}ms, transMs=${transMs}ms, renderMs=${renderMs}ms, totalMs=${totalMs}ms)",
+						)
+						if (targetFile.exists()) {
+							targetFile.delete()
+						}
+						recycleSourceBitmap(sourceBitmap)
+						sourceBitmap = null
+						onProgress(TranslationStage.DONE, 100)
+						PageTranslationResult.NoText
+					} else {
+						TranslatePipelineLog.i(
+							LOG_TAG,
+							"Page=${page.id} translated & baked: ${rendered.name} (${rendered.length()} bytes) " +
+								"ocrMs=${ocrMs}ms transMs=${transMs}ms renderMs=${renderMs}ms totalMs=${totalMs}ms",
+						)
+						recycleSourceBitmap(sourceBitmap)
+						sourceBitmap = null
+						onProgress(TranslationStage.DONE, 100)
+						PageTranslationResult.Translated(rendered)
+					}
+				} catch (t: Throwable) {
+					TranslatePipelineLog.e(LOG_TAG, "Rendering failed for page=${page.id}", t)
 					if (targetFile.exists()) {
 						targetFile.delete()
 					}
-					recycleSourceBitmap(sourceBitmap)
-					sourceBitmap = null
-					onProgress(TranslationStage.DONE, 100)
-					PageTranslationResult.NoText
-				} else {
-					TranslatePipelineLog.i(
-						LOG_TAG,
-						"Page=${page.id} translated & baked: ${rendered.name} (${rendered.length()} bytes) " +
-							"ocrMs=${ocrMs}ms transMs=${transMs}ms renderMs=${renderMs}ms totalMs=${totalMs}ms",
-					)
-					recycleSourceBitmap(sourceBitmap)
-					sourceBitmap = null
-					onProgress(TranslationStage.DONE, 100)
-					PageTranslationResult.Translated(rendered)
+					throw t
 				}
-			} catch (t: Throwable) {
-				TranslatePipelineLog.e(LOG_TAG, "Rendering failed for page=${page.id}", t)
-				if (targetFile.exists()) {
-					targetFile.delete()
-				}
-				throw t
 			}
 		} finally {
 			recycleSourceBitmap(sourceBitmap)
