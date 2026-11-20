@@ -60,7 +60,7 @@ class UpscaledStripCache @Inject constructor(
 
 		runCatching {
 			val opts = BitmapFactory.Options().apply {
-				inPreferredConfig = Bitmap.Config.ARGB_8888
+				inPreferredConfig = Bitmap.Config.RGB_565
 			}
 			BitmapFactory.decodeFile(file.absolutePath, opts)
 		}.getOrNull()
@@ -171,11 +171,11 @@ class UpscaledStripCache @Inject constructor(
 	}
 
 	private companion object {
-		const val CACHE_DIR_NAME = "upscaled_strips_v2"
-		const val CACHE_VERSION = 2
-		const val WEBP_QUALITY = 97
-		const val MAX_CACHE_BYTES = 192L * 1024L * 1024L
-		const val TRIM_TARGET_BYTES = 152L * 1024L * 1024L
+		const val CACHE_DIR_NAME = "upscaled_strips_v3"
+		const val CACHE_VERSION = 3
+		const val WEBP_QUALITY = 94
+		const val MAX_CACHE_BYTES = 160L * 1024L * 1024L
+		const val TRIM_TARGET_BYTES = 128L * 1024L * 1024L
 		const val STALE_TMP_AGE_MS = 5L * 60L * 1000L
 		val SAFE_KEY_REGEX = Regex("^[a-zA-Z0-9_-]{8,128}$")
 		val HEX_CHARS = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')

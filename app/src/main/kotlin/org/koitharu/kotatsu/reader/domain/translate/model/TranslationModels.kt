@@ -235,6 +235,8 @@ interface LocalOcrEngine {
 		filterPromoAndCredits = filterPromoAndCredits,
 		onModelDownloadProgress = onModelDownloadProgress,
 	)
+
+	suspend fun trimMemory(aggressive: Boolean = false) = Unit
 }
 
 interface ComicTextTranslator {

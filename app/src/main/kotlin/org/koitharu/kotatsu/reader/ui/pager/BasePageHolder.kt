@@ -286,6 +286,9 @@ abstract class BasePageHolder<B : ViewBinding>(
 			if (!isResumed()) {
 				upscaleController.reset()
 			}
+			val isCritical = level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
+			pageLoader.upscaleCoordinator.trimMemory(aggressive = isCritical)
+			pageLoader.translationCoordinator.trimMemory(aggressive = isCritical)
 		}
 	}
 

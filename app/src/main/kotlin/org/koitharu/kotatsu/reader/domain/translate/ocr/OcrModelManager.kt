@@ -72,6 +72,11 @@ class OcrModelManager @Inject constructor(
 	internal val detModelFile: File
 		get() = File(modelsRootDir, DET_FILE_NAME)
 
+	internal fun isUsingV6TinyDet(): Boolean {
+		val file = detModelFile
+		return file.isFile && file.length() in MIN_ONNX_BYTES..V6_TINY_DET_MAX_BYTES
+	}
+
 	fun isModelReady(sourceLang: OcrSourceLanguage): Boolean {
 		if (sourceLang == OcrSourceLanguage.AUTO) {
 			return isValidOnnxFile(detModelFile) && AUTO_CANDIDATE_GROUPS.any(::isGroupModelOnlyReady)
@@ -189,6 +194,15 @@ class OcrModelManager @Inject constructor(
 				}
 			}
 			emitProgress(100)
+			// Eski ağır det_v4.onnx dosyası kaldıysa disk alanı açmak için sessizce temizle.
+			withContext(Dispatchers.IO) {
+				if (isValidOnnxFile(detModelFile)) {
+					val legacyDet = File(modelsRootDir, LEGACY_DET_FILE_NAME)
+					if (legacyDet.isFile && legacyDet.absolutePath != detModelFile.absolutePath) {
+						legacyDet.delete()
+					}
+				}
+			}
 			Log.i(LOG_TAG, "ensureGroupModels($modelGroup): completed")
 		}
 	}
@@ -405,14 +419,20 @@ class OcrModelManager @Inject constructor(
 		val AUTO_DOWNLOAD_FALLBACK_GROUPS = listOf("cjk", "korean")
 
 		private const val MODELS_DIR_NAME = "ocr_models"
-		private const val DET_FILE_NAME = "det_v4.onnx"
+		private const val DET_FILE_NAME = "det_v6_tiny.onnx"
+		private const val LEGACY_DET_FILE_NAME = "det_v4.onnx"
 		private const val REC_FILE_NAME = "rec.onnx"
 		private const val DICT_FILE_NAME = "dict.txt"
 		private const val STREAM_BUFFER_BYTES = 16 * 1024
 		private const val MIN_ONNX_BYTES = 100_000L
+		private const val V6_TINY_DET_MAX_BYTES = 3_000_000L
 		private const val MIN_DICT_BYTES = 32L
 
+		// PP-OCRv6_tiny_det (1.78 MB, 0.43M params): PP-OCRv4'e göre ~2.4x daha hızlı,
+		// %62 daha küçük ve %80.6 Hmean (v4: %63.8) ile çok daha yüksek algılama doğruluğu.
 		private val DET_MODEL_URLS = listOf(
+			"https://huggingface.co/PaddlePaddle/PP-OCRv6_tiny_det_onnx/resolve/main/inference.onnx",
+			"https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det_onnx/resolve/main/inference.onnx",
 			"https://huggingface.co/SWHL/RapidOCR/resolve/main/PP-OCRv4/ch_PP-OCRv4_det_infer.onnx",
 			"https://huggingface.co/monkt/paddleocr-onnx/resolve/main/detection/v3/det.onnx",
 		)

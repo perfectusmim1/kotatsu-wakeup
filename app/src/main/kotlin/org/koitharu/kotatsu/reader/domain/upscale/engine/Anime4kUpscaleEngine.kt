@@ -70,6 +70,12 @@ class Anime4kUpscaleEngine @Inject constructor() {
 		val uniforms: Map<String, Int>,
 	)
 
+	suspend fun trimMemory() {
+		mutex.withLock {
+			releaseGlLocked()
+		}
+	}
+
 	suspend fun upscale(
 		source: Bitmap,
 		outWidth: Int,

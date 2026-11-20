@@ -173,11 +173,19 @@ class ReaderUpscaleCoordinator private constructor(
 		stripCache = stripCache,
 	)
 
+	private class ResidentStripEntry(
+		val token: String,
+		val isVisible: () -> Boolean,
+		val onEvict: () -> Unit,
+	)
+
 	private val scope = lifecycle.lifecycleScope + Dispatchers.Default
 	private val priorityGate = DynamicPriorityGate(maxPermits = 1)
 	private val generationCounter = AtomicLong(0L)
 	private val activeJobsCount = AtomicInteger(0)
 	private var manualDownloadJob: Job? = null
+	private val residentLock = Any()
+	private val residentStrips = LinkedHashMap<String, ResidentStripEntry>(16, 0.75f, true)
 
 	val settingsSnapshot: StateFlow<UpscaleSettingsSnapshot> =
 		settingsFlow.stateIn(scope, SharingStarted.Eagerly, initialSettings)
@@ -212,10 +220,13 @@ class ReaderUpscaleCoordinator private constructor(
 					if (snap.mode == UpscaleMode.OFF) {
 						_compareEnabled.value = false
 						_runtimeStatus.value = UpscaleRuntimeStatus()
+						trimMemory(aggressive = true)
 					} else {
 						_runtimeStatus.update { it.copy(errorMessage = null) }
 						if (snap.mode == UpscaleMode.AI) {
 							scope.launch { onnxEngine.warmUpSessionIfModelReady() }
+						} else {
+							scope.launch { onnxEngine.trimMemory(closeSession = true) }
 						}
 					}
 				}
@@ -279,6 +290,84 @@ class ReaderUpscaleCoordinator private constructor(
 		}
 	}
 
+	fun registerResidentStrip(
+		token: String,
+		isVisible: () -> Boolean,
+		onEvict: () -> Unit,
+	) {
+		val victims = ArrayList<() -> Unit>()
+		synchronized(residentLock) {
+			residentStrips[token] = ResidentStripEntry(
+				token = token,
+				isVisible = isVisible,
+				onEvict = onEvict,
+			)
+			if (residentStrips.size > MAX_RESIDENT_STRIPS) {
+				val iter = residentStrips.entries.iterator()
+				while (iter.hasNext() && residentStrips.size > MAX_RESIDENT_STRIPS) {
+					val entry = iter.next().value
+					if (entry.token == token) continue
+					val visible = try {
+						entry.isVisible()
+					} catch (_: Throwable) {
+						false
+					}
+					if (!visible) {
+						iter.remove()
+						victims.add(entry.onEvict)
+					}
+				}
+			}
+			if (residentStrips.size > HARD_MAX_RESIDENT_STRIPS) {
+				val iter = residentStrips.entries.iterator()
+				while (iter.hasNext() && residentStrips.size > HARD_MAX_RESIDENT_STRIPS) {
+					val entry = iter.next().value
+					if (entry.token == token) continue
+					iter.remove()
+					victims.add(entry.onEvict)
+				}
+			}
+		}
+		for (evict in victims) {
+			runCatching { evict() }
+		}
+	}
+
+	fun unregisterResidentStrip(token: String) {
+		synchronized(residentLock) {
+			residentStrips.remove(token)
+		}
+	}
+
+	fun trimMemory(aggressive: Boolean = false) {
+		val victims = ArrayList<() -> Unit>()
+		synchronized(residentLock) {
+			val iter = residentStrips.entries.iterator()
+			while (iter.hasNext()) {
+				val entry = iter.next().value
+				val visible = !aggressive && try {
+					entry.isVisible()
+				} catch (_: Throwable) {
+					false
+				}
+				if (!visible) {
+					iter.remove()
+					victims.add(entry.onEvict)
+				}
+			}
+		}
+		for (evict in victims) {
+			runCatching { evict() }
+		}
+		val shouldCloseSession = aggressive || settingsSnapshot.value.mode != UpscaleMode.AI
+		scope.launch {
+			onnxEngine.trimMemory(closeSession = shouldCloseSession)
+			if (aggressive || settingsSnapshot.value.mode == UpscaleMode.OFF) {
+				anime4kEngine.trimMemory()
+			}
+		}
+	}
+
 	suspend fun clearCache(): Long {
 		val freed = stripCache.clearAll()
 		generationCounter.incrementAndGet()
@@ -296,6 +385,7 @@ class ReaderUpscaleCoordinator private constructor(
 		val sizeSpec = StripPlanner.computeStripOutputSize(
 			srcW = srcWidth,
 			validH = strip.validHeight,
+			mode = mode,
 		)
 		val cacheKey = stripCache.buildStripKey(
 			pageIdentity = pageIdentity,
@@ -320,6 +410,7 @@ class ReaderUpscaleCoordinator private constructor(
 		val sizeSpec = StripPlanner.computeStripOutputSize(
 			srcW = srcWidth,
 			validH = strip.validHeight,
+			mode = mode,
 		)
 		val cacheKey = stripCache.buildStripKey(
 			pageIdentity = pageIdentity,
@@ -437,6 +528,15 @@ class ReaderUpscaleCoordinator private constructor(
 			}
 		} catch (ce: CancellationException) {
 			throw ce
+		} catch (oom: OutOfMemoryError) {
+			trimMemory(aggressive = false)
+			_runtimeStatus.update {
+				it.copy(
+					stage = UpscaleStage.ERROR,
+					errorMessage = oom.message ?: "Out of memory",
+				)
+			}
+			return null
 		} catch (t: Throwable) {
 			_runtimeStatus.update {
 				it.copy(
@@ -462,5 +562,7 @@ class ReaderUpscaleCoordinator private constructor(
 		const val DEFAULT_SPLIT_RATIO = 0.5f
 		const val ON_SCREEN_PRIORITY_THRESHOLD = 50_000f
 		const val OFF_SCREEN_PRIORITY_PENALTY = 100_000f
+		const val MAX_RESIDENT_STRIPS = 8
+		const val HARD_MAX_RESIDENT_STRIPS = 12
 	}
 }

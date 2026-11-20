@@ -68,10 +68,13 @@ class PageUpscaleController(
 	private var isOverlayAdded = false
 	private var isScrollListenerAdded = false
 
+	private val controllerId = System.identityHashCode(this)
 	private var activeSessionKey: SessionKey? = null
 	private var strips: List<StripPlan> = emptyList()
 	private val activeStripBitmaps = ConcurrentHashMap<Int, Bitmap>()
 	private val finalStripIndices = ConcurrentHashMap.newKeySet<Int>()
+	private val cachedStripPriorities = ConcurrentHashMap<Int, Float>()
+	private val residentTokens = ConcurrentHashMap<Int, String>()
 	private val inFlightJobs = HashMap<Int, Job>()
 
 	private val decoderMutex = Mutex()
@@ -167,6 +170,11 @@ class PageUpscaleController(
 	override fun onViewDetachedFromWindow(v: View) {
 		cancelWindowRetry()
 		cancelAllStripJobs()
+		cachedStripPriorities.clear()
+		clearActiveStrips()
+		lastCheckedVisY0Bucket = Int.MIN_VALUE
+		lastCheckedVisY1Bucket = Int.MIN_VALUE
+		closeDecoderAsync(force = true)
 	}
 
 	override fun onLayoutChange(
@@ -238,8 +246,8 @@ class PageUpscaleController(
 		}
 
 		cancelAllStripJobs()
-		activeStripBitmaps.clear()
-		finalStripIndices.clear()
+		cachedStripPriorities.clear()
+		clearActiveStrips()
 		activeSessionKey = nextKey
 		strips = StripPlanner.planStripsForMode(nextKey.sHeight, nextKey.mode)
 		lastCheckedVisY0Bucket = Int.MIN_VALUE
@@ -256,15 +264,52 @@ class PageUpscaleController(
 		activeSessionKey = null
 		strips = emptyList()
 		cancelAllStripJobs()
-		activeStripBitmaps.clear()
-		finalStripIndices.clear()
+		cachedStripPriorities.clear()
+		clearActiveStrips()
 		lastCheckedVisY0Bucket = Int.MIN_VALUE
 		lastCheckedVisY1Bucket = Int.MIN_VALUE
 		detachOverlay()
-		closeDecoderAsync()
+		closeDecoderAsync(force = true)
 		if (hadSession) {
 			ssiv.invalidate()
 		}
+	}
+
+	private fun clearActiveStrips() {
+		for (token in residentTokens.values) {
+			coordinator.unregisterResidentStrip(token)
+		}
+		residentTokens.clear()
+		activeStripBitmaps.clear()
+		finalStripIndices.clear()
+	}
+
+	private fun removeStripBitmap(stripIndex: Int): Boolean {
+		residentTokens.remove(stripIndex)?.let { coordinator.unregisterResidentStrip(it) }
+		finalStripIndices.remove(stripIndex)
+		return activeStripBitmaps.remove(stripIndex) != null
+	}
+
+	private fun storeStripBitmap(key: SessionKey, stripIndex: Int, bitmap: Bitmap) {
+		activeStripBitmaps[stripIndex] = bitmap
+		finalStripIndices.add(stripIndex)
+		val token = "$controllerId:${key.hashCode()}:$stripIndex"
+		residentTokens[stripIndex] = token
+		coordinator.registerResidentStrip(
+			token = token,
+			isVisible = {
+				activeSessionKey == key &&
+					(cachedStripPriorities[stripIndex] ?: Float.MAX_VALUE) < ReaderUpscaleCoordinator.ON_SCREEN_PRIORITY_THRESHOLD
+			},
+			onEvict = {
+				if (residentTokens.remove(stripIndex, token)) {
+					finalStripIndices.remove(stripIndex)
+					if (activeStripBitmaps.remove(stripIndex) != null) {
+						ssiv.postInvalidate()
+					}
+				}
+			},
+		)
 	}
 
 	private fun scheduleWindowRetry() {
@@ -361,23 +406,36 @@ class PageUpscaleController(
 		return visY0 to visY1
 	}
 
-	private fun updateVisibleWindow() {
+	private fun updateVisibleWindow(fromDraw: Boolean = false) {
 		val key = activeSessionKey ?: return
 		val currentStrips = strips
 		if (currentStrips.isEmpty()) return
 
 		val range = computeVisibleSourceRange()
 		if (range == null) {
-			// Sayfa ekran dışındaysa bekleyen/çalışan şerit işlerini iptal et ki ekrandaki sayfayı bekletmesin
+			// Sayfa ekran dışındaysa bekleyen/çalışan şerit işlerini iptal et, şerit bitmaplerini
+			// ve Skia decoder'ı serbest bırak (geri kaydırıldığında disk önbellekten ~3ms'de yüklenir).
 			if (ssiv.width > 0 && ssiv.height > 0 && !ssiv.getLocalVisibleRect(localVisRect)) {
 				lastCheckedVisY0Bucket = Int.MIN_VALUE
 				lastCheckedVisY1Bucket = Int.MIN_VALUE
+				cachedStripPriorities.clear()
 				if (inFlightJobs.isNotEmpty()) {
 					cancelAllStripJobs()
+				}
+				val hadBitmaps = activeStripBitmaps.isNotEmpty()
+				if (hadBitmaps) {
+					clearActiveStrips()
+				}
+				closeDecoderAsync(force = true)
+				if (hadBitmaps && !fromDraw) {
+					ssiv.invalidate()
 				}
 			}
 			return
 		}
+
+		// Tüm şeritlerin güncel ekran önceliklerini yalnızca Main Thread üzerinde hesaplayıp önbelleğe al.
+		refreshCachedPrioritiesMainThread(key, currentStrips)
 
 		val (visY0, visY1) = range
 		lastCheckedVisY0Bucket = visY0.toInt() / VIEWPORT_BUCKET_PX
@@ -392,8 +450,7 @@ class PageUpscaleController(
 		for (strip in currentStrips) {
 			if (strip.validY1 < keepY0 || strip.validY0 > keepY1) {
 				inFlightJobs.remove(strip.index)?.cancel()
-				finalStripIndices.remove(strip.index)
-				if (activeStripBitmaps.remove(strip.index) != null) {
+				if (removeStripBitmap(strip.index)) {
 					evictedAny = true
 				}
 			}
@@ -453,52 +510,66 @@ class PageUpscaleController(
 			}
 		}
 
-		if (evictedAny) {
+		if (evictedAny && !fromDraw) {
 			ssiv.invalidate()
 		}
 	}
 
 	/**
-	 * Şeridin gerçek ekran (pencere) koordinatlarındaki önceliğini hesaplar:
-	 * - Ekranda görünen şeritler: ekranın dikey merkezine olan piksel uzaklığı (`0 .. ~3000f`).
-	 * - Ekran dışı (lookahead) şeritler: `100_000f + ekrana uzaklık`.
-	 * - Sayfa ekran dışına çıktıysa: `Float.MAX_VALUE`.
+	 * Tüm şeritlerin gerçek ekran önceliklerini yalnızca Main Thread üzerinde hesaplayarak
+	 * [cachedStripPriorities] haritasına yazar; böylece arka plan iş parçacıkları asla Android View
+	 * yöntemlerine erişmez.
 	 */
-	private fun computeStripScreenPriority(key: SessionKey, strip: StripPlan): Float {
+	private fun refreshCachedPrioritiesMainThread(key: SessionKey, currentStrips: List<StripPlan>) {
 		if (activeSessionKey != key || !itemView.isAttachedToWindow || !ssiv.isReady || ssiv.width <= 0 || ssiv.height <= 0) {
-			return Float.MAX_VALUE
+			cachedStripPriorities.clear()
+			return
 		}
 		if (!ssiv.getLocalVisibleRect(localVisRect)) {
-			return Float.MAX_VALUE
+			cachedStripPriorities.clear()
+			return
 		}
 		val visTop = localVisRect.top.coerceIn(0, ssiv.height).toFloat()
 		val visBottom = localVisRect.bottom.coerceIn(0, ssiv.height).toFloat()
 		if (visBottom <= visTop) {
-			return Float.MAX_VALUE
+			cachedStripPriorities.clear()
+			return
 		}
+		ssiv.getLocationInWindow(windowLoc)
+		val windowTopY = windowLoc[1].toFloat()
+		val screenHeight = itemView.resources.displayMetrics.heightPixels.toFloat().coerceAtLeast(1f)
+		val screenCenterY = screenHeight * 0.5f
 
-		val sTop = ssiv.sourceToViewCoord(0f, strip.validY0.toFloat(), priorityPointA)?.y ?: return Float.MAX_VALUE
-		val sBot = ssiv.sourceToViewCoord(key.sWidth.toFloat(), strip.validY1.toFloat(), priorityPointB)?.y ?: return Float.MAX_VALUE
-		val stripViewY0 = min(sTop, sBot)
-		val stripViewY1 = max(sTop, sBot)
-
-		val isStripOnScreen = stripViewY1 > visTop && stripViewY0 < visBottom
-		if (isStripOnScreen) {
-			ssiv.getLocationInWindow(windowLoc)
-			val screenHeight = itemView.resources.displayMetrics.heightPixels.toFloat().coerceAtLeast(1f)
-			val screenCenterY = screenHeight * 0.5f
-			val clampedViewY0 = stripViewY0.coerceIn(visTop, visBottom)
-			val clampedViewY1 = stripViewY1.coerceIn(clampedViewY0, visBottom)
-			val stripScreenCenterY = windowLoc[1].toFloat() + (clampedViewY0 + clampedViewY1) * 0.5f
-			return abs(stripScreenCenterY - screenCenterY).coerceAtMost(ReaderUpscaleCoordinator.ON_SCREEN_PRIORITY_THRESHOLD - 1f)
+		for (strip in currentStrips) {
+			val sTop = ssiv.sourceToViewCoord(0f, strip.validY0.toFloat(), priorityPointA)?.y
+			val sBot = ssiv.sourceToViewCoord(key.sWidth.toFloat(), strip.validY1.toFloat(), priorityPointB)?.y
+			if (sTop == null || sBot == null) {
+				cachedStripPriorities[strip.index] = Float.MAX_VALUE
+				continue
+			}
+			val stripViewY0 = min(sTop, sBot)
+			val stripViewY1 = max(sTop, sBot)
+			val isStripOnScreen = stripViewY1 > visTop && stripViewY0 < visBottom
+			val priority = if (isStripOnScreen) {
+				val clampedViewY0 = stripViewY0.coerceIn(visTop, visBottom)
+				val clampedViewY1 = stripViewY1.coerceIn(clampedViewY0, visBottom)
+				val stripScreenCenterY = windowTopY + (clampedViewY0 + clampedViewY1) * 0.5f
+				abs(stripScreenCenterY - screenCenterY).coerceAtMost(ReaderUpscaleCoordinator.ON_SCREEN_PRIORITY_THRESHOLD - 1f)
+			} else {
+				val distToVisible = if (stripViewY0 >= visBottom) {
+					stripViewY0 - visBottom
+				} else {
+					visTop - stripViewY1
+				}
+				ReaderUpscaleCoordinator.OFF_SCREEN_PRIORITY_PENALTY + distToVisible.coerceAtLeast(0f)
+			}
+			cachedStripPriorities[strip.index] = priority
 		}
+	}
 
-		val distToVisible = if (stripViewY0 >= visBottom) {
-			stripViewY0 - visBottom
-		} else {
-			visTop - stripViewY1
-		}
-		return ReaderUpscaleCoordinator.OFF_SCREEN_PRIORITY_PENALTY + distToVisible.coerceAtLeast(0f)
+	private fun readCachedStripPriority(key: SessionKey, stripIndex: Int): Float {
+		if (activeSessionKey != key) return Float.MAX_VALUE
+		return cachedStripPriorities[stripIndex] ?: Float.MAX_VALUE
 	}
 
 	private fun scheduleStripJob(
@@ -526,8 +597,7 @@ class PageUpscaleController(
 				)
 				if (cached != null && !cached.isRecycled) {
 					if (activeSessionKey == key) {
-						activeStripBitmaps[strip.index] = cached
-						finalStripIndices.add(strip.index)
+						storeStripBitmap(key, strip.index, cached)
 						ssiv.invalidate()
 					}
 					return@launch
@@ -538,12 +608,11 @@ class PageUpscaleController(
 					strip = strip,
 					mode = key.mode,
 					srcWidth = key.sWidth,
-					priorityProducer = { computeStripScreenPriority(key, strip) },
+					priorityProducer = { readCachedStripPriority(key, strip.index) },
 					decodeSourceStrip = { decodeStripRegion(key, strip) },
 				)
 				if (activeSessionKey == key && bitmap != null && !bitmap.isRecycled) {
-					activeStripBitmaps[strip.index] = bitmap
-					finalStripIndices.add(strip.index)
+					storeStripBitmap(key, strip.index, bitmap)
 					ssiv.invalidate()
 				}
 			} catch (ce: CancellationException) {
@@ -575,9 +644,14 @@ class PageUpscaleController(
 				offsetX + key.sWidth,
 				offsetY + strip.y1,
 			)
-			runCatching {
+			try {
 				decoder.decodeRegion(srcRect, 1)
-			}.getOrNull()
+			} catch (_: OutOfMemoryError) {
+				coordinator.trimMemory(aggressive = false)
+				null
+			} catch (_: Throwable) {
+				null
+			}
 		}
 	}
 
@@ -604,10 +678,10 @@ class PageUpscaleController(
 		}.getOrNull()
 	}
 
-	private fun closeDecoderAsync() {
+	private fun closeDecoderAsync(force: Boolean = false) {
 		scope.launch(Dispatchers.IO) {
 			decoderMutex.withLock {
-				if (activeSessionKey == null) {
+				if (force || activeSessionKey == null) {
 					runCatching { activeDecoder?.recycle() }
 					activeDecoder = null
 					activeDecoderKey = null
@@ -639,7 +713,7 @@ class PageUpscaleController(
 				if (b0 != lastCheckedVisY0Bucket || b1 != lastCheckedVisY1Bucket ||
 					(activeStripBitmaps.isEmpty() && inFlightJobs.isEmpty())
 				) {
-					updateVisibleWindow()
+					updateVisibleWindow(fromDraw = true)
 				}
 			}
 
@@ -714,9 +788,9 @@ class PageUpscaleController(
 		const val MAX_WINDOW_RETRIES = 12
 		const val VIEWPORT_BUCKET_PX = 64
 		const val LOOKBEHIND_FAST_SOURCE_PX = 512f
-		const val LOOKAHEAD_FAST_SOURCE_PX = 2048f
-		const val LOOKAHEAD_AI_SOURCE_PX = 320f
-		const val EVICT_BEHIND_SOURCE_PX = 2048f
-		const val EVICT_AHEAD_SOURCE_PX = 3072f
+		const val LOOKAHEAD_FAST_SOURCE_PX = 1536f
+		const val LOOKAHEAD_AI_SOURCE_PX = 256f
+		const val EVICT_BEHIND_SOURCE_PX = 1024f
+		const val EVICT_AHEAD_SOURCE_PX = 1536f
 	}
 }

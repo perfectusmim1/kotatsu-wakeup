@@ -64,15 +64,49 @@ class UpscaleFeatureTest {
 		assertEquals(4096, oversized.outWidth)
 		assertTrue(oversized.outHeight <= 4096)
 
-		val fullHd = StripPlanner.computeStripOutputSize(
+		val fullHdFast = StripPlanner.computeStripOutputSize(
+			srcW = 1080,
+			validH = StripPlanner.STRIP_HEIGHT,
+			maxTexSize = 4096,
+			mode = UpscaleMode.FAST,
+		)
+		assertEquals(1080, fullHdFast.inputWidth)
+		assertEquals(2160, fullHdFast.outWidth)
+
+		val hdAi = StripPlanner.computeStripOutputSize(
+			srcW = 720,
+			validH = StripPlanner.AI_STRIP_HEIGHT,
+			maxTexSize = 4096,
+			mode = UpscaleMode.AI,
+		)
+		assertEquals(720, hdAi.inputWidth)
+		assertEquals(1440, hdAi.outWidth)
+
+		val fullHdAi = StripPlanner.computeStripOutputSize(
 			srcW = 1080,
 			validH = StripPlanner.AI_STRIP_HEIGHT,
 			maxTexSize = 4096,
+			mode = UpscaleMode.AI,
 		)
-		assertEquals(1080, fullHd.inputWidth)
-		assertEquals(2160, fullHd.outWidth)
-		val aiStrips = StripPlanner.planStripsForMode(7680, UpscaleMode.AI)
+		assertEquals(768, fullHdAi.inputWidth)
+		assertEquals(1536, fullHdAi.outWidth)
+		assertTrue(fullHdAi.outWidth > 1080)
+
+		val qhdAi = StripPlanner.computeStripOutputSize(
+			srcW = 1440,
+			validH = StripPlanner.AI_STRIP_HEIGHT,
+			maxTexSize = 4096,
+			mode = UpscaleMode.AI,
+		)
+		assertEquals(936, qhdAi.inputWidth)
+		assertEquals(1872, qhdAi.outWidth)
+		assertTrue(qhdAi.outWidth > 1440)
+
+		// Middle AI strip height (496 + 2*8 = 512) aligns cleanly into 4 rows of 128px tiles
+		val aiStrips = StripPlanner.planStripsForMode(4960, UpscaleMode.AI)
 		assertEquals(10, aiStrips.size)
+		assertEquals(512, aiStrips[1].y1 - aiStrips[1].y0)
+		assertEquals(24, StripPlanner.planTiles(768, 512).size)
 	}
 
 	@Test

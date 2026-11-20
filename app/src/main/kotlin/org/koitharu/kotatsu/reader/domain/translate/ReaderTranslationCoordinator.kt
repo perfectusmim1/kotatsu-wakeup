@@ -684,6 +684,14 @@ class ReaderTranslationCoordinator private constructor(
 		}
 	}
 
+	fun trimMemory(aggressive: Boolean = false) {
+		if (aggressive || !_isEnabled.value) {
+			scope.launch {
+				runCatching { ocrEngine.trimMemory(aggressive = aggressive) }
+			}
+		}
+	}
+
 	suspend fun clearCache(): Long {
 		val freed = cacheStore.clearAll()
 		resetSessionState()

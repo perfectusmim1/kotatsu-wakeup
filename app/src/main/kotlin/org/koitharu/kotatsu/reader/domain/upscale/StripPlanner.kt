@@ -11,10 +11,13 @@ object StripPlanner {
 
 	const val STRIP_HEIGHT = 1024
 	const val STRIP_OVERLAP = 16
-	const val AI_STRIP_HEIGHT = 768
-	const val AI_STRIP_OVERLAP = 12
-	const val AI_TILE_SIZE = 384
-	const val AI_TILE_OVERLAP = 12
+	const val AI_STRIP_HEIGHT = 496
+	const val AI_STRIP_OVERLAP = 8
+	const val AI_TILE_SIZE = 128
+	const val AI_TILE_OVERLAP = 8
+	const val AI_BASE_INPUT_WIDTH = 768
+	const val AI_MAX_OUTPUT_WIDTH = 2560
+	private const val AI_HIGH_RES_INPUT_RATIO = 0.65f
 	const val DEFAULT_MAX_TEX_SIZE = 4096
 
 	fun planStripsForMode(
@@ -113,22 +116,36 @@ object StripPlanner {
 
 	/**
 	 * Şerit giriş ve 2x çıkış piksel boyutlarını hesaplar; GPU doku sınırını (maxTexSize) aşmaz.
-	 * Ara yeniden örnekleme bulanıklığı olmaması için modelin doğal 2x çıktısını korur.
+	 * AI modunda yüksek genişlikli sayfalarda bellek ve hız dengesi için giriş genişliği akıllıca
+	 * optimize edilir, ancak çıkış çözünürlüğü hiçbir zaman orijinal sayfa genişliğinin altına düşmez.
 	 */
 	fun computeStripOutputSize(
 		srcW: Int,
 		validH: Int,
 		maxTexSize: Int = DEFAULT_MAX_TEX_SIZE,
+		mode: UpscaleMode = UpscaleMode.FAST,
 	): StripSizeResult {
 		val safeSrcW = srcW.coerceAtLeast(1)
 		val safeValidH = validH.coerceAtLeast(1)
 		val safeMaxTex = maxTexSize.coerceAtLeast(256)
 		val maxInputW = (safeMaxTex / 2).coerceAtLeast(1)
 
-		val inputWidth = min(safeSrcW, maxInputW)
+		val inputWidth = if (mode == UpscaleMode.AI) {
+			val aiMaxInputW = min(maxInputW, (AI_MAX_OUTPUT_WIDTH / 2).coerceAtLeast(1))
+			if (safeSrcW <= AI_BASE_INPUT_WIDTH) {
+				min(safeSrcW, aiMaxInputW)
+			} else {
+				val scaledTarget = (safeSrcW * AI_HIGH_RES_INPUT_RATIO).roundToInt()
+				val desired = maxOf(AI_BASE_INPUT_WIDTH, scaledTarget)
+				min(safeSrcW, min(desired, aiMaxInputW))
+			}
+		} else {
+			min(safeSrcW, maxInputW)
+		}.coerceAtLeast(1)
 		val inputScale = inputWidth.toFloat() / safeSrcW.toFloat()
 
-		val outWidth = min(inputWidth * 2, safeMaxTex).coerceAtLeast(1)
+		val effectiveMaxOut = if (mode == UpscaleMode.AI) min(safeMaxTex, AI_MAX_OUTPUT_WIDTH) else safeMaxTex
+		val outWidth = min(inputWidth * 2, effectiveMaxOut).coerceAtLeast(1)
 		val scaleFromOriginal = outWidth.toFloat() / safeSrcW.toFloat()
 		val outHeight = min((safeValidH * scaleFromOriginal).roundToInt(), safeMaxTex).coerceAtLeast(1)
 
@@ -182,5 +199,11 @@ object StripPlanner {
 		val wide = computeStripOutputSize(5000, 1024, 4096)
 		check(wide.inputWidth <= 2048) { "wide input must cap at maxTexSize/2" }
 		check(wide.outWidth <= 4096 && wide.outHeight <= 4096) { "output must stay within maxTexSize" }
+
+		for (srcW in intArrayOf(600, 720, 800, 1080, 1440, 2000)) {
+			val aiSize = computeStripOutputSize(srcW, AI_STRIP_HEIGHT, DEFAULT_MAX_TEX_SIZE, UpscaleMode.AI)
+			check(aiSize.outWidth > srcW) { "AI output width ${aiSize.outWidth} must exceed source width $srcW" }
+			check(aiSize.outWidth <= AI_MAX_OUTPUT_WIDTH) { "AI output width must cap at $AI_MAX_OUTPUT_WIDTH" }
+		}
 	}
 }
