@@ -1,8 +1,10 @@
 package org.koitharu.kotatsu.main.domain
 
 import androidx.collection.ArraySet
+import androidx.collection.LruCache
 import coil3.intercept.Interceptor
 import coil3.request.ErrorResult
+import coil3.request.ImageRequest
 import coil3.request.ImageResult
 import coil3.request.SuccessResult
 import coil3.toBitmap
@@ -23,6 +25,7 @@ import org.koitharu.kotatsu.parsers.model.MangaListFilter
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import org.koitharu.kotatsu.parsers.util.findById
 import org.koitharu.kotatsu.parsers.util.ifNullOrEmpty
+import org.koitharu.kotatsu.parsers.util.nullIfEmpty
 import org.koitharu.kotatsu.parsers.util.runCatchingCancellable
 import java.io.File
 import java.util.Collections
@@ -36,6 +39,7 @@ class CoverRestoreInterceptor @Inject constructor(
 ) : Interceptor {
 
 	private val blacklist = Collections.synchronizedSet(ArraySet<String>())
+	private val recoveredCovers = LruCache<Long, String>(MAX_RECOVERED_COVER_CACHE)
 
 	override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
 		val request = chain.request
@@ -74,11 +78,10 @@ class CoverRestoreInterceptor @Inject constructor(
 				}
 				return result
 			}
-			request.extras[mangaKey]?.let {
-				return if (restoreManga(it)) {
-					chain.withRequest(request.newBuilder().build()).proceed()
-				} else {
-					result
+			request.extras[mangaKey]?.let { manga ->
+				val recovered = restoreMangaCover(manga, chain, request)
+				if (recovered != null) {
+					return recovered
 				}
 			}
 		}
@@ -97,44 +100,140 @@ class CoverRestoreInterceptor @Inject constructor(
 		}
 	}
 
-	private suspend fun restoreManga(manga: Manga): Boolean {
-		val key = manga.publicUrl
-		if (!blacklist.add(key)) {
-			return false
+	private suspend fun restoreMangaCover(
+		manga: Manga,
+		chain: Interceptor.Chain,
+		request: ImageRequest,
+	): SuccessResult? {
+		if (manga.isLocal) {
+			return null
 		}
-		val restored = runCatchingCancellable {
-			restoreMangaImpl(manga)
+		val failedUrl = (request.data as? String)?.trim().orEmpty()
+		val cachedRecovery = synchronized(recoveredCovers) { recoveredCovers[manga.id] }
+		if (!cachedRecovery.isNullOrEmpty() && cachedRecovery != failedUrl) {
+			val cachedRetry = chain.withRequest(
+				request.newBuilder()
+					.data(cachedRecovery)
+					.build(),
+			).proceed()
+			if (cachedRetry is SuccessResult) {
+				return cachedRetry
+			}
+		}
+		val key = "${manga.id}:$failedUrl:${manga.publicUrl}"
+		if (!blacklist.add(key)) {
+			return null
+		}
+		val success = runCatchingCancellable {
+			restoreMangaImpl(manga, failedUrl, chain, request)
 		}.onFailure { e ->
 			e.printStackTraceDebug()
-		}.getOrDefault(false)
-		if (restored) {
+		}.getOrNull()
+		if (success != null) {
 			blacklist.remove(key)
 		}
-		return restored
+		return success
 	}
 
-	private suspend fun restoreMangaImpl(manga: Manga): Boolean {
-		if (dataRepository.findMangaById(manga.id, withChapters = false) == null || manga.isLocal) {
-			return false
-		}
+	private suspend fun restoreMangaImpl(
+		manga: Manga,
+		failedUrl: String,
+		chain: Interceptor.Chain,
+		request: ImageRequest,
+	): SuccessResult? {
 		val repo = repositoryFactory.create(manga.source)
-		val list = repo.getList(0, SortOrder.RELEVANCE, MangaListFilter(query = manga.title))
-		val fixed = list.find { it.id == manga.id }
-		if (fixed == null) {
-			// Ids come from urls, so a site that moved lists the same manga under another id. Stored is the one to keep.
-			val moved = list.singleOrNull { it.title == manga.title } ?: return false
-			if (moved.coverUrl.isNullOrEmpty() || moved.coverUrl == manga.coverUrl) {
-				return false
+		val isStoredInDb = dataRepository.findMangaById(manga.id, withChapters = false) != null
+		val attempted = HashSet<String>(6).apply {
+			if (failedUrl.isNotEmpty()) add(failedUrl)
+		}
+
+		suspend fun tryCoverCandidate(candidateUrl: String?, largeCandidateUrl: String? = null): SuccessResult? {
+			val url = candidateUrl?.trim()?.nullIfEmpty() ?: return null
+			if (!attempted.add(url)) {
+				return null
 			}
-			dataRepository.updateCover(manga.copy(coverUrl = moved.coverUrl, largeCoverUrl = moved.largeCoverUrl))
-			return true
+			val retried = chain.withRequest(
+				request.newBuilder()
+					.data(url)
+					.build(),
+			).proceed()
+			if (retried is SuccessResult) {
+				synchronized(recoveredCovers) {
+					recoveredCovers.put(manga.id, url)
+				}
+				if (isStoredInDb) {
+					dataRepository.updateCover(
+						manga.copy(
+							coverUrl = url,
+							largeCoverUrl = largeCandidateUrl?.trim()?.nullIfEmpty() ?: url,
+						),
+					)
+				}
+				return retried
+			}
+			return null
 		}
-		return if (fixed != manga) {
-			dataRepository.storeManga(fixed, replaceExisting = true)
-			fixed.coverUrl != manga.coverUrl
-		} else {
-			false
+
+		// Tier 1: Uncropped WordPress thumbnail variant (e.g. thumbnail-193x278.jpg -> thumbnail.jpg)
+		stripWpResizeSuffix(failedUrl)?.let { uncropped ->
+			tryCoverCandidate(uncropped)?.let { return it }
 		}
+
+		// Tier 2: Source search for stored library/bookmark/history items whose URL or cover shifted
+		if (isStoredInDb && manga.title.isNotBlank()) {
+			val list = runCatchingCancellable {
+				repo.getList(0, SortOrder.RELEVANCE, MangaListFilter(query = manga.title))
+			}.getOrDefault(emptyList())
+			val fixed = list.find { it.id == manga.id }
+			if (fixed != null) {
+				tryCoverCandidate(fixed.largeCoverUrl, fixed.largeCoverUrl)?.let {
+					dataRepository.storeManga(fixed, replaceExisting = true)
+					return it
+				}
+				tryCoverCandidate(fixed.coverUrl, fixed.largeCoverUrl)?.let {
+					dataRepository.storeManga(fixed, replaceExisting = true)
+					return it
+				}
+			} else {
+				val moved = list.singleOrNull { it.title == manga.title }
+					?: list.firstOrNull { BookmarkMatcher.isSameSeriesOnSameSource(manga, it) }
+				if (moved != null) {
+					tryCoverCandidate(moved.largeCoverUrl, moved.largeCoverUrl)?.let { return it }
+					tryCoverCandidate(moved.coverUrl, moved.largeCoverUrl)?.let { return it }
+				}
+			}
+		}
+
+		// Tier 3: Fresh details fetch (refreshes stale covers and provides og:image/largeCoverUrl)
+		val details = runCatchingCancellable {
+			repo.getDetails(manga)
+		}.getOrNull() ?: return null
+
+		tryCoverCandidate(details.largeCoverUrl, details.largeCoverUrl)?.let { return it }
+		tryCoverCandidate(details.coverUrl, details.largeCoverUrl)?.let { return it }
+		stripWpResizeSuffix(details.largeCoverUrl)?.let { tryCoverCandidate(it)?.let { ok -> return ok } }
+		stripWpResizeSuffix(details.coverUrl)?.let { tryCoverCandidate(it)?.let { ok -> return ok } }
+
+		// Tier 4: Source cover file itself is 404 on server — fall back to the first readable chapter page
+		val chapters = details.chapters.orEmpty()
+		if (chapters.isEmpty()) {
+			return null
+		}
+		for (chapter in chapters.take(2)) {
+			val pages = runCatchingCancellable { repo.getPages(chapter) }.getOrNull().orEmpty()
+			val firstPage = pages.firstOrNull() ?: continue
+			val resolvedUrl = firstPage.preview?.nullIfEmpty() ?: runCatchingCancellable {
+				repo.getPageUrl(firstPage)
+			}.getOrNull()?.nullIfEmpty() ?: continue
+			tryCoverCandidate(resolvedUrl)?.let { return it }
+		}
+		return null
+	}
+
+	private fun stripWpResizeSuffix(url: String?): String? {
+		val raw = url?.trim()?.nullIfEmpty() ?: return null
+		val stripped = WP_RESIZE_SUFFIX_REGEX.replace(raw, "$1")
+		return stripped.takeIf { it != raw }
 	}
 
 	private suspend fun restoreBookmark(bookmark: Bookmark): Bookmark? {
@@ -196,5 +295,10 @@ class CoverRestoreInterceptor @Inject constructor(
 
 	private fun Throwable.shouldRestore(): Boolean {
 		return this is Exception // any Exception but not Error
+	}
+
+	private companion object {
+		const val MAX_RECOVERED_COVER_CACHE = 256
+		val WP_RESIZE_SUFFIX_REGEX = Regex("""-\d+x\d+(\.[a-zA-Z0-9]+(?:$|\?))""")
 	}
 }
