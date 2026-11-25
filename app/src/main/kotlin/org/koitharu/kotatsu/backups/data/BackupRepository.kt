@@ -32,6 +32,7 @@ import org.koitharu.kotatsu.backups.data.model.ScrobblingBackup
 import org.koitharu.kotatsu.backups.data.model.SourceBackup
 import org.koitharu.kotatsu.backups.data.model.StatisticBackup
 import org.koitharu.kotatsu.backups.domain.BackupSection
+import org.koitharu.kotatsu.bookmarks.data.BookmarkVault
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.prefs.AppSettings
 import org.koitharu.kotatsu.core.util.CompositeResult
@@ -61,6 +62,7 @@ class BackupRepository @Inject constructor(
     private val hiddenImages: HiddenImagesRepository? = null,
     /** Nullable for the same reason: a backup agent writes an empty section and restores nothing. */
     private val dismissals: DiscoverDismissals? = null,
+    private val bookmarkVault: BookmarkVault? = null,
 ) {
 
     private val json = Json {
@@ -212,6 +214,8 @@ class BackupRepository @Inject constructor(
                     BackupSection.BOOKMARKS -> input.readJsonArray<BookmarkBackup>(serializer()).restoreToDb {
                         upsertManga(it.manga)
                         getBookmarksDao().upsert(it.bookmarks.map { b -> b.toEntity() })
+                    }.also {
+                        bookmarkVault?.syncFromDatabase(database)
                     }
 
                     BackupSection.SOURCES -> input.readJsonArray<SourceBackup>(serializer()).restoreToDb {

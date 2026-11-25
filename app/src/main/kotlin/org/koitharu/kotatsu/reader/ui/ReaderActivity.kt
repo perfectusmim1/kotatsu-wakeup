@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
@@ -63,6 +64,7 @@ import org.koitharu.kotatsu.core.ui.dialog.ErrorDetailsDialog
 import org.koitharu.kotatsu.core.ui.dialog.buildAlertDialog
 import org.koitharu.kotatsu.core.ui.dialog.setCheckbox
 import org.koitharu.kotatsu.core.ui.util.MenuInvalidator
+import org.koitharu.kotatsu.core.ui.util.reverseAsync
 import org.koitharu.kotatsu.core.ui.widgets.ZoomControl
 import org.koitharu.kotatsu.core.util.IdlingDetector
 import org.koitharu.kotatsu.core.util.ext.getThemeDimensionPixelOffset
@@ -253,6 +255,18 @@ class ReaderActivity :
                 .setAnchorView(viewBinding.toolbarDocked)
                 .show()
         }
+        viewModel.onActionDone
+            .filterNot { router.isChapterPagesSheetShown() }
+            .observeEvent(this) { action ->
+                val handle = action.handle
+                val length = if (handle == null) Snackbar.LENGTH_SHORT else Snackbar.LENGTH_LONG
+                val snackbar = Snackbar.make(viewBinding.container, action.stringResId, length)
+                    .setAnchorView(viewBinding.toolbarDocked)
+                if (handle != null) {
+                    snackbar.setAction(R.string.undo) { handle.reverseAsync() }
+                }
+                snackbar.show()
+            }
         viewModel.readerSettingsProducer.observe(this) {
             viewBinding.infoBar.applyColorScheme(isBlackOnWhite = it.background.isLight(this))
         }
@@ -602,7 +616,7 @@ class ReaderActivity :
     }
 
     override fun onBookmarkSelected(bookmark: Bookmark): Boolean {
-        viewModel.switchChapter(bookmark.chapterId, bookmark.page, bookmark.scroll)
+        viewModel.switchChapter(bookmark.chapterId, bookmark.page, bookmark.scroll, bookmark.pageId)
         return true
     }
 

@@ -39,7 +39,9 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.MangaHistory
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
+import org.koitharu.kotatsu.core.ui.util.ReversibleAction
 import org.koitharu.kotatsu.core.exceptions.EmptyMangaException
 import org.koitharu.kotatsu.core.exceptions.CloudFlareProtectedException
 import org.koitharu.kotatsu.core.exceptions.resolve.CaptchaAutoResolveCoordinator
@@ -256,12 +258,11 @@ class ReaderViewModel @Inject constructor(
         }.distinctUntilChanged()
         .stateIn(viewModelScope + Dispatchers.Default, SharingStarted.Eagerly, false)
 
-    val isBookmarkAdded = readingState.flatMapLatest { state ->
-        val manga = mangaDetails.value?.toManga()
-        if (state == null || manga == null) {
+    val isBookmarkAdded = combine(manga, readingState, ::Pair).flatMapLatest { (m, state) ->
+        if (state == null || m == null) {
             flowOf(false)
         } else {
-            bookmarksRepository.observeBookmark(manga, state.chapterId, state.page)
+            bookmarksRepository.observeBookmark(m, state.chapterId, state.page)
                 .map {
                     it != null && it.chapterId == state.chapterId && it.page == state.page
                 }
@@ -348,6 +349,7 @@ class ReaderViewModel @Inject constructor(
     fun onNewIntent(newIntent: Intent) {
         val parsedIntent = MangaIntent(newIntent)
         val newState: ReaderState? = newIntent.getParcelableExtraCompat(ReaderIntent.EXTRA_STATE)
+        val newBookmarkPageId = newIntent.getLongExtra(ReaderIntent.EXTRA_BOOKMARK_PAGE_ID, 0L)
         val hasNewBranch = newIntent.hasExtra(ReaderIntent.EXTRA_BRANCH)
         val newBranch = if (hasNewBranch) newIntent.getStringExtra(ReaderIntent.EXTRA_BRANCH) else null
         if (newIntent.hasExtra(ReaderIntent.EXTRA_INCOGNITO)) {
@@ -366,6 +368,7 @@ class ReaderViewModel @Inject constructor(
             savedStateHandle[AppRouter.KEY_MANGA] = newIntent.getParcelableExtraCompat<ParcelableManga>(AppRouter.KEY_MANGA)
             savedStateHandle[AppRouter.KEY_DATA] = newIntent.data
             savedStateHandle[ReaderIntent.EXTRA_STATE] = newState
+            savedStateHandle[ReaderIntent.EXTRA_BOOKMARK_PAGE_ID] = newBookmarkPageId
             if (hasNewBranch) {
                 savedStateHandle[ReaderIntent.EXTRA_BRANCH] = newBranch
             } else {
@@ -383,13 +386,14 @@ class ReaderViewModel @Inject constructor(
         }
         if (newState != null) {
             savedStateHandle[ReaderIntent.EXTRA_STATE] = newState
+            savedStateHandle[ReaderIntent.EXTRA_BOOKMARK_PAGE_ID] = newBookmarkPageId
             val chapter = chaptersLoader.peekChapter(newState.chapterId)
             if (chapter != null && chapter.branch != selectedBranch.value) {
                 selectedBranch.value = chapter.branch
                 readingState.value = null
                 reload()
             } else {
-                switchChapter(newState.chapterId, newState.page, newState.scroll)
+                switchChapter(newState.chapterId, newState.page, newState.scroll, newBookmarkPageId)
             }
         } else if (hasNewBranch && newBranch != selectedBranch.value) {
             savedStateHandle.remove<ReaderState>(ReaderIntent.EXTRA_STATE)
@@ -499,7 +503,7 @@ class ReaderViewModel @Inject constructor(
         }?.toMangaPage()
     }
 
-    fun switchChapter(id: Long, page: Int, scroll: Int = 0) {
+    fun switchChapter(id: Long, page: Int, scroll: Int = 0, bookmarkPageId: Long = 0L) {
         val prevJob = loadingJob
         val prevStateJob = stateChangeJob
         loadingJob = launchLoadingJob(Dispatchers.Default) {
@@ -507,13 +511,20 @@ class ReaderViewModel @Inject constructor(
             prevStateJob?.cancelAndJoin()
             pendingFailedLoad = null
             lastFailedError = null
-            val newState = ReaderState(id, page, scroll)
-            val alreadyLoaded = chaptersLoader.hasPages(id) &&
-                content.value.pages.any { it.chapterId == id }
+            val targetId = if (chaptersLoader.peekChapter(id) != null) {
+                id
+            } else {
+                getMangaOrNull()?.let { m ->
+                    bookmarksRepository.resolveBookmarkChapter(m, id, page, bookmarkPageId)?.id
+                } ?: id
+            }
+            val newState = ReaderState(targetId, page, scroll)
+            val alreadyLoaded = chaptersLoader.hasPages(targetId) &&
+                content.value.pages.any { it.chapterId == targetId }
             try {
                 if (!alreadyLoaded) {
                     content.value = ReaderContent(emptyList(), null)
-                    chaptersLoader.loadSingleChapter(id)
+                    chaptersLoader.loadSingleChapter(targetId)
                 } else if (content.value.state == newState) {
                     contentLock.withLock {
                         content.value = content.value.copy(state = null)
@@ -528,7 +539,7 @@ class ReaderViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 e.printStackTraceDebug()
-                recordFailure(PendingFailedLoad.SwitchChapter(id, page, scroll), e)
+                recordFailure(PendingFailedLoad.SwitchChapter(targetId, page, scroll), e)
                 if (content.value.pages.isEmpty()) {
                     onLoadingError.call(e)
                 } else {
@@ -729,14 +740,19 @@ class ReaderViewModel @Inject constructor(
             val manga = requireManga()
             val isAdded = bookmarksRepository.observeBookmark(manga, state.chapterId, state.page).first() != null
             if (isAdded) {
-                bookmarksRepository.removeBookmark(manga.id, state.chapterId, state.page)
-                onShowToast.call(R.string.bookmark_removed)
+                val handle = bookmarksRepository.removeBookmarkForManga(manga, state.chapterId, state.page)
+                if (handle != null) {
+                    onActionDone.call(ReversibleAction(R.string.bookmark_removed, handle))
+                } else {
+                    onShowToast.call(R.string.bookmark_removed)
+                }
             } else {
                 val page = checkNotNull(
                     content.value.pages.find {
                         it.chapterId == state.chapterId && it.index == state.page
                     }?.toMangaPage(),
                 ) { "Page not found" }
+                val snapshot = BookmarkMatcher.extractChapterSnapshot(manga.chapters, state.chapterId)
                 val bookmark = Bookmark(
                     manga = manga,
                     pageId = page.id,
@@ -746,6 +762,13 @@ class ReaderViewModel @Inject constructor(
                     imageUrl = page.preview.ifNullOrEmpty { page.url },
                     createdAt = Instant.now(),
                     percent = computePercent(state.chapterId, state.page),
+                    chapterNumber = snapshot?.chapterNumber ?: -1f,
+                    chapterVolume = snapshot?.chapterVolume ?: 0,
+                    chapterTitle = snapshot?.chapterTitle,
+                    chapterUrl = snapshot?.chapterUrl,
+                    chapterBranch = snapshot?.chapterBranch,
+                    chapterIndex = snapshot?.chapterIndex ?: -1,
+                    chaptersCount = snapshot?.chaptersCount ?: 0,
                 )
                 bookmarksRepository.addBookmark(bookmark)
                 onShowToast.call(R.string.bookmark_added)
@@ -808,6 +831,7 @@ class ReaderViewModel @Inject constructor(
                             readerMode.value = mode
                             try {
                                 chaptersLoader.loadSingleChapter(newState.chapterId)
+                                exception = null
                             } catch (e: Exception) {
                                 readingState.value = null // try next time
                                 if (e.findCloudFlareException() != null) {
@@ -1040,11 +1064,22 @@ class ReaderViewModel @Inject constructor(
         // specific state is requested
         val requestedState: ReaderState? = savedStateHandle[ReaderIntent.EXTRA_STATE]
         if (requestedState != null) {
-            return if (manga.findChapterById(requestedState.chapterId) != null) {
-                requestedState
-            } else {
-                null
+            if (manga.findChapterById(requestedState.chapterId) != null) {
+                return requestedState
             }
+            val bookmarkPageId: Long = savedStateHandle[ReaderIntent.EXTRA_BOOKMARK_PAGE_ID] ?: 0L
+            val resolvedChapter = bookmarksRepository.resolveBookmarkChapter(
+                manga = manga,
+                requestedChapterId = requestedState.chapterId,
+                page = requestedState.page,
+                bookmarkPageId = bookmarkPageId,
+            )
+            if (resolvedChapter != null) {
+                val resolvedState = requestedState.copy(chapterId = resolvedChapter.id)
+                savedStateHandle[ReaderIntent.EXTRA_STATE] = resolvedState
+                return resolvedState
+            }
+            return null
         }
 
         val requestedBranch: String? = savedStateHandle[ReaderIntent.EXTRA_BRANCH]

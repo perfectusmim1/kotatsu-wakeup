@@ -13,9 +13,9 @@ import org.koitharu.kotatsu.core.db.entity.MangaEntity
 			entity = MangaEntity::class,
 			parentColumns = ["manga_id"],
 			childColumns = ["manga_id"],
-			onDelete = ForeignKey.CASCADE
+			onDelete = ForeignKey.RESTRICT,
 		),
-	]
+	],
 )
 data class BookmarkEntity(
 	@ColumnInfo(name = "manga_id", index = true) val mangaId: Long,
@@ -26,4 +26,11 @@ data class BookmarkEntity(
 	@ColumnInfo(name = "image") val imageUrl: String,
 	@ColumnInfo(name = "created_at") val createdAt: Long,
 	@ColumnInfo(name = "percent") val percent: Float,
+	@ColumnInfo(name = "chapter_number", defaultValue = "-1") val chapterNumber: Float = -1f,
+	@ColumnInfo(name = "chapter_volume", defaultValue = "0") val chapterVolume: Int = 0,
+	@ColumnInfo(name = "chapter_title") val chapterTitle: String? = null,
+	@ColumnInfo(name = "chapter_url") val chapterUrl: String? = null,
+	@ColumnInfo(name = "chapter_branch") val chapterBranch: String? = null,
+	@ColumnInfo(name = "chapter_index", defaultValue = "-1") val chapterIndex: Int = -1,
+	@ColumnInfo(name = "chapters_count", defaultValue = "0") val chaptersCount: Int = 0,
 )

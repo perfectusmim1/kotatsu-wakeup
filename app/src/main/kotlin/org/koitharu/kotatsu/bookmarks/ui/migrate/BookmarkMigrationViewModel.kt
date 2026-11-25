@@ -9,7 +9,9 @@ import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.alternatives.domain.BookmarkMigrationCandidate
 import org.koitharu.kotatsu.alternatives.domain.BookmarkMigrationSearchEvent
 import org.koitharu.kotatsu.alternatives.domain.MigrateUseCase
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
+import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.parcelable.ParcelableManga
 import org.koitharu.kotatsu.core.ui.BaseViewModel
 import org.koitharu.kotatsu.core.util.ext.MutableEventFlow
@@ -66,21 +68,31 @@ class BookmarkMigrationViewModel @Inject constructor(
 					return@launchJob
 				}
 				val resolvedChapters = migrateUseCase.resolveCachedOrLoadedChapters(sourceManga)
-				val chaptersById = resolvedChapters.associateBy(MangaChapter::id)
-				val bookmarkedChapters = bookmarks.asSequence()
-					.map { it.chapterId }
-					.distinct()
-					.mapNotNull { chaptersById[it] }
-					.toList()
 				val resolvedManga = if (sourceManga.chapters.isNullOrEmpty() && resolvedChapters.isNotEmpty()) {
 					sourceManga.copy(chapters = resolvedChapters)
 				} else {
 					sourceManga
 				}
+				val preferredBranch = resolvedManga.getPreferredBranch(null)
+				val bookmarkedChapters = LinkedHashMap<Long, MangaChapter>()
+				for (bookmark in bookmarks) {
+					val resolved = BookmarkMatcher.resolveDisplayChapter(
+						bookmark = bookmark,
+						liveChapters = resolvedChapters,
+						cachedChaptersById = emptyMap(),
+						preferredBranch = preferredBranch,
+					) ?: continue
+					bookmarkedChapters.putIfAbsent(resolved.id, resolved)
+				}
+				val sourceChaptersCountHint = maxOf(
+					resolvedChapters.size,
+					bookmarks.maxOfOrNull { it.chaptersCount } ?: 0,
+				)
 				val collected = LinkedHashMap<Long, BookmarkMigrationCandidate>()
 				migrateUseCase.findBookmarkMigrationCandidates(
 					sourceManga = resolvedManga,
-					bookmarkedChapters = bookmarkedChapters,
+					bookmarkedChapters = bookmarkedChapters.values.toList(),
+					sourceChaptersCountHint = sourceChaptersCountHint,
 				).collect { event ->
 					when (event) {
 						is BookmarkMigrationSearchEvent.Progress -> {

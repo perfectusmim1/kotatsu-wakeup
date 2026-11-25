@@ -8,6 +8,12 @@ import dagger.Reusable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
+import org.koitharu.kotatsu.bookmarks.data.BookmarkThumbnailCache
+import org.koitharu.kotatsu.bookmarks.data.BookmarkVault
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher.needsChapterMetadataBackfill
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher.withChapterSnapshot
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.TABLE_FAVOURITES
 import org.koitharu.kotatsu.core.db.TABLE_FAVOURITE_CATEGORIES
@@ -22,7 +28,7 @@ import org.koitharu.kotatsu.core.db.entity.toMangaChapters
 import org.koitharu.kotatsu.core.db.entity.toMangaTags
 import org.koitharu.kotatsu.core.model.LocalMangaSource
 import org.koitharu.kotatsu.core.model.findSameChapter
-import org.koitharu.kotatsu.core.model.ids
+import org.koitharu.kotatsu.core.model.getPreferredBranch
 import org.koitharu.kotatsu.core.model.isLocal
 import org.koitharu.kotatsu.core.nav.MangaIntent
 import org.koitharu.kotatsu.core.os.AppShortcutManager
@@ -45,6 +51,8 @@ class MangaDataRepository @Inject constructor(
 	private val db: MangaDatabase,
 	private val resolverProvider: Provider<MangaLinkResolver>,
 	private val appShortcutManagerProvider: Provider<AppShortcutManager>,
+	private val bookmarkVault: BookmarkVault,
+	private val bookmarkThumbnailCache: BookmarkThumbnailCache,
 ) {
 
 	suspend fun saveReaderMode(manga: Manga, mode: ReaderMode) {
@@ -148,6 +156,7 @@ class MangaDataRepository @Inject constructor(
 		if (!replaceExisting && db.getMangaDao().find(manga.id) != null) {
 			return
 		}
+		var bookmarksChanged = false
 		db.withTransaction {
 			// avoid storing local manga if remote one is already stored
 			val existing = if (manga.isLocal) {
@@ -160,11 +169,16 @@ class MangaDataRepository @Inject constructor(
 				db.getTagsDao().upsert(tags)
 				db.getMangaDao().upsert(manga.toEntity(), tags)
 				if (!manga.isLocal) {
-					manga.chapters?.let { chapters ->
-						saveChapters(manga.id, chapters)
+					manga.chapters?.takeUnless { it.isEmpty() }?.let { chapters ->
+						if (saveChapters(manga.id, chapters, manga.getPreferredBranch(null))) {
+							bookmarksChanged = true
+						}
 					}
 				}
 			}
+		}
+		if (bookmarksChanged) {
+			bookmarkVault.syncFromDatabase(db)
 		}
 	}
 
@@ -181,10 +195,31 @@ class MangaDataRepository @Inject constructor(
 
 	suspend fun updateChapters(manga: Manga) {
 		val chapters = manga.chapters
-		if (!chapters.isNullOrEmpty() && manga.id in db.getMangaDao()) {
-			db.withTransaction {
-				saveChapters(manga.id, chapters)
+		if (chapters.isNullOrEmpty()) {
+			return
+		}
+		val movedThumbs = ArrayList<MoveRecord>()
+		var bookmarksChanged = false
+		db.withTransaction {
+			val preferredBranch = manga.getPreferredBranch(null)
+			if (manga.id in db.getMangaDao()) {
+				if (saveChapters(manga.id, chapters, preferredBranch)) {
+					bookmarksChanged = true
+				}
 			}
+			if (!manga.isLocal) {
+				if (reconcileSameSourceBookmarks(manga, chapters, preferredBranch, movedThumbs)) {
+					bookmarksChanged = true
+				}
+			}
+		}
+		if (movedThumbs.isNotEmpty()) {
+			for (move in movedThumbs) {
+				bookmarkThumbnailCache.move(move.oldMangaId, move.oldPageId, move.newMangaId, move.newPageId)
+			}
+			bookmarkVault.recordMovedBookmarks(movedThumbs.map { it.oldMangaId to it.oldPageId }, db)
+		} else if (bookmarksChanged) {
+			bookmarkVault.syncFromDatabase(db)
 		}
 	}
 
@@ -196,12 +231,43 @@ class MangaDataRepository @Inject constructor(
 		return db.getChaptersDao().find(mangaId, chapterId)?.toMangaChapter()
 	}
 
-	private suspend fun saveChapters(mangaId: Long, newChapters: List<MangaChapter>) {
-		if (newChapters.isNotEmpty()) {
-			keepHistoryChapter(mangaId, newChapters)
-			keepBookmarksChapters(mangaId, newChapters)
+	/**
+	 * Returns cached chapters stored for [manga] or any same-source bookmarked alias of [manga].
+	 * Used as a fallback when a broken source temporarily returns an empty chapter list so
+	 * bookmark chapter headers, chapter counts, and migration remain intact.
+	 */
+	suspend fun findCachedChaptersForManga(manga: Manga): List<MangaChapter> {
+		val direct = db.getChaptersDao().findAll(manga.id)
+		if (direct.isNotEmpty()) {
+			return direct.toMangaChapters()
 		}
+		if (manga.isLocal) {
+			return emptyList()
+		}
+		val candidates = db.getMangaDao().findBookmarkedBySource(manga.source.name)
+		for (candidate in candidates) {
+			if (candidate.manga.id != manga.id && BookmarkMatcher.isSameSeriesOnSameSource(candidate.toManga(), manga)) {
+				val aliasChapters = db.getChaptersDao().findAll(candidate.manga.id)
+				if (aliasChapters.isNotEmpty()) {
+					return aliasChapters.toMangaChapters()
+				}
+			}
+		}
+		return emptyList()
+	}
+
+	private suspend fun saveChapters(
+		mangaId: Long,
+		newChapters: List<MangaChapter>,
+		preferredBranch: String? = null,
+	): Boolean {
+		if (newChapters.isEmpty()) {
+			return false
+		}
+		keepHistoryChapter(mangaId, newChapters)
+		val bookmarksChanged = keepBookmarksChapters(mangaId, newChapters, preferredBranch)
 		db.getChaptersDao().replaceAll(mangaId, newChapters.withIndex().toEntities(mangaId))
+		return bookmarksChanged
 	}
 
 	/**
@@ -222,35 +288,162 @@ class MangaDataRepository @Inject constructor(
 
 	/**
 	 * Remaps bookmarks whose chapter id disappeared after a source changed chapter URLs/IDs before old cached
-	 * chapters are replaced.
+	 * chapters are replaced, and backfills self-contained chapter metadata so future reloads never lose context.
+	 * Never deletes any bookmark row.
 	 */
-	private suspend fun keepBookmarksChapters(mangaId: Long, newChapters: List<MangaChapter>) {
+	private suspend fun keepBookmarksChapters(
+		mangaId: Long,
+		newChapters: List<MangaChapter>,
+		preferredBranch: String? = null,
+	): Boolean {
 		val bookmarksDao = db.getBookmarksDao()
 		val bookmarks = bookmarksDao.findAllByManga(mangaId)
 		if (bookmarks.isEmpty()) {
-			return
+			return false
 		}
-		val newChapterIds = newChapters.ids()
-		val missingChapterIds = bookmarks.asSequence()
-			.map { it.chapterId }
-			.filterNot { it in newChapterIds }
-			.distinct()
-			.toList()
-		if (missingChapterIds.isEmpty()) {
-			return
-		}
-		val cachedChapters = db.getChaptersDao().findAll(mangaId)
-		if (cachedChapters.isEmpty()) {
-			return
-		}
-		val cachedById = cachedChapters.associateBy { it.chapterId }
-		for (oldChapterId in missingChapterIds) {
-			val previous = cachedById[oldChapterId]?.toMangaChapter() ?: continue
-			val same = findMatchingChapter(newChapters, previous) ?: continue
-			if (same.id != oldChapterId) {
-				bookmarksDao.updateChapterId(mangaId, oldChapterId, same.id)
+		val newChaptersById = newChapters.associateBy(MangaChapter::id)
+		val cachedById = db.getChaptersDao().findAll(mangaId).associateBy { it.chapterId }
+		var changed = false
+		for (bookmark in bookmarks) {
+			val direct = newChaptersById[bookmark.chapterId]
+			if (direct != null) {
+				if (bookmark.needsChapterMetadataBackfill()) {
+					val updated = bookmark.withChapterSnapshot(direct, newChapters)
+					bookmarksDao.updateChapterAndMetadata(
+						mangaId = updated.mangaId,
+						pageId = updated.pageId,
+						newChapterId = updated.chapterId,
+						chapterNumber = updated.chapterNumber,
+						chapterVolume = updated.chapterVolume,
+						chapterTitle = updated.chapterTitle,
+						chapterUrl = updated.chapterUrl,
+						chapterBranch = updated.chapterBranch,
+						chapterIndex = updated.chapterIndex,
+						chaptersCount = updated.chaptersCount,
+					)
+					changed = true
+				}
+				continue
 			}
+			val cachedChapter = cachedById[bookmark.chapterId]?.toMangaChapter()
+			val matched = BookmarkMatcher.findMatchingChapter(
+				bookmark = bookmark,
+				cachedChapter = cachedChapter,
+				newChapters = newChapters,
+				preferredBranch = preferredBranch,
+			) ?: continue
+			val updated = bookmark.withChapterSnapshot(matched, newChapters)
+			bookmarksDao.updateChapterAndMetadata(
+				mangaId = updated.mangaId,
+				pageId = updated.pageId,
+				newChapterId = updated.chapterId,
+				chapterNumber = updated.chapterNumber,
+				chapterVolume = updated.chapterVolume,
+				chapterTitle = updated.chapterTitle,
+				chapterUrl = updated.chapterUrl,
+				chapterBranch = updated.chapterBranch,
+				chapterIndex = updated.chapterIndex,
+				chaptersCount = updated.chaptersCount,
+			)
+			changed = true
 		}
+		return changed
+	}
+
+	/**
+	 * Reconciles bookmarks saved under an older manga_id of the same series on the same source (for example
+	 * when a source migrated URL prefixes/slugs or switched www/mirror hosts, changing Manga.id).
+	 *
+	 * - Orphan bookmark-only alias rows (not in active favourites or history) are cleanly consolidated onto
+	 *   [loadedManga].id with fresh chapter IDs and chapter metadata.
+	 * - Active library alias rows (still referenced by favourites or history) keep their manga_id intact while
+	 *   having their chapter IDs, chapter metadata, and cached chapter list kept up to date.
+	 */
+	private suspend fun reconcileSameSourceBookmarks(
+		loadedManga: Manga,
+		newChapters: List<MangaChapter>,
+		preferredBranch: String?,
+		movedThumbsOut: MutableList<MoveRecord>,
+	): Boolean {
+		val mangaDao = db.getMangaDao()
+		val candidates = mangaDao.findBookmarkedBySource(loadedManga.source.name)
+		if (candidates.isEmpty()) {
+			return false
+		}
+		val aliases = candidates.filter { candidate ->
+			candidate.manga.id != loadedManga.id &&
+				BookmarkMatcher.isSameSeriesOnSameSource(candidate.toManga(), loadedManga)
+		}
+		if (aliases.isEmpty()) {
+			return false
+		}
+		val bookmarksDao = db.getBookmarksDao()
+		val chaptersDao = db.getChaptersDao()
+		var changed = false
+
+		for (alias in aliases) {
+			val oldMangaId = alias.manga.id
+			val oldBookmarks = bookmarksDao.findAllByManga(oldMangaId)
+			if (oldBookmarks.isEmpty()) {
+				continue
+			}
+			val isOldInActiveLibrary = mangaDao.isInActiveLibrary(oldMangaId)
+			if (isOldInActiveLibrary) {
+				// Keep bookmarks on the library entry, but remap their chapters and keep its chapter cache fresh.
+				if (keepBookmarksChapters(oldMangaId, newChapters, preferredBranch)) {
+					changed = true
+				}
+				chaptersDao.replaceAll(oldMangaId, newChapters.withIndex().toEntities(oldMangaId))
+				continue
+			}
+
+			// Orphan bookmark-only alias: consolidate onto loadedManga.id without dropping a single bookmark.
+			val tags = loadedManga.tags.toEntities()
+			db.getTagsDao().upsert(tags)
+			mangaDao.upsert(loadedManga.toEntity(), tags)
+			val oldCachedById = chaptersDao.findAll(oldMangaId).associateBy { it.chapterId }
+			val existingTarget = bookmarksDao.findAllByManga(loadedManga.id)
+			val occupiedPageIds = existingTarget.mapTo(HashSet(existingTarget.size)) { it.pageId }
+			val existingPositions = existingTarget.mapTo(HashSet(existingTarget.size)) { it.chapterId to it.page }
+
+			for (oldBookmark in oldBookmarks) {
+				val matched = BookmarkMatcher.findMatchingChapter(
+					bookmark = oldBookmark,
+					cachedChapter = oldCachedById[oldBookmark.chapterId]?.toMangaChapter(),
+					newChapters = newChapters,
+					preferredBranch = preferredBranch,
+				)
+				val updatedMeta = if (matched != null) {
+					oldBookmark.withChapterSnapshot(matched, newChapters)
+				} else {
+					oldBookmark
+				}
+				val pos = updatedMeta.chapterId to updatedMeta.page
+				if (pos in existingPositions) {
+					// Identical bookmark position already exists on target; only delete duplicate after confirming target exists.
+					bookmarksDao.deleteByMangaAndPage(oldMangaId, oldBookmark.pageId)
+					movedThumbsOut.add(MoveRecord(oldMangaId, oldBookmark.pageId, loadedManga.id, oldBookmark.pageId))
+					changed = true
+					continue
+				}
+				var newPageId = oldBookmark.pageId
+				while (newPageId in occupiedPageIds) {
+					newPageId++
+				}
+				val movedEntity: BookmarkEntity = updatedMeta.copy(
+					mangaId = loadedManga.id,
+					pageId = newPageId,
+				)
+				bookmarksDao.upsert(movedEntity)
+				bookmarksDao.deleteByMangaAndPage(oldMangaId, oldBookmark.pageId)
+				occupiedPageIds.add(newPageId)
+				existingPositions.add(pos)
+				movedThumbsOut.add(MoveRecord(oldMangaId, oldBookmark.pageId, loadedManga.id, newPageId))
+				changed = true
+			}
+			chaptersDao.replaceAll(loadedManga.id, newChapters.withIndex().toEntities(loadedManga.id))
+		}
+		return changed
 	}
 
 	private fun findMatchingChapter(newChapters: List<MangaChapter>, previous: MangaChapter): MangaChapter? {
@@ -322,8 +515,12 @@ class MangaDataRepository @Inject constructor(
 
 	suspend fun cleanupLocalManga() {
 		val dao = db.getMangaDao()
+		val bookmarksDao = db.getBookmarksDao()
 		val broken = dao.findAllBySource(LocalMangaSource.name)
-			.filter { x -> x.manga.url.toUri().toFileOrNull()?.exists() == false }
+			.filter { x ->
+				x.manga.url.toUri().toFileOrNull()?.exists() == false &&
+					!bookmarksDao.hasBookmarks(x.manga.id)
+			}
 		if (broken.isNotEmpty()) {
 			dao.delete(broken.map { it.manga })
 		}
@@ -395,6 +592,13 @@ class MangaDataRepository @Inject constructor(
 		titleOverride = null,
 		coverUrlOverride = null,
 		contentRatingOverride = null,
+	)
+
+	private class MoveRecord(
+		val oldMangaId: Long,
+		val oldPageId: Long,
+		val newMangaId: Long,
+		val newPageId: Long,
 	)
 
 	private companion object {

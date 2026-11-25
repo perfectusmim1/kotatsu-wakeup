@@ -17,13 +17,19 @@ data class Bookmark(
 	val imageUrl: String,
 	val createdAt: Instant,
 	val percent: Float,
+	val chapterNumber: Float = -1f,
+	val chapterVolume: Int = 0,
+	val chapterTitle: String? = null,
+	val chapterUrl: String? = null,
+	val chapterBranch: String? = null,
+	val chapterIndex: Int = -1,
+	val chaptersCount: Int = 0,
 ) : ListModel {
 
 	override fun areItemsTheSame(other: ListModel): Boolean {
 		return other is Bookmark &&
 			manga.id == other.manga.id &&
-			chapterId == other.chapterId &&
-			page == other.page
+			pageId == other.pageId
 	}
 
 	fun toMangaPage() = MangaPage(

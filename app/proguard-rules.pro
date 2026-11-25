@@ -40,3 +40,4 @@
 
 -keep class ai.onnxruntime.** { *; }
 -dontwarn ai.onnxruntime.**
+-keep class org.koitharu.kotatsu.bookmarks.data.BookmarkVault$** { *; }

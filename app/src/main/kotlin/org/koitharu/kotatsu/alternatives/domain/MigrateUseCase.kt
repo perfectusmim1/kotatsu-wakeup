@@ -8,6 +8,11 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koitharu.kotatsu.bookmarks.data.BookmarkEntity
+import org.koitharu.kotatsu.bookmarks.data.BookmarkThumbnailCache
+import org.koitharu.kotatsu.bookmarks.data.BookmarkVault
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher.withChapterSnapshot
+import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.db.entity.toMangaChapters
 import org.koitharu.kotatsu.core.model.getPreferredBranch
@@ -39,6 +44,9 @@ constructor(
 	private val progressUpdateUseCase: ProgressUpdateUseCase,
 	private val scrobblers: Set<@JvmSuppressWildcards Scrobbler>,
 	private val alternativesUseCase: AlternativesUseCase,
+	private val bookmarksRepository: BookmarksRepository,
+	private val bookmarkVault: BookmarkVault,
+	private val bookmarkThumbnailCache: BookmarkThumbnailCache,
 ) {
 	suspend operator fun invoke(
 		oldManga: Manga,
@@ -72,6 +80,7 @@ constructor(
 		Log.d(TAG, "Migration stage=store_target target=${newDetails.debugRef()} chapters=${newDetails.chapters?.size ?: 0}")
 		mangaDataRepository.storeManga(newDetails, replaceExisting = true)
 		Log.d(TAG, "Migration stage=database_transaction oldId=${oldDetails.id} targetId=${newDetails.id}")
+		var movedBookmarkKeys: List<MovedBookmarkRecord> = emptyList()
 		database.withTransaction {
 			// replace favorites
 			Log.d(TAG, "Migration stage=favorites oldId=${oldDetails.id} targetId=${newDetails.id}")
@@ -147,7 +156,15 @@ constructor(
 			}
 			// bookmarks
 			Log.d(TAG, "Migration stage=bookmarks oldId=${oldDetails.id} targetId=${newDetails.id}")
-			migrateBookmarksInTransaction(oldDetails, newDetails)
+			movedBookmarkKeys = migrateBookmarksInTransaction(oldDetails, newDetails).second
+		}
+		if (movedBookmarkKeys.isNotEmpty()) {
+			for (moved in movedBookmarkKeys) {
+				bookmarkThumbnailCache.move(moved.oldMangaId, moved.oldPageId, newDetails.id, moved.newPageId)
+			}
+			bookmarkVault.recordMovedBookmarks(movedBookmarkKeys.map { it.oldMangaId to it.oldPageId }, database)
+		} else {
+			bookmarkVault.syncFromDatabase(database)
 		}
 		Log.d(TAG, "Migration stage=progress_update target=${newManga.debugRef()}")
 		progressUpdateUseCase(newManga)
@@ -157,9 +174,11 @@ constructor(
 		sourceManga: Manga,
 		bookmarkedChapters: List<MangaChapter>,
 		activeSources: List<MangaSource>? = null,
+		sourceChaptersCountHint: Int = 0,
 	): Flow<BookmarkMigrationSearchEvent> {
 		val distinctBookmarked = bookmarkedChapters.distinctBy { it.id }
 		val oldChapters = resolveCachedOrLoadedChapters(sourceManga)
+		val effectiveSourceChaptersCount = maxOf(oldChapters.size, sourceChaptersCountHint)
 		val seedTitles = buildList(1 + sourceManga.altTitles.size) {
 			add(sourceManga.title)
 			addAll(sourceManga.altTitles)
@@ -209,7 +228,7 @@ constructor(
 
 				is AlternativeSearchEvent.Result -> BookmarkMigrationSearchEvent.Candidate(
 					scoreBookmarkCandidate(
-						sourceChaptersCount = oldChapters.size,
+						sourceChaptersCount = effectiveSourceChaptersCount,
 						bookmarkedChapters = distinctBookmarked,
 						candidate = event.manga,
 						seedTitles = seedTitles,
@@ -224,7 +243,7 @@ constructor(
 		newManga: Manga,
 	): Int {
 		val oldDetails = if (oldManga.chapters.isNullOrEmpty()) {
-			val cachedChapters = database.getChaptersDao().findAll(oldManga.id).toMangaChapters()
+			val cachedChapters = bookmarksRepository.findCachedChapters(oldManga)
 			if (cachedChapters.isNotEmpty()) {
 				oldManga.copy(chapters = cachedChapters)
 			} else {
@@ -239,9 +258,18 @@ constructor(
 			newManga
 		}
 		mangaDataRepository.storeManga(newDetails, replaceExisting = true)
-		return database.withTransaction {
+		val (count, movedKeys) = database.withTransaction {
 			migrateBookmarksInTransaction(oldDetails, newDetails)
 		}
+		if (movedKeys.isNotEmpty()) {
+			for (moved in movedKeys) {
+				bookmarkThumbnailCache.move(moved.oldMangaId, moved.oldPageId, newDetails.id, moved.newPageId)
+			}
+			bookmarkVault.recordMovedBookmarks(movedKeys.map { it.oldMangaId to it.oldPageId }, database)
+		} else if (count > 0) {
+			bookmarkVault.syncFromDatabase(database)
+		}
+		return count
 	}
 
 	suspend fun resolveCachedOrLoadedChapters(manga: Manga): List<MangaChapter> {
@@ -249,7 +277,7 @@ constructor(
 		if (!direct.isNullOrEmpty()) {
 			return direct
 		}
-		val cached = database.getChaptersDao().findAll(manga.id).toMangaChapters()
+		val cached = bookmarksRepository.findCachedChapters(manga)
 		if (cached.isNotEmpty()) {
 			return cached
 		}
@@ -270,32 +298,46 @@ constructor(
 		if (!remote.chapters.isNullOrEmpty()) {
 			return remote
 		}
-		val cached = database.getChaptersDao().findAll(oldManga.id).toMangaChapters()
+		val cached = bookmarksRepository.findCachedChapters(oldManga)
 		return if (cached.isNotEmpty()) remote.copy(chapters = cached) else remote
 	}
 
 	private suspend fun migrateBookmarksInTransaction(
 		oldDetails: Manga,
 		newDetails: Manga,
-	): Int {
+	): Pair<Int, List<MovedBookmarkRecord>> {
 		val bookmarksDao = database.getBookmarksDao()
-		val oldBookmarks = bookmarksDao.findAllByManga(oldDetails.id)
+		val aliasIds = bookmarksRepository.resolveBookmarkMangaIds(oldDetails)
+		val oldBookmarks = bookmarksDao.findAllByMangaIds(aliasIds)
 		if (oldBookmarks.isEmpty()) {
-			return 0
+			return 0 to emptyList()
 		}
 		val newChaptersAll = newDetails.chapters.orEmpty()
 		if (newChaptersAll.isEmpty()) {
-			return 0
+			return 0 to emptyList()
 		}
 		val oldChapters = oldDetails.chapters.orEmpty().ifEmpty {
-			database.getChaptersDao().findAll(oldDetails.id).toMangaChapters()
+			bookmarksRepository.findCachedChapters(oldDetails)
 		}
 		val oldChaptersById = oldChapters.associateBy { it.id }
 		val preferredBranch = newDetails.getPreferredBranch(null)
 		val fallbackPool = newDetails.getChapters(preferredBranch).ifEmpty { newChaptersAll }
+
+		val existingTarget = if (newDetails.id !in aliasIds) {
+			bookmarksDao.findAllByManga(newDetails.id)
+		} else {
+			emptyList()
+		}
+		val occupiedPageIds = existingTarget.mapTo(HashSet(existingTarget.size + oldBookmarks.size)) { it.pageId }
+
 		val migrated = ArrayList<BookmarkEntity>(oldBookmarks.size)
+		val movedRecords = ArrayList<MovedBookmarkRecord>(oldBookmarks.size)
 		for (bookmark in oldBookmarks) {
-			val oldChapter = oldChaptersById[bookmark.chapterId]
+			val oldChapter = BookmarkMatcher.reconstructChapter(
+				bookmark = bookmark,
+				source = oldDetails.source,
+				cachedChapter = oldChaptersById[bookmark.chapterId],
+			)
 			val matchedChapter = findMatchingTargetChapter(
 				oldChapter = oldChapter,
 				newDetails = newDetails,
@@ -309,36 +351,56 @@ constructor(
 						fallbackPool[targetIdx]
 					}
 
-					bookmark.percent in 0f..1f -> {
-						val targetIdx = (bookmark.percent * fallbackPool.lastIndex).toInt().coerceIn(0, fallbackPool.lastIndex)
+					bookmark.chapterIndex >= 0 && bookmark.chaptersCount > 0 -> {
+						val targetIdx = if (fallbackPool.size == bookmark.chaptersCount) {
+							bookmark.chapterIndex.coerceIn(0, fallbackPool.lastIndex)
+						} else {
+							val ratio = bookmark.chapterIndex.toFloat() / (bookmark.chaptersCount - 1).coerceAtLeast(1)
+							(ratio * fallbackPool.lastIndex).toInt().coerceIn(0, fallbackPool.lastIndex)
+						}
+						fallbackPool[targetIdx]
+					}
+
+					bookmark.percent.isFinite() && bookmark.percent >= 0f && bookmark.percent <= 1.01f -> {
+						val targetIdx = BookmarkMatcher.estimateChapterIndexFromPercent(
+							percent = bookmark.percent.coerceIn(0f, 1f),
+							chaptersCount = fallbackPool.size,
+						)
 						fallbackPool[targetIdx]
 					}
 
 					else -> fallbackPool.first()
 				}
 			}
-			val updatedPercent = if (bookmark.percent in 0f..1f) {
-				bookmark.percent
+			val updatedPercent = if (bookmark.percent.isFinite() && bookmark.percent >= 0f && bookmark.percent <= 1.01f) {
+				bookmark.percent.coerceIn(0f, 1f)
 			} else {
 				val targetBranchChapters = newDetails.getChapters(matchedChapter.branch).ifEmpty { newChaptersAll }
 				val idx = targetBranchChapters.indexOfFirst { it.id == matchedChapter.id }.coerceAtLeast(0)
 				idx.toFloat() / targetBranchChapters.size.coerceAtLeast(1)
 			}
+			var targetPageId = bookmark.pageId
+			while (targetPageId in occupiedPageIds) {
+				targetPageId++
+			}
+			occupiedPageIds.add(targetPageId)
 			migrated.add(
-				bookmark.copy(
+				bookmark.withChapterSnapshot(matchedChapter, newChaptersAll).copy(
 					mangaId = newDetails.id,
-					chapterId = matchedChapter.id,
+					pageId = targetPageId,
 					percent = updatedPercent,
 				),
 			)
-		}
-		if (oldDetails.id != newDetails.id) {
-			for (old in oldBookmarks) {
-				bookmarksDao.delete(old)
+			if (bookmark.mangaId != newDetails.id || bookmark.pageId != targetPageId) {
+				movedRecords.add(MovedBookmarkRecord(bookmark.mangaId, bookmark.pageId, targetPageId))
 			}
 		}
+		// Upsert migrated rows FIRST, then delete old rows only after upsert succeeded in this transaction.
 		bookmarksDao.upsert(migrated)
-		return migrated.size
+		for (moved in movedRecords) {
+			bookmarksDao.deleteByMangaAndPage(moved.oldMangaId, moved.oldPageId)
+		}
+		return migrated.size to movedRecords
 	}
 
 	private fun scoreBookmarkCandidate(
@@ -401,6 +463,7 @@ constructor(
 			newChaptersAll.firstOrNull { it.title.normalizeChapterTitle() == normalizedTitle }?.let { return it }
 		}
 		val parsedNumber = oldChapter.title?.let(::extractChapterNumber)
+			?: BookmarkMatcher.extractChapterNumberFromUrl(oldChapter.url)
 		if (parsedNumber != null && parsedNumber > 0f) {
 			sameBranchPool.firstOrNull { it.number == parsedNumber || extractChapterNumber(it.title) == parsedNumber }
 				?.let { return it }
@@ -499,6 +562,12 @@ constructor(
 		} else {
 			firstOrNull { it.volume == volume && it.number == number }
 		}
+
+	private class MovedBookmarkRecord(
+		val oldMangaId: Long,
+		val oldPageId: Long,
+		val newPageId: Long,
+	)
 
 	private companion object {
 		const val TAG = "SourceReplacement"

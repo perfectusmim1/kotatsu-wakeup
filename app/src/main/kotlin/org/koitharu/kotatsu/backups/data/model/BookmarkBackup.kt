@@ -23,6 +23,13 @@ class BookmarkBackup(
 		@SerialName("image_url") val imageUrl: String,
 		@SerialName("created_at") val createdAt: Long,
 		@SerialName("percent") val percent: Float,
+		@SerialName("chapter_number") val chapterNumber: Float = -1f,
+		@SerialName("chapter_volume") val chapterVolume: Int = 0,
+		@SerialName("chapter_title") val chapterTitle: String? = null,
+		@SerialName("chapter_url") val chapterUrl: String? = null,
+		@SerialName("chapter_branch") val chapterBranch: String? = null,
+		@SerialName("chapter_index") val chapterIndex: Int = -1,
+		@SerialName("chapters_count") val chaptersCount: Int = 0,
 	) {
 
 		fun toEntity() = BookmarkEntity(
@@ -34,6 +41,13 @@ class BookmarkBackup(
 			imageUrl = imageUrl,
 			createdAt = createdAt,
 			percent = percent,
+			chapterNumber = chapterNumber,
+			chapterVolume = chapterVolume,
+			chapterTitle = chapterTitle,
+			chapterUrl = chapterUrl,
+			chapterBranch = chapterBranch,
+			chapterIndex = chapterIndex,
+			chaptersCount = chaptersCount,
 		)
 	}
 
@@ -50,6 +64,13 @@ class BookmarkBackup(
 				imageUrl = it.imageUrl,
 				createdAt = it.createdAt,
 				percent = it.percent,
+				chapterNumber = it.chapterNumber,
+				chapterVolume = it.chapterVolume,
+				chapterTitle = it.chapterTitle,
+				chapterUrl = it.chapterUrl,
+				chapterBranch = it.chapterBranch,
+				chapterIndex = it.chapterIndex,
+				chaptersCount = it.chaptersCount,
 			)
 		},
 	)

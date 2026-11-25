@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.plus
 import org.koitharu.kotatsu.R
 import org.koitharu.kotatsu.bookmarks.domain.Bookmark
+import org.koitharu.kotatsu.bookmarks.domain.BookmarkMatcher
 import org.koitharu.kotatsu.bookmarks.domain.BookmarkSortOrder
 import org.koitharu.kotatsu.bookmarks.domain.BookmarksRepository
 import org.koitharu.kotatsu.bookmarks.domain.matchesBookmarkQuery
@@ -212,12 +213,18 @@ class AllBookmarksViewModel @Inject constructor(
 			} else {
 				val chaptersById = chapters.associateBy(MangaChapter::id)
 				bookmarks.filter { b ->
-					val ch = chaptersById[b.chapterId] ?: return@filter false
-					val idx = chapterOrderMap[b.chapterId] ?: -1
-					ch.matchesBookmarkQuery(
-						normalizedQuery = normalizedQuery,
-						localizedTitle = ch.getLocalizedTitle(appContext.resources, idx),
-					)
+					val ch = chaptersById[b.chapterId] ?: BookmarkMatcher.reconstructChapter(b)
+					if (ch != null) {
+						val idx = chapterOrderMap[ch.id] ?: b.chapterIndex
+						ch.matchesBookmarkQuery(
+							normalizedQuery = normalizedQuery,
+							localizedTitle = ch.getLocalizedTitle(appContext.resources, idx),
+						)
+					} else {
+						b.chapterTitle?.contains(normalizedQuery, ignoreCase = true) == true ||
+							(b.chapterNumber >= 0f && b.chapterNumber.toString().contains(normalizedQuery, ignoreCase = true)) ||
+							b.chapterBranch?.contains(normalizedQuery, ignoreCase = true) == true
+					}
 				}
 			}
 			if (matched.isNotEmpty()) {
@@ -231,9 +238,15 @@ class AllBookmarksViewModel @Inject constructor(
 				val chapterKey = if (order == BookmarkSortOrder.CHAPTER_ASC) {
 					var minKey = Float.MAX_VALUE
 					for (b in sortedBookmarks) {
-						val idx = chapterOrderMap[b.chapterId] ?: continue
-						val ch = chapters.getOrNull(idx)
-						val key = if (ch != null && ch.number >= 0f) ch.number else idx.toFloat()
+						val idx = chapterOrderMap[b.chapterId]
+						val ch = if (idx != null) chapters.getOrNull(idx) else null
+						val key = when {
+							ch != null && ch.number >= 0f -> ch.number
+							idx != null -> idx.toFloat()
+							b.chapterNumber >= 0f -> b.chapterNumber
+							b.chapterIndex >= 0 -> b.chapterIndex.toFloat()
+							else -> BookmarkMatcher.extractChapterNumberFromImageUrl(b.imageUrl) ?: continue
+						}
 						if (key < minKey) {
 							minKey = key
 						}

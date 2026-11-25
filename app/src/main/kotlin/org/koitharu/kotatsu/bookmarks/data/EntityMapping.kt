@@ -13,6 +13,13 @@ fun BookmarkEntity.toBookmark(manga: Manga) = Bookmark(
 	imageUrl = imageUrl,
 	createdAt = Instant.ofEpochMilli(createdAt),
 	percent = percent,
+	chapterNumber = chapterNumber,
+	chapterVolume = chapterVolume,
+	chapterTitle = chapterTitle,
+	chapterUrl = chapterUrl,
+	chapterBranch = chapterBranch,
+	chapterIndex = chapterIndex,
+	chaptersCount = chaptersCount,
 )
 
 fun Bookmark.toEntity() = BookmarkEntity(
@@ -24,6 +31,13 @@ fun Bookmark.toEntity() = BookmarkEntity(
 	imageUrl = imageUrl,
 	createdAt = createdAt.toEpochMilli(),
 	percent = percent,
+	chapterNumber = chapterNumber,
+	chapterVolume = chapterVolume,
+	chapterTitle = chapterTitle,
+	chapterUrl = chapterUrl,
+	chapterBranch = chapterBranch,
+	chapterIndex = chapterIndex,
+	chaptersCount = chaptersCount,
 )
 
 fun Collection<BookmarkEntity>.toBookmarks(manga: Manga) = map {

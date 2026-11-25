@@ -33,6 +33,18 @@ abstract class MangaDao {
 	abstract suspend fun findAllBySource(source: String): List<MangaWithTags>
 
 	@Transaction
+	@Query(
+		"SELECT * FROM manga WHERE source = :source AND EXISTS(SELECT 1 FROM bookmarks WHERE bookmarks.manga_id = manga.manga_id)",
+	)
+	abstract suspend fun findBookmarkedBySource(source: String): List<MangaWithTags>
+
+	@Query(
+		"SELECT EXISTS(SELECT 1 FROM favourites WHERE manga_id = :mangaId AND deleted_at = 0) " +
+			"OR EXISTS(SELECT 1 FROM history WHERE manga_id = :mangaId AND deleted_at = 0)",
+	)
+	abstract suspend fun isInActiveLibrary(mangaId: Long): Boolean
+
+	@Transaction
 	@Query("SELECT * FROM manga WHERE source = :source AND manga_id IN (SELECT manga_id FROM favourites UNION SELECT manga_id FROM history)")
 	abstract suspend fun findLibraryBySource(source: String): List<MangaWithTags>
 

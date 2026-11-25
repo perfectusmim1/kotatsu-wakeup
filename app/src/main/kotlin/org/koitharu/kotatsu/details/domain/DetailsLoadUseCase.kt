@@ -115,11 +115,11 @@ class DetailsLoadUseCase @Inject constructor(
                 description = descriptionParser.parse((remoteDetails ?: localDetails).description, withImages = true),
                 isLoaded = true,
             )
-            emit(mangaDetails)
             if (remoteDetails != null) {
                 mangaDataRepository.updateChapters(mangaDetails.toManga())
                 mangaDataRepository.updateCover(remoteDetails)
             }
+            emit(mangaDetails)
         }
     }
 
@@ -149,19 +149,33 @@ class DetailsLoadUseCase @Inject constructor(
             )
         }
         val remoteDetails = remoteDeferred.await().getOrThrow()
+        val hasRemoteChapters = !remoteDetails.chapters.isNullOrEmpty()
+        val effectiveRemote = if (hasRemoteChapters) {
+            remoteDetails
+        } else {
+            val cachedChapters = manga.chapters?.takeUnless { it.isEmpty() }
+                ?: mangaDataRepository.findCachedChaptersForManga(remoteDetails)
+            if (cachedChapters.isNotEmpty()) {
+                remoteDetails.copy(chapters = cachedChapters)
+            } else {
+                remoteDetails
+            }
+        }
         val mangaDetails = MangaDetails(
-            manga = remoteDetails,
+            manga = effectiveRemote,
             localManga = localManga,
             override = override,
             description = descriptionParser.parse(
-                remoteDetails.description ?: localManga?.manga?.description,
+                effectiveRemote.description ?: localManga?.manga?.description,
                 withImages = true,
             ),
             isLoaded = true,
         )
+        if (hasRemoteChapters) {
+            mangaDataRepository.updateChapters(mangaDetails.toManga())
+        }
+        mangaDataRepository.updateCover(effectiveRemote)
         emit(mangaDetails)
-        mangaDataRepository.updateChapters(mangaDetails.toManga())
-        mangaDataRepository.updateCover(remoteDetails)
     }
 
     private suspend fun getDetails(seed: Manga, force: Boolean) = runCatchingCancellable {

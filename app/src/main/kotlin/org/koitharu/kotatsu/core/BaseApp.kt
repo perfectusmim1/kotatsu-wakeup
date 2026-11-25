@@ -21,6 +21,8 @@ import org.acra.ktx.initAcra
 import org.conscrypt.Conscrypt
 import org.koitharu.kotatsu.BuildConfig
 import org.koitharu.kotatsu.R
+import org.koitharu.kotatsu.bookmarks.data.BookmarkThumbnailCache
+import org.koitharu.kotatsu.bookmarks.data.BookmarkVault
 import org.koitharu.kotatsu.core.db.MangaDatabase
 import org.koitharu.kotatsu.core.os.AppValidator
 import org.koitharu.kotatsu.core.os.RomCompat
@@ -69,6 +71,12 @@ open class BaseApp : Application(), Configuration.Provider {
 	lateinit var localMangaIndexProvider: Provider<LocalMangaIndex>
 
 	@Inject
+	lateinit var bookmarkVaultProvider: Provider<BookmarkVault>
+
+	@Inject
+	lateinit var bookmarkThumbnailCacheProvider: Provider<BookmarkThumbnailCache>
+
+	@Inject
 	@LocalStorageChanges
 	lateinit var localStorageChanges: MutableSharedFlow<LocalManga?>
 
@@ -104,6 +112,13 @@ open class BaseApp : Application(), Configuration.Provider {
 		processLifecycleScope.launch(Dispatchers.Default) {
 			setupDatabaseObservers()
 			localStorageChanges.collect(localMangaIndexProvider.get())
+		}
+		processLifecycleScope.launch(Dispatchers.IO) {
+			val db = database.get()
+			bookmarkVaultProvider.get().verifyAndRestore(db)
+			val activePairs = db.getBookmarksDao().findAllEntities()
+				.mapTo(HashSet()) { it.mangaId to it.pageId }
+			bookmarkThumbnailCacheProvider.get().pruneUnused(activePairs)
 		}
 		workScheduleManager.init()
 	}
